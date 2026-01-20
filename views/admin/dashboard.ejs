@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - UPHSD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <%- include('partials/navbar') %>
+
+    <div class="container mx-auto px-4 py-8">
+        <% if (success_msg && success_msg.length > 0) { %>
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <%= success_msg %>
+            </div>
+        <% } %>
+
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+            <p class="text-gray-600">Welcome back, <%= admin.username %>!</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm mb-1">Total Evaluations</p>
+                        <h3 class="text-3xl font-bold text-blue-600"><%= stats.evaluations %></h3>
+                    </div>
+                    <div class="bg-blue-100 p-4 rounded-full">
+                        <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm mb-1">Active Teachers</p>
+                        <h3 class="text-3xl font-bold text-green-600"><%= stats.teachers %></h3>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-full">
+                        <i class="fas fa-chalkboard-teacher text-green-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm mb-1">Programs</p>
+                        <h3 class="text-3xl font-bold text-purple-600"><%= stats.programs %></h3>
+                    </div>
+                    <div class="bg-purple-100 p-4 rounded-full">
+                        <i class="fas fa-graduation-cap text-purple-600 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Average Ratings Summary -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+                    Average Ratings Summary
+                </h2>
+                <% if (stats.evaluations > 0) { %>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-gray-600">Overall Average</span>
+                                <span class="text-lg font-bold text-blue-600"><%= summary.overallAvg %>/5.0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-blue-600 h-3 rounded-full" style="width: <%= (summary.overallAvg / 5) * 100 %>%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-gray-600">The Teacher</span>
+                                <span class="text-lg font-bold text-green-600"><%= summary.avgTeacherRating %>/5.0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: <%= (summary.avgTeacherRating / 5) * 100 %>%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-gray-600">Learning Process</span>
+                                <span class="text-lg font-bold text-purple-600"><%= summary.avgLearningRating %>/5.0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-purple-600 h-2 rounded-full" style="width: <%= (summary.avgLearningRating / 5) * 100 %>%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-gray-600">Classroom Management</span>
+                                <span class="text-lg font-bold text-orange-600"><%= summary.avgClassroomRating %>/5.0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-orange-600 h-2 rounded-full" style="width: <%= (summary.avgClassroomRating / 5) * 100 %>%"></div>
+                            </div>
+                        </div>
+                    </div>
+                <% } else { %>
+                    <p class="text-gray-500 text-center py-4">No evaluation data available yet</p>
+                <% } %>
+            </div>
+
+            <!-- Top Rated Teachers -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-star mr-2 text-yellow-500"></i>
+                    Top Rated Teachers
+                </h2>
+                <% if (topTeachers.length > 0) { %>
+                    <div class="space-y-3">
+                        <% topTeachers.forEach((teacher, index) => { %>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-blue-100 text-blue-600 font-bold w-8 h-8 rounded-full flex items-center justify-center">
+                                        <%= index + 1 %>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-800"><%= teacher.full_name %></p>
+                                        <p class="text-xs text-gray-500"><%= teacher.eval_count %> evaluation<%= teacher.eval_count > 1 ? 's' : '' %></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <i class="fas fa-star text-yellow-500 text-sm"></i>
+                                    <span class="font-bold text-lg text-gray-800"><%= teacher.avg_rating %></span>
+                                    <span class="text-gray-500 text-sm">/5.0</span>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% } else { %>
+                    <p class="text-gray-500 text-center py-4">No evaluation data available yet</p>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Evaluations by School Year -->
+        <% if (evalsByYear.length > 0) { %>
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-green-600"></i>
+                    Evaluations by School Year
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <% evalsByYear.forEach(item => { %>
+                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                            <p class="text-gray-600 text-sm mb-1"><%= item.school_year %></p>
+                            <p class="text-2xl font-bold text-blue-600"><%= item.count %></p>
+                            <p class="text-xs text-gray-500">evaluation<%= item.count > 1 ? 's' : '' %></p>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Recent Evaluations -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Evaluations</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student #</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teacher</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <% if (recentEvaluations.length === 0) { %>
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">No evaluations yet</td>
+                            </tr>
+                        <% } else { %>
+                            <% recentEvaluations.forEach(evaluation => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm"><%= evaluation.student_number %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm"><%= evaluation.teacher_name %></td>
+                                    <td class="px-6 py-4 text-sm"><%= evaluation.course_name %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm"><%= new Date(evaluation.submitted_at).toLocaleDateString() %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <a href="/admin/evaluations/<%= evaluation.id %>" 
+                                           class="text-blue-600 hover:text-blue-900">View</a>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+            <% if (recentEvaluations.length > 0) { %>
+                <div class="mt-4 text-center">
+                    <a href="/admin/evaluations" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        View All Evaluations →
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>

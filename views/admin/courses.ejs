@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Courses - UPHSD Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <%- include('partials/navbar') %>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Manage Courses</h1>
+                <p class="text-gray-600">Add, edit, or remove courses</p>
+            </div>
+            <button onclick="document.getElementById('addModal').classList.remove('hidden')" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md transition">
+                <i class="fas fa-plus mr-2"></i>Add Course
+            </button>
+        </div>
+
+        <% if (success_msg && success_msg.length > 0) { %>
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <%= success_msg %>
+            </div>
+        <% } %>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% courses.forEach(course => { %>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">#<%= course.id %></td>
+                            <td class="px-6 py-4 text-sm font-medium"><%= course.name %></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm"><%= course.code || '-' %></td>
+                            <td class="px-6 py-4 text-sm"><%= course.program_name %></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                <button onclick="editCourse(<%= course.id %>, '<%= course.name %>', '<%= course.code || '' %>', <%= course.program_id %>)" 
+                                        class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button onclick="deleteCourse(<%= course.id %>, '<%= course.name %>')" 
+                                        class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Course Modal -->
+    <div id="addModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Add New Course</h3>
+                <button onclick="document.getElementById('addModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form action="/admin/courses" method="POST">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Course Name *</label>
+                        <input type="text" name="name" required class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Course Code</label>
+                        <input type="text" name="code" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Program *</label>
+                        <select name="program_id" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Select Program</option>
+                            <% programs.forEach(program => { %>
+                                <option value="<%= program.id %>"><%= program.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">
+                        Add Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Course Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Edit Course</h3>
+                <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editForm" method="POST">
+                <input type="hidden" id="edit_id" name="id">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Course Name *</label>
+                        <input type="text" id="edit_name" name="name" required class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Course Code</label>
+                        <input type="text" id="edit_code" name="code" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Program *</label>
+                        <select id="edit_program_id" name="program_id" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Select Program</option>
+                            <% programs.forEach(program => { %>
+                                <option value="<%= program.id %>"><%= program.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">
+                        Update Course
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function editCourse(id, name, code, programId) {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_code').value = code;
+            document.getElementById('edit_program_id').value = programId;
+            document.getElementById('editForm').action = '/admin/courses/' + id;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function deleteCourse(id, name) {
+            if (confirm('Are you sure you want to delete "' + name + '"?\n\nNote: Courses with evaluations cannot be deleted.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/courses/' + id + '/delete';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+</body>
+</html>
