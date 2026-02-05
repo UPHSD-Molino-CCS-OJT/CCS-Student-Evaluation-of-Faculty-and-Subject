@@ -764,8 +764,14 @@ app.use((req, res) => {
     res.status(404).send('Page not found');
 });
 
-app.listen(PORT, () => {
-    console.log(`✓ Server is running on http://localhost:${PORT}`);
-    console.log(`✓ Admin login: http://localhost:${PORT}/admin/login`);
-    console.log(`  Default credentials: admin / admin123`);
-});
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`✓ Server is running on http://localhost:${PORT}`);
+        console.log(`✓ Admin login: http://localhost:${PORT}/admin/login`);
+        console.log(`  Default credentials: admin / admin123`);
+    });
+}
+
+// Export for Vercel
+module.exports = app;
