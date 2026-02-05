@@ -2,22 +2,53 @@
     <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
             <div class="flex items-center">
-                <h1 class="text-xl font-bold">UPHSD Admin</h1>
+                <h1 class="text-lg md:text-xl font-bold">UPHSD Admin</h1>
             </div>
-            <div class="flex items-center space-x-6">
+            
+            <!-- Mobile menu button -->
+            <button id="mobileMenuBtn" class="md:hidden text-white focus:outline-none">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+            
+            <!-- Desktop menu -->
+            <div class="hidden md:flex items-center space-x-4 lg:space-x-6">
                 <a href="/admin/dashboard" class="hover:text-blue-200 transition">
-                    <i class="fas fa-home mr-2"></i>Dashboard
+                    <i class="fas fa-home mr-1 md:mr-2"></i><span class="hidden lg:inline">Dashboard</span>
                 </a>
                 <a href="/admin/evaluations" class="hover:text-blue-200 transition">
-                    <i class="fas fa-clipboard-list mr-2"></i>Evaluations
+                    <i class="fas fa-clipboard-list mr-1 md:mr-2"></i><span class="hidden lg:inline">Evaluations</span>
                 </a>
                 <a href="/admin/programs" class="hover:text-blue-200 transition">
-                    <i class="fas fa-graduation-cap mr-2"></i>Programs
+                    <i class="fas fa-graduation-cap mr-1 md:mr-2"></i><span class="hidden lg:inline">Programs</span>
                 </a>
                 <a href="/admin/teachers" class="hover:text-blue-200 transition">
-                    <i class="fas fa-chalkboard-teacher mr-2"></i>Teachers
+                    <i class="fas fa-chalkboard-teacher mr-1 md:mr-2"></i><span class="hidden lg:inline">Teachers</span>
                 </a>
                 <a href="/admin/courses" class="hover:text-blue-200 transition">
+                    <i class="fas fa-book mr-1 md:mr-2"></i><span class="hidden lg:inline">Courses</span>
+                </a>
+                <a href="/admin/logout" class="bg-red-600 hover:bg-red-700 px-3 lg:px-4 py-2 rounded transition">
+                    <i class="fas fa-sign-out-alt mr-1 md:mr-2"></i><span class="hidden lg:inline">Logout</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobileMenu" class="hidden md:hidden pb-4">
+            <div class="flex flex-col space-y-2">
+                <a href="/admin/dashboard" class="hover:bg-blue-800 px-4 py-2 rounded transition">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <a href="/admin/evaluations" class="hover:bg-blue-800 px-4 py-2 rounded transition">
+                    <i class="fas fa-clipboard-list mr-2"></i>Evaluations
+                </a>
+                <a href="/admin/programs" class="hover:bg-blue-800 px-4 py-2 rounded transition">
+                    <i class="fas fa-graduation-cap mr-2"></i>Programs
+                </a>
+                <a href="/admin/teachers" class="hover:bg-blue-800 px-4 py-2 rounded transition">
+                    <i class="fas fa-chalkboard-teacher mr-2"></i>Teachers
+                </a>
+                <a href="/admin/courses" class="hover:bg-blue-800 px-4 py-2 rounded transition">
                     <i class="fas fa-book mr-2"></i>Courses
                 </a>
                 <a href="/admin/logout" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
@@ -27,3 +58,10 @@
         </div>
     </div>
 </nav>
+
+<script>
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', function() {
+        const menu = document.getElementById('mobileMenu');
+        menu.classList.toggle('hidden');
+    });
+</script>

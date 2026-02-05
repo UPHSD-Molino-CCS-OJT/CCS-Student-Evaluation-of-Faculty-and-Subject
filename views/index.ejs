@@ -62,6 +62,16 @@
         input:valid, select:valid {
             border-color: #86efac;
         }
+        .highlight-error {
+            border: 2px solid #ef4444 !important;
+            background-color: #fef2f2 !important;
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
         .section-header {
             cursor: pointer;
             transition: all 0.3s ease;
@@ -84,9 +94,40 @@
         .chevron.rotated {
             transform: rotate(180deg);
         }
+        .navbar {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .admin-login-btn {
+            transition: all 0.3s ease;
+        }
+        .admin-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="max-w-7xl mx-auto px-4 py-3 md:py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 md:space-x-3">
+                    <i class="fas fa-graduation-cap text-white text-xl md:text-2xl"></i>
+                    <div>
+                        <h1 class="text-white font-bold text-sm md:text-lg">UPHSD - Molino Campus</h1>
+                        <p class="text-blue-100 text-xs hidden sm:block">Faculty Evaluation System</p>
+                    </div>
+                </div>
+                <a href="/admin/login" class="admin-login-btn bg-white text-blue-900 px-3 md:px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 flex items-center space-x-1 md:space-x-2 text-sm md:text-base">
+                    <i class="fas fa-user-shield"></i>
+                    <span class="hidden sm:inline">Admin Login</span>
+                    <span class="sm:hidden">Admin</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
     <!-- Progress Bar -->
     <div class="progress-bar" id="progressBar"></div>
     
@@ -423,6 +464,77 @@
     </div>
 
     <script>
+        // Find first invalid/empty required field
+        function findFirstInvalidField(form) {
+            // Check text inputs and selects
+            const requiredFields = form.querySelectorAll('[required]');
+            for (let field of requiredFields) {
+                if (field.type === 'radio') {
+                    // For radio buttons, check if any in the group is checked
+                    const radioGroup = form.querySelectorAll(`[name="${field.name}"]`);
+                    if (!Array.from(radioGroup).some(r => r.checked)) {
+                        return field;
+                    }
+                } else if (field.type === 'checkbox') {
+                    if (!field.checked) {
+                        return field;
+                    }
+                } else {
+                    if (!field.value || field.value === '') {
+                        return field;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Scroll to and highlight invalid field
+        function scrollToInvalidField(field) {
+            // Determine which section the field belongs to
+            const sectionMapping = {
+                'content-teacher': 'teacher',
+                'content-learning': 'learning',
+                'content-classroom': 'classroom'
+            };
+            
+            let sectionName = null;
+            for (let [contentId, name] of Object.entries(sectionMapping)) {
+                const content = document.getElementById(contentId);
+                if (content && content.contains(field)) {
+                    sectionName = name;
+                    break;
+                }
+            }
+            
+            // Open the section if it's collapsed
+            if (sectionName) {
+                const content = document.getElementById('content-' + sectionName);
+                const chevron = document.getElementById('chevron-' + sectionName);
+                if (content && content.classList.contains('collapsed')) {
+                    content.classList.remove('collapsed');
+                    chevron.classList.add('rotated');
+                }
+            }
+            
+            // Highlight the field
+            field.classList.add('highlight-error');
+            
+            // Scroll to the field
+            setTimeout(() => {
+                const yOffset = -100;
+                const y = field.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+                
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    field.classList.remove('highlight-error');
+                }, 3000);
+            }, 200);
+            
+            // Show alert
+            alert('Please fill in all required fields. The first empty field has been highlighted.');
+        }
+
         // Toggle section collapse/expand (accordion behavior - only one section open at a time)
         function toggleSection(sectionName) {
             const allSections = ['teacher', 'learning', 'classroom'];
@@ -442,8 +554,21 @@
             });
             
             // Toggle current section
+            const isExpanding = content.classList.contains('collapsed');
             content.classList.toggle('collapsed');
             chevron.classList.toggle('rotated');
+            
+            // Scroll to the section header when expanding
+            if (isExpanding) {
+                setTimeout(() => {
+                    const headerElement = chevron.closest('.section-header');
+                    if (headerElement) {
+                        const yOffset = -20; // 20px offset from top
+                        const y = headerElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                        window.scrollTo({ top: y, behavior: 'smooth' });
+                    }
+                }, 150);
+            }
         }
         
         // Auto-format student number as user types
@@ -637,8 +762,12 @@
             
             // Validate all required fields
             if (!this.checkValidity()) {
-                alert('Please fill in all required fields before submitting.');
-                this.reportValidity();
+                // Find the first empty required field
+                const firstInvalidField = findFirstInvalidField(this);
+                if (firstInvalidField) {
+                    // Open the section containing the invalid field and scroll to it
+                    scrollToInvalidField(firstInvalidField);
+                }
                 return;
             }
             

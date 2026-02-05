@@ -1,25 +1,46 @@
 require('dotenv').config();
-const mysql = require('mysql2/promise');
+const mongoose = require('mongoose');
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'faculty_evaluation',
-    port: process.env.DB_PORT || 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+// MongoDB connection string - supports both local and MongoDB Atlas
+const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation';
 
-// Test connection
-pool.getConnection()
-    .then(connection => {
-        console.log('✓ Database connected successfully');
-        connection.release();
+// MongoDB connection options
+const options = {
+    // useNewUrlParser: true, // Deprecated in Mongoose 6+
+    // useUnifiedTopology: true, // Deprecated in Mongoose 6+
+    serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds instead of 30 seconds
+    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+};
+
+// Connect to MongoDB
+mongoose.connect(mongoURI, options)
+    .then(() => {
+        console.log('✓ MongoDB connected successfully');
+        console.log('✓ Database:', mongoose.connection.name);
     })
     .catch(err => {
-        console.error('✗ Database connection failed:', err.message);
+        console.error('✗ MongoDB connection failed:', err.message);
+        process.exit(1);
     });
 
-module.exports = pool;
+// Handle connection events
+mongoose.connection.on('connected', () => {
+    console.log('✓ Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('✗ Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('✗ Mongoose disconnected from MongoDB');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    await mongoose.connection.close();
+    console.log('✓ MongoDB connection closed through app termination');
+    process.exit(0);
+});
+
+module.exports = mongoose.connection;
