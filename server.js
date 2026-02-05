@@ -5,6 +5,7 @@ if (process.env.NODE_ENV !== 'production') {
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
 const path = require('path');
@@ -28,14 +29,22 @@ app.use(express.static('public'));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Session configuration
+// Session configuration with MongoDB store for Vercel compatibility
 app.use(session({
     secret: process.env.SESSION_SECRET || 'uphsd_secret_key',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation',
+        touchAfter: 24 * 3600, // Update session only once in 24 hours unless data changes
+        crypto: {
+            secret: process.env.SESSION_SECRET || 'uphsd_secret_key'
+        }
+    }),
     cookie: { 
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        httpOnly: true
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' // Use secure cookies in production
     }
 }));
 

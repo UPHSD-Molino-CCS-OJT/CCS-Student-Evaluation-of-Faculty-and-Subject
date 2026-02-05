@@ -1,18 +1,27 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Fix DNS resolution for Windows + MongoDB Atlas
+dns.setDefaultResultOrder('ipv4first');
+
+// Use Google DNS as fallback (helps with Windows DNS issues)
+dns.setServers([
+    '8.8.8.8',       // Google DNS
+    '8.8.4.4',       // Google DNS Secondary
+    '1.1.1.1'        // Cloudflare DNS
+]);
 
 // MongoDB connection string - supports both local and MongoDB Atlas
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation';
 
-// MongoDB connection options with Stable API
+// MongoDB connection options with better DNS resolution for Windows
 const options = {
-    serverApi: {
-        version: '1',
-        strict: true,
-        deprecationErrors: true,
-    },
     serverSelectionTimeoutMS: 30000, // 30 seconds timeout
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+    family: 4, // Use IPv4, skip trying IPv6 (helps with DNS issues on Windows)
+    retryWrites: true,
+    w: 'majority'
 };
 
 // Connect to MongoDB
