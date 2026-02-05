@@ -1,4 +1,7 @@
-require('dotenv').config();
+// Only load dotenv in development, Vercel provides environment variables directly
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
