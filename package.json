@@ -9,18 +9,23 @@
     "setup-db": "node setup-db-mongodb.js",
     "cleanup": "node cleanup-duplicates-mongodb.js && node cleanup-teacher-duplicates-mongodb.js && node cleanup-course-duplicates-mongodb.js"
   },
-  "keywords": ["evaluation", "faculty", "student"],
+  "keywords": [
+    "evaluation",
+    "faculty",
+    "student"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "body-parser": "^1.20.2",
-    "ejs": "^3.1.9",
-    "mongoose": "^8.0.3",
-    "express-session": "^1.17.3",
     "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.2",
+    "connect-flash": "^0.1.1",
     "dotenv": "^16.3.1",
-    "connect-flash": "^0.1.1"
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "mongodb": "^7.1.0",
+    "mongoose": "^8.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
