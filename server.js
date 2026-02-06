@@ -30,17 +30,21 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Session configuration with MongoDB store for Vercel compatibility
+const sessionStore = MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation',
+    touchAfter: 24 * 3600, // Update session only once in 24 hours unless data changes
+    crypto: {
+        secret: process.env.SESSION_SECRET || 'uphsd_secret_key'
+    }
+}).on('error', (error) => {
+    console.error('Session store error:', error);
+});
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'uphsd_secret_key',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation',
-        touchAfter: 24 * 3600, // Update session only once in 24 hours unless data changes
-        crypto: {
-            secret: process.env.SESSION_SECRET || 'uphsd_secret_key'
-        }
-    }),
+    store: sessionStore,
     cookie: { 
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         httpOnly: true,
@@ -222,6 +226,15 @@ async function initializeDatabase() {
 }
 
 // ==================== PUBLIC ROUTES ====================
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        mongodb: db.readyState === 1 ? 'connected' : 'disconnected',
+        env: process.env.NODE_ENV || 'development'
+    });
+});
 
 // Student Evaluation Form
 app.get('/', async (req, res) => {
