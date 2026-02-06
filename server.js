@@ -59,35 +59,18 @@ app.use((req, res, next) => {
 });
 
 // ==================== AUTO-INITIALIZE DATABASE ====================
-let isInitialized = false;
-let isInitializing = false;
+let initPromise = null;
 
 async function initializeDatabase() {
-    // Prevent multiple simultaneous initialization attempts
-    if (isInitialized || isInitializing) {
-        return;
+    // Return existing promise if initialization is in progress
+    if (initPromise) {
+        return initPromise;
     }
     
-    isInitializing = true;
-    
-    try {
-        // Wait for connection to be ready
-        if (db.readyState !== 1) {
-            await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('DB connection timeout')), 10000);
-                db.once('open', () => {
-                    clearTimeout(timeout);
-                    resolve();
-                });
-                if (db.readyState === 1) {
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            });
-        }
-        
-        // Check if admin exists
-        const adminCount = await Admin.countDocuments();
+    initPromise = (async () => {
+        try {
+            // Check if admin exists
+            const adminCount = await Admin.countDocuments();
         
         if (adminCount === 0) {
             console.log('📦 No data found. Initializing database with sample data...\n');
@@ -226,29 +209,26 @@ async function initializeDatabase() {
             console.log('✓ Database already initialized with data');
         }
         
-        isInitialized = true;
+        return true;
     } catch (error) {
         console.error('❌ Error initializing database:', error.message);
         console.error('Full error:', error);
-        // Don't exit - let the app continue running
-    } finally {
-        isInitializing = false;
+        initPromise = null; // Reset on error so it can retry
+        return false;
     }
+    })();
+    
+    return initPromise;
 }
-
-// Initialize database on first request (serverless-friendly)
-app.use(async (req, res, next) => {
-    if (!isInitialized && !isInitializing) {
-        await initializeDatabase();
-    }
-    next();
-});
 
 // ==================== PUBLIC ROUTES ====================
 
 // Student Evaluation Form
 app.get('/', async (req, res) => {
     try {
+        // Initialize database if needed
+        await initializeDatabase();
+        
         const programs = await Program.find().sort({ name: 1 });
         const teachers = await Teacher.find({ status: 'active' }).sort({ full_name: 1 });
         
@@ -341,6 +321,9 @@ app.get('/admin/login', isGuest, (req, res) => {
 // Admin Login POST
 app.post('/admin/login', isGuest, async (req, res) => {
     try {
+        // Initialize database if needed
+        await initializeDatabase();
+        
         const { username, password } = req.body;
         
         const admin = await Admin.findOne({ username });
