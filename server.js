@@ -9,7 +9,7 @@ const MongoStore = require('connect-mongo');
 const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const db = require('./config/database');
+const { connection: db, mongoose } = require('./config/database');
 const { isAuthenticated, isGuest } = require('./middleware/auth');
 
 // Import Models
@@ -30,27 +30,35 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Session configuration with MongoDB store for Vercel compatibility
-const sessionStore = MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation',
-    touchAfter: 24 * 3600, // Update session only once in 24 hours unless data changes
-    crypto: {
-        secret: process.env.SESSION_SECRET || 'uphsd_secret_key'
-    }
-}).on('error', (error) => {
-    console.error('Session store error:', error);
-});
-
-app.use(session({
+// IMPORTANT: For serverless, session store may not be ready on first request
+// Session configuration optimized for Vercel serverless
+const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'uphsd_secret_key',
-    resave: false,
+    resave: true,
     saveUninitialized: false,
-    store: sessionStore,
     cookie: { 
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' // Use secure cookies in production
+        secure: false, // Set to false to allow non-HTTPS in development
+        sameSite: 'lax'
     }
-}));
+};
+
+// Use MongoDB store for sessions
+if (process.env.MONGODB_URI) {
+    try {
+        sessionConfig.store = MongoStore.create({
+            mongoUrl: process.env.MONGODB_URI,
+            touchAfter: 24 * 3600,
+            autoRemove: 'native'
+        });
+        console.log('✓ MongoDB session store configured');
+    } catch (error) {
+        console.warn('Session store error:', error.message);
+    }
+}
+
+app.use(session(sessionConfig));
 
 app.use(flash());
 
@@ -362,8 +370,16 @@ app.post('/admin/login', isGuest, async (req, res) => {
         req.session.username = admin.username;
         req.session.fullName = admin.full_name;
         
-        req.flash('success', 'Welcome back, ' + admin.full_name);
-        res.redirect('/admin/dashboard');
+        // IMPORTANT: Explicitly save session before redirect in serverless
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                req.flash('error', 'An error occurred during login');
+                return res.redirect('/admin/login');
+            }
+            req.flash('success', 'Welcome back, ' + admin.full_name);
+            res.redirect('/admin/dashboard');
+        });
     } catch (error) {
         console.error('Login error:', error);
         req.flash('error', 'An error occurred during login');
@@ -374,6 +390,9 @@ app.post('/admin/login', isGuest, async (req, res) => {
 // Admin Dashboard
 app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
     try {
+        // Initialize database if needed
+        await initializeDatabase();
+        
         // Get statistics
         const totalEvaluations = await Evaluation.countDocuments();
         const totalTeachers = await Teacher.countDocuments({ status: 'active' });
@@ -540,9 +559,9 @@ app.get('/admin/evaluations', isAuthenticated, async (req, res) => {
 app.get('/admin/evaluations/:id', isAuthenticated, async (req, res) => {
     try {
         const evaluation = await Evaluation.findById(req.params.id)
-            .populate('teacher_id', 'full_name employee_id')
-            .populate('program_id', 'name')
-            .populate('course_id', 'name')
+            .populate('teacher_id', 'full_name email employee_id')
+            .populate('course_id', 'name code')
+            .populate('program_id', 'name code')
             .lean();
         
         if (!evaluation) {

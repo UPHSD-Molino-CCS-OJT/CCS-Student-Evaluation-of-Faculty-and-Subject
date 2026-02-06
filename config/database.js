@@ -41,7 +41,9 @@ mongoose.connect(mongoURI, options)
     .catch(err => {
         console.error('✗ MongoDB connection failed:', err.message);
         console.error('✗ Full error:', err);
-        process.exit(1);
+        if (process.env.NODE_ENV !== 'production') {
+            process.exit(1);
+        }
     });
 
 // Handle connection events
@@ -64,4 +66,8 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
-module.exports = mongoose.connection;
+// Export connection and mongoose instance
+module.exports = {
+    connection: mongoose.connection,
+    mongoose: mongoose
+};
