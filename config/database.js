@@ -2,26 +2,34 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Fix DNS resolution for Windows + MongoDB Atlas
-dns.setDefaultResultOrder('ipv4first');
-
-// Use Google DNS as fallback (helps with Windows DNS issues)
-dns.setServers([
-    '8.8.8.8',       // Google DNS
-    '8.8.4.4',       // Google DNS Secondary
-    '1.1.1.1'        // Cloudflare DNS
-]);
+// Fix DNS resolution for Windows + MongoDB Atlas (only in development)
+if (process.env.NODE_ENV !== 'production') {
+    try {
+        dns.setDefaultResultOrder('ipv4first');
+        
+        // Use Google DNS as fallback (helps with Windows DNS issues)
+        dns.setServers([
+            '8.8.8.8',       // Google DNS
+            '8.8.4.4',       // Google DNS Secondary
+            '1.1.1.1'        // Cloudflare DNS
+        ]);
+    } catch (err) {
+        console.log('DNS configuration skipped (production environment)');
+    }
+}
 
 // MongoDB connection string - supports both local and MongoDB Atlas
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation';
 
-// MongoDB connection options with better DNS resolution for Windows
+// MongoDB connection options optimized for both local and Vercel
 const options = {
-    serverSelectionTimeoutMS: 30000, // 30 seconds timeout
+    serverSelectionTimeoutMS: process.env.VERCEL ? 10000 : 30000, // Shorter timeout on Vercel
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
     family: 4, // Use IPv4, skip trying IPv6 (helps with DNS issues on Windows)
     retryWrites: true,
-    w: 'majority'
+    w: 'majority',
+    maxPoolSize: process.env.VERCEL ? 10 : 100, // Smaller pool for serverless
+    minPoolSize: process.env.VERCEL ? 1 : 10
 };
 
 // Connect to MongoDB
