@@ -59,8 +59,33 @@ app.use((req, res, next) => {
 });
 
 // ==================== AUTO-INITIALIZE DATABASE ====================
+let isInitialized = false;
+let isInitializing = false;
+
 async function initializeDatabase() {
+    // Prevent multiple simultaneous initialization attempts
+    if (isInitialized || isInitializing) {
+        return;
+    }
+    
+    isInitializing = true;
+    
     try {
+        // Wait for connection to be ready
+        if (db.readyState !== 1) {
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('DB connection timeout')), 10000);
+                db.once('open', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+                if (db.readyState === 1) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
+            });
+        }
+        
         // Check if admin exists
         const adminCount = await Admin.countDocuments();
         
@@ -200,15 +225,23 @@ async function initializeDatabase() {
         } else {
             console.log('✓ Database already initialized with data');
         }
+        
+        isInitialized = true;
     } catch (error) {
         console.error('❌ Error initializing database:', error.message);
+        console.error('Full error:', error);
         // Don't exit - let the app continue running
+    } finally {
+        isInitializing = false;
     }
 }
 
-// Run database initialization on startup
-db.once('open', () => {
-    initializeDatabase();
+// Initialize database on first request (serverless-friendly)
+app.use(async (req, res, next) => {
+    if (!isInitialized && !isInitializing) {
+        await initializeDatabase();
+    }
+    next();
 });
 
 // ==================== PUBLIC ROUTES ====================
