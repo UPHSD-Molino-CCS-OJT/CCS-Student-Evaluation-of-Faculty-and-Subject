@@ -734,7 +734,7 @@
                     courseSelect.innerHTML = '<option value="">Select Course</option>';
                     courses.forEach(course => {
                         const option = document.createElement('option');
-                        option.value = course.id;
+                        option.value = course._id; // MongoDB uses _id not id
                         option.textContent = course.name;
                         courseSelect.appendChild(option);
                     });

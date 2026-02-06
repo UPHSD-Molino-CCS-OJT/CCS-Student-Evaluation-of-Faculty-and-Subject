@@ -279,6 +279,33 @@ app.post('/submit-evaluation', async (req, res) => {
     try {
         const data = req.body;
         
+        // Validate required fields
+        if (!data.program || !data.course || !data.teacher) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please select Program, Course, and Teacher.' 
+            });
+        }
+
+        // Validate that IDs are not "undefined" strings
+        if (data.program === 'undefined' || data.course === 'undefined' || data.teacher === 'undefined') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please select valid Program, Course, and Teacher.' 
+            });
+        }
+
+        // Validate ObjectId format
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(data.program) || 
+            !mongoose.Types.ObjectId.isValid(data.course) || 
+            !mongoose.Types.ObjectId.isValid(data.teacher)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid Program, Course, or Teacher selection.' 
+            });
+        }
+        
         const evaluation = new Evaluation({
             school_year: data.schoolYear,
             student_number: data.studentNumber,
