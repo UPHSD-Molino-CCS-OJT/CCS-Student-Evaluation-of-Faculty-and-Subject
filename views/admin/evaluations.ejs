@@ -41,14 +41,14 @@
                         <% } else { %>
                             <% evaluations.forEach(evaluation => { %>
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#<%= evaluation.id %></td>
-                                    <td class="px-6 py-4 text-sm"><%= evaluation.teacher_name %></td>
-                                    <td class="px-6 py-4 text-sm"><%= evaluation.program_name %></td>
-                                    <td class="px-6 py-4 text-sm"><%= evaluation.course_name %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#<%= evaluation.id || evaluation._id %></td>
+                                    <td class="px-6 py-4 text-sm"><%= evaluation.teacher_name || 'N/A' %></td>
+                                    <td class="px-6 py-4 text-sm"><%= evaluation.program_name || 'N/A' %></td>
+                                    <td class="px-6 py-4 text-sm"><%= evaluation.course_name || 'N/A' %></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm"><%= evaluation.year_level %></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm"><%= new Date(evaluation.submitted_at).toLocaleDateString() %></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <a href="/admin/evaluations/<%= evaluation.id %>" 
+                                        <a href="/admin/evaluations/<%= evaluation.id || evaluation._id %>" 
                                            class="text-blue-600 hover:text-blue-900 font-medium">
                                             <i class="fas fa-eye mr-1"></i>View
                                         </a>

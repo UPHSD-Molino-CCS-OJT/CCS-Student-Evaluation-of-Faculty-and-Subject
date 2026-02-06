@@ -570,6 +570,7 @@ app.get('/admin/evaluations', isAuthenticated, async (req, res) => {
         // Transform for template
         const evalsFormatted = evaluations.map(e => ({
             ...e,
+            id: e._id.toString(),
             teacher_name: e.teacher_id ? e.teacher_id.full_name : null,
             program_name: e.program_id ? e.program_id.name : null,
             course_name: e.course_id ? e.course_id.name : null
@@ -599,6 +600,7 @@ app.get('/admin/evaluations/:id', isAuthenticated, async (req, res) => {
         // Transform for template
         const evalFormatted = {
             ...evaluation,
+            id: evaluation._id.toString(),
             teacher_name: evaluation.teacher_id ? evaluation.teacher_id.full_name : null,
             employee_id: evaluation.teacher_id ? evaluation.teacher_id.employee_id : null,
             program_name: evaluation.program_id ? evaluation.program_id.name : null,
