@@ -6,10 +6,11 @@ const evaluationSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    student_number: {
+    anonymous_token: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        index: true
     },
     program_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -89,7 +90,7 @@ const evaluationSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-evaluationSchema.index({ student_number: 1 });
+evaluationSchema.index({ anonymous_token: 1 });
 evaluationSchema.index({ teacher_id: 1 });
 evaluationSchema.index({ school_year: 1 });
 evaluationSchema.index({ submitted_at: -1 });
