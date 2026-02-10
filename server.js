@@ -8,6 +8,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const path = require('path');
 const { connection: db, mongoose } = require('./config/database');
 const { isAuthenticated, isGuest } = require('./middleware/auth');
@@ -445,10 +446,17 @@ app.post('/student/submit-evaluation', async (req, res) => {
                         req.socket.remoteAddress ||
                         req.ip;
         
+        // Generate anonymous token using crypto hash
+        // This ensures complete anonymity - no way to trace back to student
+        const anonymousToken = crypto
+            .createHash('sha256')
+            .update(`${enrollment._id}-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`)
+            .digest('hex');
+        
         // Create evaluation
         const evaluation = await Evaluation.create({
             school_year: enrollment.school_year,
-            student_number: enrollment.student_id.student_number,
+            anonymous_token: anonymousToken,
             program_id: data.program,
             year_level: enrollment.student_id.year_level,
             status: enrollment.student_id.status,
@@ -552,9 +560,15 @@ app.post('/submit-evaluation', async (req, res) => {
             });
         }
         
+        // Generate anonymous token using crypto hash
+        const anonymousToken = crypto
+            .createHash('sha256')
+            .update(`${data.course}-${data.teacher}-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`)
+            .digest('hex');
+        
         const evaluation = new Evaluation({
             school_year: data.schoolYear,
-            student_number: data.studentNumber,
+            anonymous_token: anonymousToken,
             program_id: data.program,
             year_level: data.yearLevel,
             status: data.status,
