@@ -7,6 +7,8 @@ const Admin = require('./models/Admin');
 const Program = require('./models/Program');
 const Teacher = require('./models/Teacher');
 const Course = require('./models/Course');
+const Student = require('./models/Student');
+const Enrollment = require('./models/Enrollment');
 
 // MongoDB connection string
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation';
@@ -34,6 +36,8 @@ mongoose.connect(mongoURI, options)
             await Program.deleteMany({});
             await Teacher.deleteMany({});
             await Course.deleteMany({});
+            await Student.deleteMany({});
+            await Enrollment.deleteMany({});
             console.log('✓ Collections cleared\n');
 
             // Create default admin
@@ -166,14 +170,125 @@ mongoose.connect(mongoURI, options)
             ]);
             console.log(`✓ Created ${courses.length} courses\n`);
 
+            // Create sample students
+            console.log('👨‍🎓 Creating sample students...');
+            const students = await Student.insertMany([
+                {
+                    student_number: '21-1234-567',
+                    full_name: 'Juan Dela Cruz',
+                    email: 'juan.delacruz@student.uphsd.edu.ph',
+                    program_id: bscsProgram._id,
+                    year_level: '3rd Year',
+                    section: 'CS-3A',
+                    status: 'Regular'
+                },
+                {
+                    student_number: '21-1234-568',
+                    full_name: 'Maria Garcia',
+                    email: 'maria.garcia@student.uphsd.edu.ph',
+                    program_id: bscsProgram._id,
+                    year_level: '3rd Year',
+                    section: 'CS-3A',
+                    status: 'Regular'
+                },
+                {
+                    student_number: '21-5678-901',
+                    full_name: 'Pedro Santos',
+                    email: 'pedro.santos@student.uphsd.edu.ph',
+                    program_id: bsitProgram._id,
+                    year_level: '2nd Year',
+                    section: 'IT-2A',
+                    status: 'Regular'
+                }
+            ]);
+            console.log(`✓ Created ${students.length} students\n`);
+
+            // Create sample enrollments
+            console.log('📝 Creating sample enrollments...');
+            const enrollments = await Enrollment.insertMany([
+                // Student 1 (Juan) - BSCS-DS enrollments
+                {
+                    student_id: students[0]._id,
+                    course_id: courses[0]._id, // Data Structures
+                    teacher_id: teachers[0]._id, // Prof. Juan Dela Cruz
+                    section_code: 'CS-3A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                {
+                    student_id: students[0]._id,
+                    course_id: courses[1]._id, // DBMS
+                    teacher_id: teachers[2]._id, // Prof. Jose Garcia
+                    section_code: 'CS-3A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                {
+                    student_id: students[0]._id,
+                    course_id: courses[2]._id, // Machine Learning
+                    teacher_id: teachers[4]._id, // Prof. Pedro Martinez
+                    section_code: 'CS-3A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                // Student 2 (Maria) - BSCS-DS enrollments
+                {
+                    student_id: students[1]._id,
+                    course_id: courses[0]._id,
+                    teacher_id: teachers[0]._id,
+                    section_code: 'CS-3A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                {
+                    student_id: students[1]._id,
+                    course_id: courses[1]._id,
+                    teacher_id: teachers[2]._id,
+                    section_code: 'CS-3A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                // Student 3 (Pedro) - BSIT-GD enrollments
+                {
+                    student_id: students[2]._id,
+                    course_id: courses[5]._id, // Game Design
+                    teacher_id: teachers[1]._id, // Prof. Maria Santos
+                    section_code: 'IT-2A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                },
+                {
+                    student_id: students[2]._id,
+                    course_id: courses[7]._id, // Game Engine
+                    teacher_id: teachers[3]._id, // Prof. Ana Reyes
+                    section_code: 'IT-2A',
+                    school_year: '2025-2026',
+                    semester: '1st Semester',
+                    has_evaluated: false
+                }
+            ]);
+            console.log(`✓ Created ${enrollments.length} enrollments\n`);
+
             // Summary
             console.log('✅ Database setup completed successfully!\n');
             console.log('📊 Summary:');
             console.log(`  • 1 admin account`);
             console.log(`  • ${programs.length} programs`);
             console.log(`  • ${teachers.length} teachers`);
-            console.log(`  • ${courses.length} courses\n`);
+            console.log(`  • ${courses.length} courses`);
+            console.log(`  • ${students.length} students`);
+            console.log(`  • ${enrollments.length} enrollments\n`);
             console.log('🚀 You can now run: npm start');
+            console.log('\n📝 Sample Student Logins:');
+            console.log('  • 21-1234-567 (Juan Dela Cruz - BSCS-DS)');
+            console.log('  • 21-1234-568 (Maria Garcia - BSCS-DS)');
+            console.log('  • 21-5678-901 (Pedro Santos - BSIT-GD)\n');
 
         } catch (error) {
             console.error('❌ Error during setup:', error.message);
