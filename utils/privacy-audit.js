@@ -39,6 +39,9 @@ class PrivacyAuditor {
         await this.checkEnrollmentLinkage();
         await this.checkAnonymousTokens();
         await this.checkSessionData();
+        await this.checkIpAddressAnonymization();
+        await this.checkTimestampPrivacy();
+        await this.checkEnrollmentDecoupling();
         
         // Determine overall status
         if (this.auditResults.issues.length > 0) {
@@ -267,8 +270,8 @@ class PrivacyAuditor {
                 this.addWarning(
                     'MEDIUM',
                     `${invalidTokens.length} Invalid Token Formats`,
-                    'Some anonymous tokens do not match the expected SHA-256 format.',
-                    'Ensure tokens are generated using crypto.createHash("sha256")'
+                    'Some anonymous tokens do not match the expected SHA-256 or SHA-512 format.',
+                    'Ensure tokens are generated using proper cryptographic hash functions'
                 );
             }
 
@@ -278,6 +281,150 @@ class PrivacyAuditor {
                 'Token Verification Failed',
                 `Error checking anonymous tokens: ${error.message}`,
                 'Check database query and token generation logic'
+            );
+        }
+    }
+
+    /**
+     * Check IP address anonymization
+     */
+    async checkIpAddressAnonymization() {
+        try {
+            // Check for non-anonymized IP addresses
+            const evaluationsWithIp = await Evaluation.find({
+                ip_address: { $exists: true, $ne: null, $ne: '' }
+            }).select('ip_address').lean();
+
+            if (evaluationsWithIp.length > 0) {
+                // Check if IPs are properly anonymized (should end with .0 or ::0)
+                const nonAnonymizedIps = evaluationsWithIp.filter(e => {
+                    const ip = e.ip_address;
+                    // IPv4 should end with .0, IPv6 should end with ::0
+                    return ip && !ip.endsWith('.0') && !ip.endsWith('::0');
+                });
+
+                if (nonAnonymizedIps.length > 0) {
+                    this.addIssue(
+                        'HIGH',
+                        `${nonAnonymizedIps.length} Non-Anonymized IP Addresses`,
+                        'Found evaluation records with non-anonymized IP addresses.',
+                        'Update IP anonymization logic to remove last octet/segments'
+                    );
+                }
+
+                this.addWarning(
+                    'INFO',
+                    'IP Addresses Stored',
+                    `${evaluationsWithIp.length} evaluations contain IP addresses (${evaluationsWithIp.length - nonAnonymizedIps.length} properly anonymized).`,
+                    'Consider if IP storage is necessary for your use case'
+                );
+            }
+
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                'IP Address Check Failed',
+                `Could not check IP addresses: ${error.message}`,
+                'Verify IP anonymization manually'
+            );
+        }
+    }
+
+    /**
+     * Check timestamp privacy (timestamps should be rounded)
+     */
+    async checkTimestampPrivacy() {
+        try {
+            const evaluations = await Evaluation.find({
+                submitted_at: { $exists: true, $ne: null }
+            }).select('submitted_at').limit(100).lean();
+
+            if (evaluations.length > 0) {
+                // Check if timestamps are rounded to hour (privacy-safe)
+                const preciseTimestamps = evaluations.filter(e => {
+                    const date = new Date(e.submitted_at);
+                    // If minutes, seconds, or milliseconds are non-zero, it's not rounded
+                    return date.getMinutes() !== 0 || date.getSeconds() !== 0 || date.getMilliseconds() !== 0;
+                });
+
+                if (preciseTimestamps.length > 0) {
+                    const percentPrecise = Math.round((preciseTimestamps.length / evaluations.length) * 100);
+                    this.addWarning(
+                        'MEDIUM',
+                        'Precise Timestamps Detected',
+                        `${percentPrecise}% of sampled evaluations have precise timestamps (not rounded to hour).`,
+                        'Consider rounding timestamps to nearest hour to prevent timing correlation attacks'
+                    );
+                }
+            }
+
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                'Timestamp Check Failed',
+                `Could not check timestamp precision: ${error.message}`,
+                'Verify timestamp handling manually'
+            );
+        }
+    }
+
+    /**
+     * Check enrollment decoupling
+     */
+    async checkEnrollmentDecoupling() {
+        try {
+            const totalEvaluatedEnrollments = await Enrollment.countDocuments({
+                has_evaluated: true
+            });
+
+            const enrollmentsWithLink = await Enrollment.countDocuments({
+                has_evaluated: true,
+                evaluation_id: { $exists: true, $ne: null }
+            });
+
+            const decoupledEnrollments = await Enrollment.countDocuments({
+                has_evaluated: true,
+                decoupled_at: { $exists: true, $ne: null }
+            });
+
+            if (totalEvaluatedEnrollments > 0) {
+                const percentLinked = Math.round((enrollmentsWithLink / totalEvaluatedEnrollments) * 100);
+                const percentDecoupled = Math.round((decoupledEnrollments / totalEvaluatedEnrollments) * 100);
+
+                this.addWarning(
+                    'INFO',
+                    'Enrollment-Evaluation Linkage Status',
+                    `${percentLinked}% of evaluated enrollments still linked, ${percentDecoupled}% decoupled.`,
+                    'Links are automatically removed after 24 hours for privacy protection'
+                );
+
+                // Check if any links are older than grace period
+                const gracePeriodHours = 24;
+                const cutoffTime = new Date();
+                cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
+
+                const oldLinks = await Enrollment.countDocuments({
+                    has_evaluated: true,
+                    evaluation_id: { $exists: true, $ne: null },
+                    updatedAt: { $lt: cutoffTime }
+                });
+
+                if (oldLinks > 0) {
+                    this.addWarning(
+                        'MEDIUM',
+                        `${oldLinks} Old Enrollment Links`,
+                        'Found enrollment-evaluation links older than 24 hours that should be decoupled.',
+                        'Run manual decoupling or verify privacy scheduler is running'
+                    );
+                }
+            }
+
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                'Enrollment Decoupling Check Failed',
+                `Could not check decoupling status: ${error.message}`,
+                'Verify enrollment decoupling manually'
             );
         }
     }

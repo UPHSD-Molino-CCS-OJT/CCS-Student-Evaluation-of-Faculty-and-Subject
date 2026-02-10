@@ -22,6 +22,10 @@ const Evaluation = require('./models/Evaluation');
 const Student = require('./models/Student');
 const Enrollment = require('./models/Enrollment');
 
+// Import Privacy Protection Utilities
+const PrivacyProtection = require('./utils/privacy-protection');
+const PrivacyScheduler = require('./utils/privacy-scheduler');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -397,6 +401,10 @@ app.post('/student/submit-evaluation', async (req, res) => {
             });
         }
         
+        // PRIVACY PROTECTION: Add random delay to prevent timing correlation attacks
+        const submissionDelay = PrivacyProtection.calculateSubmissionDelay(2, 8);
+        await new Promise(resolve => setTimeout(resolve, submissionDelay));
+        
         const data = req.body;
         
         // Validate enrollment
@@ -439,18 +447,19 @@ app.post('/student/submit-evaluation', async (req, res) => {
             });
         }
         
-        // Get client IP address
-        const clientIp = req.headers['x-forwarded-for'] || 
-                        req.connection.remoteAddress || 
-                        req.socket.remoteAddress ||
-                        req.ip;
+        // PRIVACY PROTECTION: Anonymize IP address to prevent tracking
+        const rawIp = req.headers['x-forwarded-for'] || 
+                     req.connection.remoteAddress || 
+                     req.socket.remoteAddress ||
+                     req.ip;
+        const anonymizedIp = PrivacyProtection.anonymizeIpAddress(rawIp);
         
-        // Generate anonymous token using crypto hash
-        // This ensures complete anonymity - no way to trace back to student
-        const anonymousToken = crypto
-            .createHash('sha256')
-            .update(`${enrollment._id}-${Date.now()}-${crypto.randomBytes(16).toString('hex')}`)
-            .digest('hex');
+        // PRIVACY PROTECTION: Generate enhanced anonymous token
+        // Uses multiple entropy sources for complete unlinkability
+        const anonymousToken = PrivacyProtection.generateAnonymousToken(enrollment);
+        
+        // PRIVACY PROTECTION: Get safe submission timestamp (rounded to hour)
+        const safeTimestamp = PrivacyProtection.getSafeSubmissionTimestamp();
         
         // Create evaluation
         const evaluation = await Evaluation.create({
@@ -494,13 +503,36 @@ app.post('/student/submit-evaluation', async (req, res) => {
             classroom_punctuality: parseInt(data.classroom_punctuality),
             
             comments: data.comments || '',
-            ip_address: clientIp
+            ip_address: anonymizedIp,
+            submitted_at: safeTimestamp  // Use privacy-safe timestamp
         });
+        
+        // PRIVACY PROTECTION: Validate that no identifying information was included
+        const validation = PrivacyProtection.validateAnonymousSubmission(evaluation.toObject());
+        if (!validation.valid) {
+            console.error('⚠️ Privacy validation failed:', validation.issues);
+            // Log but don't fail - evaluation already created
+        }
         
         // Update enrollment as evaluated
         enrollment.has_evaluated = true;
-        enrollment.evaluation_id = evaluation._id;
+        enrollment.evaluation_id = evaluation._id;  // Will be auto-decoupled after 24h
         await enrollment.save();
+        
+        // PRIVACY PROTECTION: Clear sensitive session data after submission
+        PrivacyProtection.clearSensitiveSessionData(req.session);
+        
+        // Log privacy-safe audit entry
+        const auditLog = PrivacyProtection.createPrivacySafeAuditLog(
+            'evaluation_submitted',
+            'student_action',
+            {
+                school_year: enrollment.school_year,
+                semester: enrollment.semester,
+                has_comments: !!data.comments
+            }
+        );
+        console.log('📝 Evaluation submitted:', auditLog.audit_token);
         
         res.json({ 
             success: true, 
@@ -727,6 +759,20 @@ app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
         
         const avgRatings = avgRatingsResult[0] || { avg_teacher_rating: 0, avg_learning_rating: 0, avg_classroom_rating: 0, overall_avg: 0 };
         
+        // PRIVACY PROTECTION: Check if we have enough data for statistical safety
+        const statSafety = PrivacyProtection.checkStatisticalSafety(totalEvaluations, 10);
+        
+        // PRIVACY PROTECTION: Apply differential privacy noise to aggregate statistics
+        let noisedAvgRatings = avgRatings;
+        if (statSafety.isSafe && totalEvaluations > 0) {
+            noisedAvgRatings = {
+                avg_teacher_rating: PrivacyProtection.addDifferentialPrivacyNoise(avgRatings.avg_teacher_rating || 0, 0.1, 1),
+                avg_learning_rating: PrivacyProtection.addDifferentialPrivacyNoise(avgRatings.avg_learning_rating || 0, 0.1, 1),
+                avg_classroom_rating: PrivacyProtection.addDifferentialPrivacyNoise(avgRatings.avg_classroom_rating || 0, 0.1, 1),
+                overall_avg: PrivacyProtection.addDifferentialPrivacyNoise(avgRatings.overall_avg || 0, 0.1, 1)
+            };
+        }
+        
         // Get evaluations by school year
         const evalsByYear = await Evaluation.aggregate([
             {
@@ -771,10 +817,20 @@ app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
             { $limit: 5 }
         ]);
         
-        // Populate teacher names
+        // PRIVACY PROTECTION: Only show top teachers if k-anonymity is satisfied
+        const safeTopTeachers = [];
         for (let teacher of topTeachers) {
             const teacherDoc = await Teacher.findById(teacher._id);
             teacher.full_name = teacherDoc ? teacherDoc.full_name : 'Unknown';
+            
+            // Check if this teacher has enough evaluations for k-anonymity
+            if (PrivacyProtection.checkKAnonymity(teacher.eval_count, 5)) {
+                // Add noise to the rating for additional privacy
+                teacher.avg_rating = PrivacyProtection.addDifferentialPrivacyNoise(
+                    teacher.avg_rating, 0.1, 1
+                );
+                safeTopTeachers.push(teacher);
+            }
         }
         
         // Get recent evaluations
@@ -801,14 +857,16 @@ app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
                 programs: totalPrograms
             },
             summary: {
-                avgTeacherRating: Math.round(avgRatings.avg_teacher_rating * 100) / 100 || 0,
-                avgLearningRating: Math.round(avgRatings.avg_learning_rating * 100) / 100 || 0,
-                avgClassroomRating: Math.round(avgRatings.avg_classroom_rating * 100) / 100 || 0,
-                overallAvg: Math.round(avgRatings.overall_avg * 100) / 100 || 0
+                avgTeacherRating: statSafety.isSafe ? Math.round(noisedAvgRatings.avg_teacher_rating * 100) / 100 : null,
+                avgLearningRating: statSafety.isSafe ? Math.round(noisedAvgRatings.avg_learning_rating * 100) / 100 : null,
+                avgClassroomRating: statSafety.isSafe ? Math.round(noisedAvgRatings.avg_classroom_rating * 100) / 100 : null,
+                overallAvg: statSafety.isSafe ? Math.round(noisedAvgRatings.overall_avg * 100) / 100 : null,
+                privacyNote: statSafety.message
             },
             evalsByYear,
-            topTeachers,
-            recentEvaluations: recentEvalsFormatted
+            topTeachers: safeTopTeachers,
+            recentEvaluations: recentEvalsFormatted,
+            privacyProtected: true  // Flag to show privacy notice in template
         });
     } catch (error) {
         console.error('Dashboard error:', error);
@@ -1149,6 +1207,9 @@ if (process.env.VERCEL !== '1') {
         console.log(`✓ Server is running on http://localhost:${PORT}`);
         console.log(`✓ Admin login: http://localhost:${PORT}/admin/login`);
         console.log(`  Default credentials: admin / admin123`);
+        
+        // Initialize privacy protection scheduled tasks
+        PrivacyScheduler.initializeScheduledTasks();
     });
 }
 

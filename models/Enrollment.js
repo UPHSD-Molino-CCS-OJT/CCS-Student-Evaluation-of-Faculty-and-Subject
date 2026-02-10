@@ -39,6 +39,10 @@ const enrollmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Evaluation',
         default: null
+    },
+    decoupled_at: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,
