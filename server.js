@@ -1099,6 +1099,40 @@ app.post('/admin/courses/:id/delete', isAuthenticated, async (req, res) => {
     }
 });
 
+// Privacy Audit
+app.get('/admin/privacy-audit', isAuthenticated, async (req, res) => {
+    try {
+        const { runPrivacyAudit } = require('./utils/privacy-audit');
+        const auditReport = await runPrivacyAudit();
+        
+        res.render('admin/privacy-audit', { auditReport });
+    } catch (error) {
+        console.error('Error running privacy audit:', error);
+        req.flash('error', 'Failed to run privacy audit');
+        res.redirect('/admin/dashboard');
+    }
+});
+
+// Run Privacy Audit (API endpoint for manual triggers)
+app.post('/admin/privacy-audit/run', isAuthenticated, async (req, res) => {
+    try {
+        const { runPrivacyAudit } = require('./utils/privacy-audit');
+        const auditReport = await runPrivacyAudit();
+        
+        res.json({ 
+            success: true, 
+            report: auditReport 
+        });
+    } catch (error) {
+        console.error('Error running privacy audit:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to run privacy audit',
+            error: error.message
+        });
+    }
+});
+
 // Admin Logout
 app.get('/admin/logout', (req, res) => {
     req.session.destroy();

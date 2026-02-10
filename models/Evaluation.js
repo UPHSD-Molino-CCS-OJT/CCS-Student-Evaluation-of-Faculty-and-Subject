@@ -9,8 +9,7 @@ const evaluationSchema = new mongoose.Schema({
     anonymous_token: {
         type: String,
         required: true,
-        trim: true,
-        index: true
+        trim: true
     },
     program_id: {
         type: mongoose.Schema.Types.ObjectId,
