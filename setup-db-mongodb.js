@@ -178,7 +178,7 @@ mongoose.connect(mongoURI, options)
                     full_name: 'Juan Dela Cruz',
                     email: 'juan.delacruz@student.uphsd.edu.ph',
                     program_id: bscsProgram._id,
-                    year_level: '3rd Year',
+                    year_level: '3rd',
                     section: 'CS-3A',
                     status: 'Regular'
                 },
@@ -187,7 +187,7 @@ mongoose.connect(mongoURI, options)
                     full_name: 'Maria Garcia',
                     email: 'maria.garcia@student.uphsd.edu.ph',
                     program_id: bscsProgram._id,
-                    year_level: '3rd Year',
+                    year_level: '3rd',
                     section: 'CS-3A',
                     status: 'Regular'
                 },
@@ -196,7 +196,7 @@ mongoose.connect(mongoURI, options)
                     full_name: 'Pedro Santos',
                     email: 'pedro.santos@student.uphsd.edu.ph',
                     program_id: bsitProgram._id,
-                    year_level: '2nd Year',
+                    year_level: '2nd',
                     section: 'IT-2A',
                     status: 'Regular'
                 }
