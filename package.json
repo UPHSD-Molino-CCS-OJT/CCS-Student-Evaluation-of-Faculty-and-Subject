@@ -9,9 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "setup-db": "node setup-db-mongodb.js",
-    "cleanup": "node cleanup-duplicates-mongodb.js && node cleanup-teacher-duplicates-mongodb.js && node cleanup-course-duplicates-mongodb.js",
-    "vercel-build": "echo 'Building for Vercel'"
+    "setup-db": "node setup-db-mongodb.js"
   },
   "keywords": [
     "evaluation",
