@@ -1156,6 +1156,115 @@ app.post('/admin/courses/:id/delete', isAuthenticated, async (req, res) => {
     }
 });
 
+// ==================== STUDENTS MANAGEMENT ====================
+
+// Manage Students
+app.get('/admin/students', isAuthenticated, async (req, res) => {
+    try {
+        const students = await Student.find()
+            .populate('program_id', 'name')
+            .sort({ student_number: 1 })
+            .lean();
+        
+        // Transform for template
+        const studentsFormatted = students.map(s => ({
+            ...s,
+            program_name: s.program_id ? s.program_id.name : 'N/A'
+        }));
+        
+        const programs = await Program.find().sort({ name: 1 });
+        res.render('admin/students', { students: studentsFormatted, programs });
+    } catch (error) {
+        console.error('Error loading students:', error);
+        res.status(500).send('Error loading students');
+    }
+});
+
+// Add Student
+app.post('/admin/students', isAuthenticated, async (req, res) => {
+    try {
+        const { student_number, full_name, email, program_id, year_level, section, status } = req.body;
+        
+        // Check for duplicate student number
+        const existing = await Student.findOne({ student_number });
+        
+        if (existing) {
+            req.flash('error', 'A student with this student number already exists');
+            return res.redirect('/admin/students');
+        }
+        
+        await Student.create({ 
+            student_number, 
+            full_name, 
+            email, 
+            program_id, 
+            year_level, 
+            section, 
+            status 
+        });
+        req.flash('success', 'Student added successfully');
+        res.redirect('/admin/students');
+    } catch (error) {
+        console.error('Error adding student:', error);
+        req.flash('error', 'Failed to add student');
+        res.redirect('/admin/students');
+    }
+});
+
+// Update Student
+app.post('/admin/students/:id', isAuthenticated, async (req, res) => {
+    try {
+        const { student_number, full_name, email, program_id, year_level, section, status } = req.body;
+        
+        // Check if student_number is being changed and if it already exists
+        const existing = await Student.findOne({ 
+            student_number, 
+            _id: { $ne: req.params.id } 
+        });
+        
+        if (existing) {
+            req.flash('error', 'A student with this student number already exists');
+            return res.redirect('/admin/students');
+        }
+        
+        await Student.findByIdAndUpdate(req.params.id, { 
+            student_number, 
+            full_name, 
+            email, 
+            program_id, 
+            year_level, 
+            section, 
+            status 
+        });
+        req.flash('success', 'Student updated successfully');
+        res.redirect('/admin/students');
+    } catch (error) {
+        console.error('Error updating student:', error);
+        req.flash('error', 'Failed to update student');
+        res.redirect('/admin/students');
+    }
+});
+
+// Delete Student
+app.post('/admin/students/:id/delete', isAuthenticated, async (req, res) => {
+    try {
+        // Check if student has enrollments or evaluations
+        const enrollmentsCount = await Enrollment.countDocuments({ student_id: req.params.id });
+        
+        if (enrollmentsCount > 0) {
+            req.flash('error', 'Cannot delete student with existing enrollments. Consider marking as inactive instead.');
+        } else {
+            await Student.findByIdAndDelete(req.params.id);
+            req.flash('success', 'Student deleted successfully');
+        }
+        res.redirect('/admin/students');
+    } catch (error) {
+        console.error('Error deleting student:', error);
+        req.flash('error', 'Failed to delete student');
+        res.redirect('/admin/students');
+    }
+});
+
 // Privacy Audit
 app.get('/admin/privacy-audit', isAuthenticated, async (req, res) => {
     try {
