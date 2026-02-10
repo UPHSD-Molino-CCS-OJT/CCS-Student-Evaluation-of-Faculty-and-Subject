@@ -284,16 +284,58 @@ class PrivacyAuditor {
 
     /**
      * Check for session data leakage
-     * Note: This checks the structure, not active sessions
+     * This checks the source code for session variable usage
      */
     async checkSessionData() {
-        // This is a structural check - we verify best practices
-        this.addWarning(
-            'INFO',
-            'Session Data Check',
-            'Session data should only store studentId (MongoDB ObjectId) during evaluation submission, never student_number.',
-            'Review server.js student login and evaluation submission routes'
-        );
+        const fs = require('fs');
+        const path = require('path');
+        
+        try {
+            const serverJsPath = path.join(__dirname, '..', 'server.js');
+            const serverContent = fs.readFileSync(serverJsPath, 'utf-8');
+            
+            // Check for student_number in session
+            if (serverContent.includes('req.session.studentNumber') || 
+                serverContent.includes('session.student_number') ||
+                serverContent.includes('req.session.student_number')) {
+                this.addIssue(
+                    'CRITICAL',
+                    'Session Contains student_number',
+                    'The server.js file stores student_number in session data. This violates zero-knowledge privacy.',
+                    'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).'
+                );
+            }
+            
+            // Verify only studentId is stored
+            const sessionStudentIdPattern = /req\.session\.studentId\s*=/;
+            if (!sessionStudentIdPattern.test(serverContent)) {
+                this.addWarning(
+                    'MEDIUM',
+                    'Session StudentId Not Found',
+                    'Could not verify that studentId is being stored in session properly.',
+                    'Ensure req.session.studentId = student._id is used in login routes'
+                );
+            }
+            
+            // Check for console.log statements that might leak student data
+            const consoleLogPattern = /console\.log.*student_number|console\.log.*studentNumber/i;
+            if (consoleLogPattern.test(serverContent)) {
+                this.addWarning(
+                    'MEDIUM',
+                    'Potential Console Logging of Student IDs',
+                    'Found console.log statements that might be logging student numbers.',
+                    'Remove or sanitize all console.log statements containing student identifiers'
+                );
+            }
+            
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                'Session Code Review',
+                'Could not automatically scan source code. Manual review recommended.',
+                'Manually verify that req.session only stores studentId (ObjectId), never student_number'
+            );
+        }
     }
 
     /**
