@@ -288,9 +288,8 @@ app.post('/student/login', async (req, res) => {
             return res.redirect('/student/login');
         }
         
-        // Store student ID in session
+        // Store ONLY student ObjectId in session (never student_number for privacy)
         req.session.studentId = student._id;
-        req.session.studentNumber = student.student_number;
         
         res.redirect('/student/subjects');
     } catch (error) {
