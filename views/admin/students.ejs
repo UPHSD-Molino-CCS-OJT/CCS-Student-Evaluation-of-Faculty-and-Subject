@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - UPHSD Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <%- include('partials/navbar') %>
+
+    <div class="container mx-auto px-4 py-6 md:py-8">
+        <div class="mb-6 md:mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Manage Students</h1>
+                <p class="text-sm md:text-base text-gray-600">Add, edit, or remove students</p>
+            </div>
+            <button onclick="document.getElementById('addModal').classList.remove('hidden')" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg shadow-md transition text-sm md:text-base w-full sm:w-auto">
+                <i class="fas fa-plus mr-2"></i>Add Student
+            </button>
+        </div>
+
+        <% if (success_msg && success_msg.length > 0) { %>
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <%= success_msg %>
+            </div>
+        <% } %>
+
+        <% if (error_msg && error_msg.length > 0) { %>
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                <%= error_msg %>
+            </div>
+        <% } %>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Number</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Full Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year Level</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <% if (students.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                <i class="fas fa-user-graduate text-4xl mb-2"></i>
+                                <p>No students found. Add your first student!</p>
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% students.forEach(student => { %>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium"><%= student.student_number %></td>
+                                <td class="px-6 py-4 text-sm"><%= student.full_name %></td>
+                                <td class="px-6 py-4 text-sm"><%= student.email || '-' %></td>
+                                <td class="px-6 py-4 text-sm"><%= student.program_name %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm"><%= student.year_level %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm"><%= student.section || '-' %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <%= student.status === 'Regular' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' %>">
+                                        <%= student.status %>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                    <button 
+                                        data-id="<%= student._id %>"
+                                        data-student-number="<%= student.student_number %>"
+                                        data-full-name="<%= student.full_name %>"
+                                        data-email="<%= student.email || '' %>"
+                                        data-program-id="<%= student.program_id %>"
+                                        data-year-level="<%= student.year_level %>"
+                                        data-section="<%= student.section || '' %>"
+                                        data-status="<%= student.status %>"
+                                        onclick="editStudentFromData(this)"
+                                        class="text-blue-600 hover:text-blue-900">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button 
+                                        data-id="<%= student._id %>"
+                                        data-student-number="<%= student.student_number %>"
+                                        data-full-name="<%= student.full_name %>"
+                                        onclick="deleteStudentFromData(this)"
+                                        class="text-red-600 hover:text-red-900">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    <% } %>
+                </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="addModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Add New Student</h3>
+                <button onclick="document.getElementById('addModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form action="/admin/students" method="POST">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Student Number *</label>
+                        <input type="text" name="student_number" required placeholder="e.g., 2021-01234" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Full Name *</label>
+                        <input type="text" name="full_name" required placeholder="e.g., Juan Dela Cruz" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" name="email" placeholder="e.g., student@uphsd.edu.ph" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Program *</label>
+                        <select name="program_id" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Program --</option>
+                            <% programs.forEach(program => { %>
+                                <option value="<%= program._id %>"><%= program.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Year Level *</label>
+                        <select name="year_level" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Year --</option>
+                            <option value="1st">1st Year</option>
+                            <option value="2nd">2nd Year</option>
+                            <option value="3rd">3rd Year</option>
+                            <option value="4th">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Section</label>
+                        <input type="text" name="section" placeholder="e.g., A" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Status</label>
+                        <select name="status" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition mt-4">
+                    Add Student
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Edit Student</h3>
+                <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editForm" method="POST">
+                <input type="hidden" id="edit_id" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Student Number *</label>
+                        <input type="text" id="edit_student_number" name="student_number" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Full Name *</label>
+                        <input type="text" id="edit_full_name" name="full_name" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="edit_email" name="email" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Program *</label>
+                        <select id="edit_program_id" name="program_id" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Program --</option>
+                            <% programs.forEach(program => { %>
+                                <option value="<%= program._id %>"><%= program.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Year Level *</label>
+                        <select id="edit_year_level" name="year_level" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Year --</option>
+                            <option value="1st">1st Year</option>
+                            <option value="2nd">2nd Year</option>
+                            <option value="3rd">3rd Year</option>
+                            <option value="4th">4th Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Section</label>
+                        <input type="text" id="edit_section" name="section" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Status</label>
+                        <select id="edit_status" name="status" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition mt-4">
+                    Update Student
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function editStudentFromData(btn) {
+            const id = btn.getAttribute('data-id');
+            const studentNumber = btn.getAttribute('data-student-number');
+            const fullName = btn.getAttribute('data-full-name');
+            const email = btn.getAttribute('data-email');
+            const programId = btn.getAttribute('data-program-id');
+            const yearLevel = btn.getAttribute('data-year-level');
+            const section = btn.getAttribute('data-section');
+            const status = btn.getAttribute('data-status');
+            editStudent(id, studentNumber, fullName, email, programId, yearLevel, section, status);
+        }
+
+        function deleteStudentFromData(btn) {
+            const id = btn.getAttribute('data-id');
+            const studentNumber = btn.getAttribute('data-student-number');
+            const fullName = btn.getAttribute('data-full-name');
+            deleteStudent(id, studentNumber, fullName);
+        }
+
+        function editStudent(id, studentNumber, fullName, email, programId, yearLevel, section, status) {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_student_number').value = studentNumber;
+            document.getElementById('edit_full_name').value = fullName;
+            document.getElementById('edit_email').value = email;
+            document.getElementById('edit_program_id').value = programId;
+            document.getElementById('edit_year_level').value = yearLevel;
+            document.getElementById('edit_section').value = section;
+            document.getElementById('edit_status').value = status;
+            document.getElementById('editForm').action = '/admin/students/' + id;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function deleteStudent(id, studentNumber, fullName) {
+            if (confirm('Are you sure you want to delete "' + fullName + '" (' + studentNumber + ')?\n\nNote: Students with existing enrollments cannot be deleted.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/students/' + id + '/delete';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            const addModal = document.getElementById('addModal');
+            const editModal = document.getElementById('editModal');
+            if (event.target == addModal) {
+                addModal.classList.add('hidden');
+            }
+            if (event.target == editModal) {
+                editModal.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
