@@ -18,6 +18,8 @@ const Program = require('./models/Program');
 const Teacher = require('./models/Teacher');
 const Course = require('./models/Course');
 const Evaluation = require('./models/Evaluation');
+const Student = require('./models/Student');
+const Enrollment = require('./models/Enrollment');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -244,22 +246,266 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Student Evaluation Form
+// Redirect root to student login
 app.get('/', async (req, res) => {
     try {
         // Initialize database if needed
         await initializeDatabase();
+        res.redirect('/student/login');
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).send('Error loading application');
+    }
+});
+
+// Student Login Page
+app.get('/student/login', async (req, res) => {
+    try {
+        await initializeDatabase();
+        res.render('student-login');
+    } catch (error) {
+        console.error('Error loading student login:', error);
+        res.status(500).send('Error loading login page');
+    }
+});
+
+// Student Login Submit
+app.post('/student/login', async (req, res) => {
+    try {
+        const { student_number } = req.body;
         
-        const programs = await Program.find().sort({ name: 1 });
-        const teachers = await Teacher.find({ status: 'active' }).sort({ full_name: 1 });
+        if (!student_number) {
+            req.flash('error', 'Please enter your School ID');
+            return res.redirect('/student/login');
+        }
         
-        res.render('index', { 
-            programs, 
-            teachers 
+        // Find student by student number
+        const student = await Student.findOne({ student_number }).populate('program_id');
+        
+        if (!student) {
+            req.flash('error', 'School ID not found. Please check your ID and try again.');
+            return res.redirect('/student/login');
+        }
+        
+        // Store student ID in session
+        req.session.studentId = student._id;
+        req.session.studentNumber = student.student_number;
+        
+        res.redirect('/student/subjects');
+    } catch (error) {
+        console.error('Error during student login:', error);
+        req.flash('error', 'An error occurred. Please try again.');
+        res.redirect('/student/login');
+    }
+});
+
+// Student Subjects Page
+app.get('/student/subjects', async (req, res) => {
+    try {
+        // Check if student is logged in
+        if (!req.session.studentId) {
+            req.flash('error', 'Please login first');
+            return res.redirect('/student/login');
+        }
+        
+        // Get student info
+        const student = await Student.findById(req.session.studentId).populate('program_id');
+        
+        if (!student) {
+            req.flash('error', 'Student not found');
+            return res.redirect('/student/login');
+        }
+        
+        // Get student's enrollments with populated data
+        const enrollments = await Enrollment.find({ student_id: student._id })
+            .populate('course_id')
+            .populate('teacher_id')
+            .sort({ 'course_id.name': 1 });
+        
+        // Count evaluated subjects
+        const evaluatedCount = enrollments.filter(e => e.has_evaluated).length;
+        
+        res.render('student-subjects', {
+            student,
+            enrollments,
+            evaluatedCount
         });
     } catch (error) {
-        console.error('Error loading form:', error);
-        res.status(500).send('Error loading evaluation form');
+        console.error('Error loading student subjects:', error);
+        req.flash('error', 'Error loading subjects');
+        res.redirect('/student/login');
+    }
+});
+
+// Student Evaluate Specific Subject
+app.get('/student/evaluate/:enrollmentId', async (req, res) => {
+    try {
+        // Check if student is logged in
+        if (!req.session.studentId) {
+            req.flash('error', 'Please login first');
+            return res.redirect('/student/login');
+        }
+        
+        // Get enrollment with populated data
+        const enrollment = await Enrollment.findById(req.params.enrollmentId)
+            .populate('student_id')
+            .populate({
+                path: 'course_id',
+                populate: { path: 'program_id' }
+            })
+            .populate('teacher_id');
+        
+        if (!enrollment) {
+            req.flash('error', 'Enrollment not found');
+            return res.redirect('/student/subjects');
+        }
+        
+        // Verify enrollment belongs to logged-in student
+        if (enrollment.student_id._id.toString() !== req.session.studentId) {
+            req.flash('error', 'Unauthorized access');
+            return res.redirect('/student/subjects');
+        }
+        
+        // Check if already evaluated
+        if (enrollment.has_evaluated) {
+            req.flash('error', 'You have already evaluated this subject');
+            return res.redirect('/student/subjects');
+        }
+        
+        res.render('student-evaluate', {
+            enrollment,
+            student: enrollment.student_id,
+            course: enrollment.course_id,
+            teacher: enrollment.teacher_id,
+            program: enrollment.course_id.program_id
+        });
+    } catch (error) {
+        console.error('Error loading evaluation form:', error);
+        req.flash('error', 'Error loading evaluation form');
+        res.redirect('/student/subjects');
+    }
+});
+
+// Submit Student Evaluation
+app.post('/student/submit-evaluation', async (req, res) => {
+    try {
+        // Check if student is logged in
+        if (!req.session.studentId) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Please login first' 
+            });
+        }
+        
+        const data = req.body;
+        
+        // Validate enrollment
+        const enrollment = await Enrollment.findById(data.enrollment_id)
+            .populate('student_id')
+            .populate('course_id')
+            .populate('teacher_id');
+        
+        if (!enrollment) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Enrollment not found' 
+            });
+        }
+        
+        // Verify enrollment belongs to logged-in student
+        if (enrollment.student_id._id.toString() !== req.session.studentId) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Unauthorized access' 
+            });
+        }
+        
+        // Check if already evaluated
+        if (enrollment.has_evaluated) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'You have already evaluated this subject' 
+            });
+        }
+        
+        // Validate ObjectId format
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(data.program) || 
+            !mongoose.Types.ObjectId.isValid(data.course) ||
+            !mongoose.Types.ObjectId.isValid(data.teacher)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid data format' 
+            });
+        }
+        
+        // Get client IP address
+        const clientIp = req.headers['x-forwarded-for'] || 
+                        req.connection.remoteAddress || 
+                        req.socket.remoteAddress ||
+                        req.ip;
+        
+        // Create evaluation
+        const evaluation = await Evaluation.create({
+            school_year: enrollment.school_year,
+            student_number: enrollment.student_id.student_number,
+            program_id: data.program,
+            year_level: enrollment.student_id.year_level,
+            status: enrollment.student_id.status,
+            course_id: data.course,
+            teacher_id: data.teacher,
+            
+            // Teacher ratings (6 criteria)
+            teacher_diction: parseInt(data.teacher_diction),
+            teacher_grammar: parseInt(data.teacher_grammar),
+            teacher_personality: parseInt(data.teacher_personality),
+            teacher_disposition: parseInt(data.teacher_disposition),
+            teacher_dynamic: parseInt(data.teacher_dynamic),
+            teacher_fairness: parseInt(data.teacher_fairness),
+            
+            // Learning process ratings (13 criteria)
+            learning_motivation: parseInt(data.learning_motivation),
+            learning_critical_thinking: parseInt(data.learning_critical_thinking),
+            learning_organization: parseInt(data.learning_organization),
+            learning_interest: parseInt(data.learning_interest),
+            learning_explanation: parseInt(data.learning_explanation),
+            learning_clarity: parseInt(data.learning_clarity),
+            learning_integration: parseInt(data.learning_integration),
+            learning_mastery: parseInt(data.learning_mastery),
+            learning_methodology: parseInt(data.learning_methodology),
+            learning_values: parseInt(data.learning_values),
+            learning_grading: parseInt(data.learning_grading),
+            learning_synthesis: parseInt(data.learning_synthesis),
+            learning_requirements: parseInt(data.learning_requirements),
+            
+            // Classroom management ratings (6 criteria)
+            classroom_attendance: parseInt(data.classroom_attendance),
+            classroom_policies: parseInt(data.classroom_policies),
+            classroom_discipline: parseInt(data.classroom_discipline),
+            classroom_respect: parseInt(data.classroom_respect),
+            classroom_prayer: parseInt(data.classroom_prayer),
+            classroom_punctuality: parseInt(data.classroom_punctuality),
+            
+            comments: data.comments || '',
+            ip_address: clientIp
+        });
+        
+        // Update enrollment as evaluated
+        enrollment.has_evaluated = true;
+        enrollment.evaluation_id = evaluation._id;
+        await enrollment.save();
+        
+        res.json({ 
+            success: true, 
+            message: 'Evaluation submitted successfully!' 
+        });
+        
+    } catch (error) {
+        console.error('Error submitting evaluation:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error submitting evaluation. Please try again.' 
+        });
     }
 });
 
