@@ -484,14 +484,14 @@ app.post('/student/submit-evaluation', async (req, res) => {
             learning_values: parseInt(data.learning_values),
             learning_grading: parseInt(data.learning_grading),
             learning_synthesis: parseInt(data.learning_synthesis),
-            learning_requirements: parseInt(data.learning_requirements),
+            learning_reasonableness: parseInt(data.learning_reasonableness),
             
             // Classroom management ratings (6 criteria)
             classroom_attendance: parseInt(data.classroom_attendance),
             classroom_policies: parseInt(data.classroom_policies),
             classroom_discipline: parseInt(data.classroom_discipline),
-            classroom_respect: parseInt(data.classroom_respect),
-            classroom_prayer: parseInt(data.classroom_prayer),
+            classroom_authority: parseInt(data.classroom_authority),
+            classroom_prayers: parseInt(data.classroom_prayers),
             classroom_punctuality: parseInt(data.classroom_punctuality),
             
             comments: data.comments || '',
