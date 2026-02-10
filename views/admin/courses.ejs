@@ -33,7 +33,6 @@
                 <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
@@ -43,7 +42,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     <% courses.forEach(course => { %>
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">#<%= course.id %></td>
+
                             <td class="px-6 py-4 text-sm font-medium"><%= course.name %></td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm"><%= course.code || '-' %></td>
                             <td class="px-6 py-4 text-sm"><%= course.program_name %></td>
