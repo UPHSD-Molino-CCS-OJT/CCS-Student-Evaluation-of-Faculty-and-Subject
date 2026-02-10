@@ -59,12 +59,19 @@
                                 <td class="px-6 py-4 text-sm font-medium"><%= program.name %></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm"><%= program.code || '-' %></td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                                    <button onclick="editProgram(<%= program.id %>, '<%= program.name.replace(/'/g, "\\'") %>', '<%= program.code || '' %>')" 
-                                            class="text-blue-600 hover:text-blue-900">
+                                    <button 
+                                        data-id="<%= program.id %>" 
+                                        data-name="<%= program.name %>" 
+                                        data-code="<%= program.code || '' %>"
+                                        onclick="editProgramFromData(this)" 
+                                        class="text-blue-600 hover:text-blue-900">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button onclick="deleteProgram(<%= program.id %>, '<%= program.name.replace(/'/g, "\\'") %>')" 
-                                            class="text-red-600 hover:text-red-900">
+                                    <button 
+                                        data-id="<%= program.id %>" 
+                                        data-name="<%= program.name %>"
+                                        onclick="deleteProgramFromData(this)" 
+                                        class="text-red-600 hover:text-red-900">
                                         <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </td>
@@ -139,6 +146,19 @@
     </div>
 
     <script>
+        function editProgramFromData(btn) {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            const code = btn.getAttribute('data-code');
+            editProgram(id, name, code);
+        }
+
+        function deleteProgramFromData(btn) {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            deleteProgram(id, name);
+        }
+
         function editProgram(id, name, code) {
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_name').value = name;
