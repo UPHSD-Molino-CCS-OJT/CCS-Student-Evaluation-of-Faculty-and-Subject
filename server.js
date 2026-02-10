@@ -845,6 +845,7 @@ app.get('/admin/dashboard', isAuthenticated, async (req, res) => {
         // Transform for template
         const recentEvalsFormatted = recentEvaluations.map(e => ({
             ...e,
+            id: e._id.toString(),
             teacher_name: e.teacher_id ? e.teacher_id.full_name : null,
             program_name: e.program_id ? e.program_id.name : null,
             course_name: e.course_id ? e.course_id.name : null
