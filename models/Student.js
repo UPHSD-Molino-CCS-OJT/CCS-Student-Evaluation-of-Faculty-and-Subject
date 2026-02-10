@@ -23,7 +23,7 @@ const studentSchema = new mongoose.Schema({
     },
     year_level: {
         type: String,
-        enum: ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+        enum: ['1st', '2nd', '3rd', '4th'],
         required: true
     },
     section: {
