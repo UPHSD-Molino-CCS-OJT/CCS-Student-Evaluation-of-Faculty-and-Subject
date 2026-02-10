@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluate <%= course.name %> - UPHSD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+            transition: width 0.3s ease;
+            z-index: 9999;
+        }
+        .rating-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .rating-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .section-header {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .section-header:hover {
+            background-color: #f3f4f6;
+        }
+        .section-content {
+            max-height: 5000px;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        .section-content.collapsed {
+            max-height: 0;
+        }
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+        .chevron.rotated {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">UPHSD Faculty Evaluation</h1>
+                        <p class="text-xs text-blue-100">Student: <%= student.student_number %></p>
+                    </div>
+                </div>
+                <a href="/student/subjects" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-blue-50 transition">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Subjects
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-xl p-8">
+            <!-- Subject Info Card -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold mb-3"><%= course.name %></h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div><i class="fas fa-code mr-2"></i><strong>Course Code:</strong> <%= course.code %></div>
+                    <div><i class="fas fa-users mr-2"></i><strong>Section:</strong> <%= enrollment.section_code %></div>
+                    <div><i class="fas fa-chalkboard-teacher mr-2"></i><strong>Professor:</strong> <%= teacher.full_name %></div>
+                    <div><i class="fas fa-calendar mr-2"></i><strong>AY:</strong> <%= enrollment.school_year %> - <%= enrollment.semester %></div>
+                </div>
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="mb-6">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="font-semibold">Evaluation Progress</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div class="bg-gray-200 rounded-full h-3">
+                    <div id="progressFill" class="bg-gradient-to-r from-blue-600 to-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Evaluation Form -->
+            <form id="evaluationForm">
+                <input type="hidden" name="enrollment_id" value="<%= enrollment._id %>">
+                <input type="hidden" name="program" value="<%= program._id %>">
+                <input type="hidden" name="course" value="<%= course._id %>">
+                <input type="hidden" name="teacher" value="<%= teacher._id %>">
+
+                <!-- Rating Legend -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-3">Rating Scale:</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                        <div class="text-center">
+                            <div class="font-bold text-green-600">5</div>
+                            <div>Outstanding</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-blue-600">4</div>
+                            <div>High Satisfactory</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-yellow-600">3</div>
+                            <div>Satisfactory</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-orange-600">2</div>
+                            <div>Needs Improvement</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-bold text-red-600">1</div>
+                            <div>Poor</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1: The Teacher -->
+                <div class="border-l-4 border-blue-600 mb-6">
+                    <div class="section-header bg-gray-50 p-4 rounded-r-lg flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-user-tie mr-2 text-blue-600"></i>The Teacher (6 Questions)
+                        </h3>
+                        <i class="fas fa-chevron-down chevron text-gray-600"></i>
+                    </div>
+                    <div class="section-content p-4">
+                        <% const teacherCriteria = [
+                            { name: 'teacher_diction', label: 'Diction, Voice Quality and Enunciation' },
+                            { name: 'teacher_grammar', label: 'Grammar and Language Fluency' },
+                            { name: 'teacher_personality', label: 'Personality and Character' },
+                            { name: 'teacher_disposition', label: 'Disposition and Attitude' },
+                            { name: 'teacher_dynamic', label: 'Dynamic and Enthusiasm' },
+                            { name: 'teacher_fairness', label: 'Fairness and Impartiality' }
+                        ]; %>
+                        <% teacherCriteria.forEach((criteria, index) => { %>
+                            <div class="mb-4 pb-4 <%= index < teacherCriteria.length - 1 ? 'border-b' : '' %>">
+                                <label class="block font-medium text-gray-700 mb-3"><%= index + 1 %>. <%= criteria.label %> *</label>
+                                <div class="rating-group flex-wrap md:flex-nowrap">
+                                    <% for(let i = 1; i <= 5; i++) { %>
+                                        <div class="rating-option">
+                                            <input type="radio" name="<%= criteria.name %>" value="<%= i %>" required 
+                                                   class="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                                   id="<%= criteria.name %>_<%= i %>">
+                                            <label for="<%= criteria.name %>_<%= i %>" class="text-sm"><%= i %></label>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+
+                <!-- Section 2: Learning Process -->
+                <div class="border-l-4 border-green-600 mb-6">
+                    <div class="section-header bg-gray-50 p-4 rounded-r-lg flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-brain mr-2 text-green-600"></i>The Teacher Learning Process (13 Questions)
+                        </h3>
+                        <i class="fas fa-chevron-down chevron text-gray-600"></i>
+                    </div>
+                    <div class="section-content p-4">
+                        <% const learningCriteria = [
+                            { name: 'learning_motivation', label: 'Provides Motivation and Enthusiasm' },
+                            { name: 'learning_critical_thinking', label: 'Promotes Critical Thinking' },
+                            { name: 'learning_organization', label: 'Well Organized and Prepared' },
+                            { name: 'learning_interest', label: 'Generates Interest in the Subject' },
+                            { name: 'learning_explanation', label: 'Provides Clear Explanations' },
+                            { name: 'learning_clarity', label: 'Clarity in Instruction and Objectives' },
+                            { name: 'learning_integration', label: 'Integrates Concepts Effectively' },
+                            { name: 'learning_mastery', label: 'Shows Subject Matter Mastery' },
+                            { name: 'learning_methodology', label: 'Appropriate Teaching Methodology' },
+                            { name: 'learning_values', label: 'Promotes Values Formation' },
+                            { name: 'learning_grading', label: 'Fair and Clear Grading System' },
+                            { name: 'learning_synthesis', label: 'Provides Summaries and Synthesis' },
+                            { name: 'learning_requirements', label: 'Reasonable Requirements and Workload' }
+                        ]; %>
+                        <% learningCriteria.forEach((criteria, index) => { %>
+                            <div class="mb-4 pb-4 <%= index < learningCriteria.length - 1 ? 'border-b' : '' %>">
+                                <label class="block font-medium text-gray-700 mb-3"><%= index + 1 %>. <%= criteria.label %> *</label>
+                                <div class="rating-group flex-wrap md:flex-nowrap">
+                                    <% for(let i = 1; i <= 5; i++) { %>
+                                        <div class="rating-option">
+                                            <input type="radio" name="<%= criteria.name %>" value="<%= i %>" required 
+                                                   class="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                                   id="<%= criteria.name %>_<%= i %>">
+                                            <label for="<%= criteria.name %>_<%= i %>" class="text-sm"><%= i %></label>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+
+                <!-- Section 3: Classroom Management -->
+                <div class="border-l-4 border-purple-600 mb-6">
+                    <div class="section-header bg-gray-50 p-4 rounded-r-lg flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <i class="fas fa-chalkboard mr-2 text-purple-600"></i>The Classroom Management (6 Questions)
+                        </h3>
+                        <i class="fas fa-chevron-down chevron text-gray-600"></i>
+                    </div>
+                    <div class="section-content p-4">
+                        <% const classroomCriteria = [
+                            { name: 'classroom_attendance', label: 'Monitors Attendance Regularly' },
+                            { name: 'classroom_policies', label: 'Enforces Policies and Rules Consistently' },
+                            { name: 'classroom_discipline', label: 'Maintains Classroom Discipline' },
+                            { name: 'classroom_respect', label: 'Commands Respect and Authority' },
+                            { name: 'classroom_prayer', label: 'Observes Prayer Before and After Class' },
+                            { name: 'classroom_punctuality', label: 'Punctual and Time Management' }
+                        ]; %>
+                        <% classroomCriteria.forEach((criteria, index) => { %>
+                            <div class="mb-4 pb-4 <%= index < classroomCriteria.length - 1 ? 'border-b' : '' %>">
+                                <label class="block font-medium text-gray-700 mb-3"><%= index + 1 %>. <%= criteria.label %> *</label>
+                                <div class="rating-group flex-wrap md:flex-nowrap">
+                                    <% for(let i = 1; i <= 5; i++) { %>
+                                        <div class="rating-option">
+                                            <input type="radio" name="<%= criteria.name %>" value="<%= i %>" required 
+                                                   class="w-5 h-5 text-blue-600 focus:ring-blue-500"
+                                                   id="<%= criteria.name %>_<%= i %>">
+                                            <label for="<%= criteria.name %>_<%= i %>" class="text-sm"><%= i %></label>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+
+                <!-- Comments Section -->
+                <div class="mb-6">
+                    <label class="block font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-2 text-blue-600"></i>Additional Comments (Optional)
+                    </label>
+                    <textarea name="comments" rows="4" 
+                              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Share your thoughts, suggestions, or feedback..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex gap-4">
+                    <a href="/student/subjects" 
+                       class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition text-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" id="submitBtn"
+                            class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Evaluation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+            <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Evaluation Submitted!</h3>
+            <p class="text-gray-600 mb-6">Thank you for your feedback. Your response has been recorded.</p>
+            <a href="/student/subjects" 
+               class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition inline-block">
+                Back to My Subjects
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Section accordion
+        document.querySelectorAll('.section-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                const chevron = this.querySelector('.chevron');
+                
+                content.classList.toggle('collapsed');
+                chevron.classList.toggle('rotated');
+            });
+        });
+
+        // Progress tracking
+        function updateProgress() {
+            const form = document.getElementById('evaluationForm');
+            const inputs = form.querySelectorAll('input[type="radio"]');
+            const groups = {};
+            
+            inputs.forEach(input => {
+                if (!groups[input.name]) {
+                    groups[input.name] = false;
+                }
+                if (input.checked) {
+                    groups[input.name] = true;
+                }
+            });
+            
+            const total = Object.keys(groups).length;
+            const completed = Object.values(groups).filter(v => v).length;
+            const percentage = Math.round((completed / total) * 100);
+            
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = percentage + '%';
+        }
+
+        // Listen to radio button changes
+        document.querySelectorAll('input[type="radio"]').forEach(input => {
+            input.addEventListener('change', updateProgress);
+        });
+
+        // Form submission
+        document.getElementById('evaluationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+            
+            try {
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData);
+                
+                const response = await fetch('/student/submit-evaluation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('successModal').classList.remove('hidden');
+                    document.getElementById('successModal').classList.add('flex');
+                } else {
+                    alert('Error: ' + result.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Evaluation';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Evaluation';
+            }
+        });
+
+        // Initialize progress
+        updateProgress();
+    </script>
+</body>
+</html>
