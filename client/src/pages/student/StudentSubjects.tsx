@@ -57,7 +57,7 @@ const StudentSubjects: React.FC = () => {
         {student && (
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg shadow-lg p-6 mb-8 fade-in">
             <div className="flex items-center space-x-4">
-              <div className="bg-white bg-opacity-20 rounded-full p-4">
+              <div className="bg-white/20 rounded-full p-4">
                 <i className="fas fa-user-graduate text-3xl"></i>
               </div>
               <div>

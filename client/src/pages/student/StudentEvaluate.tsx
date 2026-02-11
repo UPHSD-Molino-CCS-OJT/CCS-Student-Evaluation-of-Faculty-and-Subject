@@ -512,7 +512,7 @@ const StudentEvaluate: React.FC = () => {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md mx-4 fade-in">
             <div className="text-center">
               <div className="inline-block bg-green-100 rounded-full p-4 mb-4">

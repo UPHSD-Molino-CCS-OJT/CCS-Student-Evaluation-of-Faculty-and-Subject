@@ -176,7 +176,7 @@ const AdminStudents: React.FC = () => {
         </div>
 
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-auto">
             <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4 my-8">
               <h2 className="text-2xl font-bold mb-6">{editingStudent ? 'Edit Student' : 'Add New Student'}</h2>
               <form onSubmit={handleSubmit}>
