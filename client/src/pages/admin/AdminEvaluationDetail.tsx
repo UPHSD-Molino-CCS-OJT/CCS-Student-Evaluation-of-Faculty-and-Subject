@@ -151,25 +151,25 @@ const AdminEvaluationDetail: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-500 text-sm mb-2">Teacher Average</p>
             <p className={`text-4xl font-bold ${getRatingColor(evaluation.teacher_average)}`}>
-              {evaluation.teacher_average.toFixed(2)}
+              {(evaluation.teacher_average || 0).toFixed(2)}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-500 text-sm mb-2">Learning Process</p>
             <p className={`text-4xl font-bold ${getRatingColor(evaluation.learning_average)}`}>
-              {evaluation.learning_average.toFixed(2)}
+              {(evaluation.learning_average || 0).toFixed(2)}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-500 text-sm mb-2">Classroom Mgmt</p>
             <p className={`text-4xl font-bold ${getRatingColor(evaluation.classroom_average)}`}>
-              {evaluation.classroom_average.toFixed(2)}
+              {(evaluation.classroom_average || 0).toFixed(2)}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <p className="text-gray-500 text-sm mb-2">Overall Average</p>
             <p className={`text-4xl font-bold ${getRatingColor(evaluation.overall_average)}`}>
-              {evaluation.overall_average.toFixed(2)}
+              {(evaluation.overall_average || 0).toFixed(2)}
             </p>
           </div>
         </div>

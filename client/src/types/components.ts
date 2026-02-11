@@ -89,7 +89,7 @@ export interface TopTeacher {
   _id: string;
   full_name: string;
   evaluation_count: number;
-  average_rating: number;
+  average_rating: number | null;
 }
 
 // Evaluation with populated fields

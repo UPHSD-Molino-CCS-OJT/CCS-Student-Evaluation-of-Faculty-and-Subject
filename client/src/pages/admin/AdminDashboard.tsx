@@ -90,7 +90,7 @@ const AdminDashboard: React.FC = () => {
         <i className={`${icon} text-blue-600`}></i>
       </div>
       <div className="flex items-end">
-        <span className="text-3xl font-bold text-gray-800">{value.toFixed(2)}</span>
+        <span className="text-3xl font-bold text-gray-800">{(value || 0).toFixed(2)}</span>
         <span className="text-gray-500 ml-2 mb-1">/5.0</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
@@ -205,7 +205,7 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-lg text-blue-600">{teacher.average_rating.toFixed(2)}</p>
+                      <p className="font-bold text-lg text-blue-600">{(teacher.average_rating || 0).toFixed(2)}</p>
                       <p className="text-xs text-gray-500">avg rating</p>
                     </div>
                   </div>
