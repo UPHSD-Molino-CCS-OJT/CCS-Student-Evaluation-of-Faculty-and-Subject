@@ -51,7 +51,7 @@ const AdminPrivacyAudit: React.FC = () => {
             <li>✓ Cryptographic anonymization (SHA-512)</li>
             <li>✓ Temporal decorrelation (random delays)</li>
             <li>✓ Network privacy (IP anonymization)</li>
-            <li>✓ Automatic data decoupling (24-hour removal)</li>
+            <li>✓ Cryptographic receipt model (no reversible links)</li>
             <li>✓ Differential privacy in statistics</li>
             <li>✓ K-anonymity thresholds</li>
             <li>✓ Session security</li>
