@@ -54,9 +54,6 @@ const StudentEvaluate: React.FC = () => {
     // Comments (optional)
     comments: ''
   })
-
-  // Section accordion states
-  const [openSection, setOpenSection] = useState<string>('teacher')
   
   // Progress tracking
   const [progress, setProgress] = useState<number>(0)
@@ -176,11 +173,6 @@ const StudentEvaluate: React.FC = () => {
       // Find first empty field and scroll to it
       const firstEmpty = document.querySelector(`[name="${emptyFields[0]}"]`)
       if (firstEmpty) {
-        // Open section if closed
-        if (emptyFields[0].startsWith('teacher_')) setOpenSection('teacher')
-        else if (emptyFields[0].startsWith('learning_')) setOpenSection('learning')
-        else if (emptyFields[0].startsWith('classroom_')) setOpenSection('classroom')
-        
         setTimeout(() => {
           firstEmpty.scrollIntoView({ behavior: 'smooth', block: 'center' })
           ;(firstEmpty as HTMLElement).focus()
@@ -361,96 +353,57 @@ const StudentEvaluate: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: The Teacher */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setOpenSection(openSection === 'teacher' ? '' : 'teacher')}
-              className={`w-full px-6 py-4 text-left font-bold text-lg flex justify-between items-center transition-colors ${
-                openSection === 'teacher'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
-            >
-              <span>
-                <i className="fas fa-chalkboard-teacher mr-3"></i>
-                Section 1: The Teacher
-              </span>
-              <i className={`fas fa-chevron-${openSection === 'teacher' ? 'up' : 'down'}`}></i>
-            </button>
-            {openSection === 'teacher' && (
-              <div className="p-6 space-y-6">
-                <RatingQuestion name="teacher_diction" label="1. Diction (clear and understandable speech)" />
-                <RatingQuestion name="teacher_grammar" label="2. Grammar (correct use of language)" />
-                <RatingQuestion name="teacher_personality" label="3. Personality (pleasant and approachable)" />
-                <RatingQuestion name="teacher_disposition" label="4. Disposition (temperament and attitude)" />
-                <RatingQuestion name="teacher_dynamic" label="5. Dynamic (energetic and engaging)" />
-                <RatingQuestion name="teacher_fairness" label="6. Fairness (treats students equally)" />
-              </div>
-            )}
+            <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
+              <i className="fas fa-chalkboard-teacher mr-3"></i>
+              Section 1: The Teacher
+            </div>
+            <div className="p-6 space-y-6">
+              <RatingQuestion name="teacher_diction" label="1. Diction (clear and understandable speech)" />
+              <RatingQuestion name="teacher_grammar" label="2. Grammar (correct use of language)" />
+              <RatingQuestion name="teacher_personality" label="3. Personality (pleasant and approachable)" />
+              <RatingQuestion name="teacher_disposition" label="4. Disposition (temperament and attitude)" />
+              <RatingQuestion name="teacher_dynamic" label="5. Dynamic (energetic and engaging)" />
+              <RatingQuestion name="teacher_fairness" label="6. Fairness (treats students equally)" />
+            </div>
           </div>
 
           {/* Section 2: The Learning Process */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setOpenSection(openSection === 'learning' ? '' : 'learning')}
-              className={`w-full px-6 py-4 text-left font-bold text-lg flex justify-between items-center transition-colors ${
-                openSection === 'learning'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
-            >
-              <span>
-                <i className="fas fa-book-reader mr-3"></i>
-                Section 2: The Learning Process
-              </span>
-              <i className={`fas fa-chevron-${openSection === 'learning' ? 'up' : 'down'}`}></i>
-            </button>
-            {openSection === 'learning' && (
-              <div className="p-6 space-y-6">
-                <RatingQuestion name="learning_motivation" label="7. Motivation (inspires and encourages learning)" />
-                <RatingQuestion name="learning_critical_thinking" label="8. Critical Thinking (promotes analytical skills)" />
-                <RatingQuestion name="learning_organization" label="9. Organization (well-structured lessons)" />
-                <RatingQuestion name="learning_interest" label="10. Interest (makes subject engaging)" />
-                <RatingQuestion name="learning_explanation" label="11. Explanation (clear and easy to understand)" />
-                <RatingQuestion name="learning_clarity" label="12. Clarity (presents ideas clearly)" />
-                <RatingQuestion name="learning_integration" label="13. Integration (connects theory and practice)" />
-                <RatingQuestion name="learning_mastery" label="14. Mastery (demonstrates subject expertise)" />
-                <RatingQuestion name="learning_methodology" label="15. Methodology (effective teaching methods)" />
-                <RatingQuestion name="learning_values" label="16. Values (promotes ethical values)" />
-                <RatingQuestion name="learning_grading" label="17. Grading (fair assessment system)" />
-                <RatingQuestion name="learning_synthesis" label="18. Synthesis (brings ideas together)" />
-                <RatingQuestion name="learning_reasonableness" label="19. Reasonableness (realistic expectations)" />
-              </div>
-            )}
+            <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
+              <i className="fas fa-book-reader mr-3"></i>
+              Section 2: The Learning Process
+            </div>
+            <div className="p-6 space-y-6">
+              <RatingQuestion name="learning_motivation" label="7. Motivation (inspires and encourages learning)" />
+              <RatingQuestion name="learning_critical_thinking" label="8. Critical Thinking (promotes analytical skills)" />
+              <RatingQuestion name="learning_organization" label="9. Organization (well-structured lessons)" />
+              <RatingQuestion name="learning_interest" label="10. Interest (makes subject engaging)" />
+              <RatingQuestion name="learning_explanation" label="11. Explanation (clear and easy to understand)" />
+              <RatingQuestion name="learning_clarity" label="12. Clarity (presents ideas clearly)" />
+              <RatingQuestion name="learning_integration" label="13. Integration (connects theory and practice)" />
+              <RatingQuestion name="learning_mastery" label="14. Mastery (demonstrates subject expertise)" />
+              <RatingQuestion name="learning_methodology" label="15. Methodology (effective teaching methods)" />
+              <RatingQuestion name="learning_values" label="16. Values (promotes ethical values)" />
+              <RatingQuestion name="learning_grading" label="17. Grading (fair assessment system)" />
+              <RatingQuestion name="learning_synthesis" label="18. Synthesis (brings ideas together)" />
+              <RatingQuestion name="learning_reasonableness" label="19. Reasonableness (realistic expectations)" />
+            </div>
           </div>
 
           {/* Section 3: Classroom Management */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setOpenSection(openSection === 'classroom' ? '' : 'classroom')}
-              className={`w-full px-6 py-4 text-left font-bold text-lg flex justify-between items-center transition-colors ${
-                openSection === 'classroom'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-              }`}
-            >
-              <span>
-                <i className="fas fa-door-open mr-3"></i>
-                Section 3: Classroom Management
-              </span>
-              <i className={`fas fa-chevron-${openSection === 'classroom' ? 'up' : 'down'}`}></i>
-            </button>
-            {openSection === 'classroom' && (
-              <div className="p-6 space-y-6">
-                <RatingQuestion name="classroom_attendance" label="20. Attendance (monitors student attendance)\" />
-                <RatingQuestion name="classroom_policies" label="21. Policies (implements class policies)\" />
-                <RatingQuestion name="classroom_discipline" label="22. Discipline (maintains order and discipline)\" />
-                <RatingQuestion name="classroom_authority" label="23. Authority (commands respect and attention)\" />
-                <RatingQuestion name="classroom_prayers" label="24. Prayers (facilitates spiritual activities)\" />
-                <RatingQuestion name="classroom_punctuality" label="25. Punctuality (starts and ends on time)\" />
-              </div>
-            )}
+            <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
+              <i className="fas fa-door-open mr-3"></i>
+              Section 3: Classroom Management
+            </div>
+            <div className="p-6 space-y-6">
+              <RatingQuestion name="classroom_attendance" label="20. Attendance (monitors student attendance)\" />
+              <RatingQuestion name="classroom_policies" label="21. Policies (implements class policies)\" />
+              <RatingQuestion name="classroom_discipline" label="22. Discipline (maintains order and discipline)\" />
+              <RatingQuestion name="classroom_authority" label="23. Authority (commands respect and attention)\" />
+              <RatingQuestion name="classroom_prayers" label="24. Prayers (facilitates spiritual activities)\" />
+              <RatingQuestion name="classroom_punctuality" label="25. Punctuality (starts and ends on time)\" />
+            </div>
           </div>
 
           {/* Comments Section */}
