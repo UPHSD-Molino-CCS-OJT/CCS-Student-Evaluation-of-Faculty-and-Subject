@@ -16,8 +16,8 @@ interface AuditLogEntry {
     audit_token: string;
 }
 interface ValidationResult {
-    valid: boolean;
-    issues: string[];
+    isValid: boolean;
+    errors: string[];
 }
 interface NoisedStatistics {
     count: number;

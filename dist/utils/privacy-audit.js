@@ -462,22 +462,46 @@ class PrivacyAuditor {
      */
     async checkLayer8_KAnonymity() {
         try {
+            // Check both server.ts and routes/api.ts
             const serverPath = path.join(__dirname, '..', 'server.ts');
-            if (!fs.existsSync(serverPath)) {
-                this.addWarning('INFO', '[Layer 8] Server File Not Found', 'Could not read server.ts to check k-anonymity thresholds.', 'Manually verify minimum thresholds are enforced');
-                return;
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
+            let hasMinimumCheck = false;
+            let checkLocation = '';
+            // Check routes/api.ts first (most likely location)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                hasMinimumCheck =
+                    routesContent.includes('K_ANONYMITY_THRESHOLD') ||
+                        routesContent.includes('checkKAnonymity') ||
+                        routesContent.includes('evaluations.length < 5') ||
+                        routesContent.includes('evaluations.length >= 5') ||
+                        routesContent.includes('totalEvaluations >= 5') ||
+                        routesContent.includes('totalEvaluations < 5') ||
+                        routesContent.includes('MIN_EVALUATIONS') ||
+                        routesContent.includes('MINIMUM_RESPONSES');
+                if (hasMinimumCheck) {
+                    checkLocation = 'routes/api.ts';
+                }
             }
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
-            // Check for minimum threshold checks
-            const hasMinimumCheck = serverContent.includes('evaluations.length < 5') ||
-                serverContent.includes('evaluations.length >= 5') ||
-                serverContent.includes('MIN_EVALUATIONS') ||
-                serverContent.includes('MINIMUM_RESPONSES');
+            // If not found in routes, check server.ts
+            if (!hasMinimumCheck && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                hasMinimumCheck =
+                    serverContent.includes('K_ANONYMITY_THRESHOLD') ||
+                        serverContent.includes('checkKAnonymity') ||
+                        serverContent.includes('evaluations.length < 5') ||
+                        serverContent.includes('evaluations.length >= 5') ||
+                        serverContent.includes('MIN_EVALUATIONS') ||
+                        serverContent.includes('MINIMUM_RESPONSES');
+                if (hasMinimumCheck) {
+                    checkLocation = 'server.ts';
+                }
+            }
             if (!hasMinimumCheck) {
                 this.addIssue('HIGH', '[Layer 8] K-Anonymity Thresholds Missing', 'No evidence of minimum group size checks (k≥5) in server code.', 'Add checks: if (evaluations.length < 5) return "Insufficient data for privacy protection"');
             }
             else {
-                this.addWarning('INFO', '[Layer 8] ✓ K-Anonymity Checks Found', 'Found evidence of minimum threshold checks in server code.', 'Verify k≥5 for teachers and k≥10 for department-wide reports');
+                this.addWarning('INFO', `[Layer 8] ✓ K-Anonymity Checks Found in ${checkLocation}`, 'Found evidence of minimum threshold checks in server code.', 'Verify k≥5 for teachers and k≥10 for department-wide reports');
             }
             // Check actual evaluation counts per teacher
             const teachersWithFewEvals = await Evaluation_1.default.aggregate([
@@ -542,32 +566,57 @@ class PrivacyAuditor {
      */
     async checkLayer10_SubmissionDataValidation() {
         try {
+            // Check both server.ts and routes/api.ts
             const serverPath = path.join(__dirname, '..', 'server.ts');
-            if (!fs.existsSync(serverPath)) {
-                this.addWarning('INFO', '[Layer 10] Server File Not Found', 'Could not read server.ts to check validation logic.', 'Manually verify validateAnonymousSubmission() before database saves');
-                return;
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
+            let hasValidation = false;
+            let checkLocation = '';
+            // Check routes/api.ts first (most likely location)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                hasValidation =
+                    routesContent.includes('validateAnonymousSubmission') ||
+                        routesContent.includes('validateSubmission') ||
+                        routesContent.includes('validate(req.body');
+                if (hasValidation) {
+                    checkLocation = 'routes/api.ts';
+                }
             }
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
-            // Check for validation function
-            const hasValidation = serverContent.includes('validateAnonymousSubmission') ||
-                serverContent.includes('validateSubmission') ||
-                serverContent.includes('validate(req.body');
+            // If not found in routes, check server.ts
+            if (!hasValidation && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                hasValidation =
+                    serverContent.includes('validateAnonymousSubmission') ||
+                        serverContent.includes('validateSubmission') ||
+                        serverContent.includes('validate(req.body');
+                if (hasValidation) {
+                    checkLocation = 'server.ts';
+                }
+            }
             if (!hasValidation) {
                 this.addIssue('HIGH', '[Layer 10] Pre-Storage Validation Missing', 'No evidence of validation function before saving evaluations.', 'Add validateAnonymousSubmission(data) to check for student_number, names, and identifying text');
             }
             else {
-                this.addWarning('INFO', '[Layer 10] ✓ Validation Function Found', 'Found evidence of validation before storage.', 'Ensure validation rejects: student_number, student names, email addresses, and identifying text');
+                this.addWarning('INFO', `[Layer 10] ✓ Validation Function Found in ${checkLocation}`, 'Found evidence of validation before storage.', 'Ensure validation rejects: student_number, student names, email addresses, and identifying text');
             }
-            // Check for blacklist/sanitization patterns
-            const hasSanitization = serverContent.includes('sanitize') ||
-                serverContent.includes('blacklist') ||
-                serverContent.includes('forbidden_patterns') ||
-                serverContent.includes('prohibited_words');
+            // Check for blacklist/sanitization patterns in privacy-protection.ts
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.ts');
+            let hasSanitization = false;
+            if (fs.existsSync(privacyProtectionPath)) {
+                const privacyContent = fs.readFileSync(privacyProtectionPath, 'utf-8');
+                hasSanitization =
+                    privacyContent.includes('sanitize') ||
+                        privacyContent.includes('blacklist') ||
+                        privacyContent.includes('forbidden') ||
+                        privacyContent.includes('prohibited') ||
+                        privacyContent.includes('student_number.*pattern') ||
+                        privacyContent.includes('email.*pattern');
+            }
             if (!hasSanitization) {
-                this.addWarning('MEDIUM', '[Layer 10] Text Sanitization Not Found', 'Could not find evidence of text sanitization or pattern matching.', 'Add blacklist patterns to detect and reject: student_number, names, emails in free text');
+                this.addWarning('MEDIUM', '[Layer 10] Text Sanitization Not Found', 'Could not find evidence of text sanitization or pattern matching in validation.', 'Add blacklist patterns to detect and reject: student_number, names, emails in free text');
             }
             else {
-                this.addWarning('INFO', '[Layer 10] ✓ Sanitization Logic Detected', 'Found sanitization or blacklist patterns in submission handler.', 'Continue blocking identifying information in evaluation text fields');
+                this.addWarning('INFO', '[Layer 10] ✓ Sanitization Logic Detected', 'Found sanitization or blacklist patterns in privacy utilities.', 'Continue blocking identifying information in evaluation text fields');
             }
             // Check actual evaluation data for potential leaks
             const suspiciousEvaluations = await Evaluation_1.default.find({

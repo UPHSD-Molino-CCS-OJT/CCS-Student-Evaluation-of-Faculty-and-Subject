@@ -289,6 +289,16 @@ router.post('/student/submit-evaluation', async (req, res) => {
         const submissionDelay = privacy_protection_1.default.calculateSubmissionDelay(2, 8);
         await new Promise(resolve => setTimeout(resolve, submissionDelay));
         const data = req.body;
+        // LAYER 10: Validate anonymous submission data
+        const validationResult = privacy_protection_1.default.validateAnonymousSubmission(data);
+        if (!validationResult.isValid) {
+            res.status(400).json({
+                success: false,
+                message: validationResult.errors.join('. '),
+                privacyViolation: true
+            });
+            return;
+        }
         // Validate enrollment
         const enrollment = await Enrollment_1.default.findById(data.enrollment_id)
             .populate('student_id')
