@@ -112,24 +112,33 @@ router.post('/admin/login', async (req, res) => {
         req.session.adminId = admin._id.toString();
         req.session.username = admin.username;
         req.session.fullName = admin.full_name;
-        req.session.save((err) => {
-            if (err) {
-                console.error('Session save error:', err);
-                res.status(500).json({
-                    success: false,
-                    message: 'Session error'
-                });
-                return;
-            }
-            res.json({
-                success: true,
-                admin: {
-                    id: admin._id,
-                    username: admin.username,
-                    fullName: admin.full_name
+        // Save session with retry mechanism (helps during parallel testing)
+        const saveSession = (retries = 3) => {
+            req.session.save((err) => {
+                if (err) {
+                    console.error(`Admin session save error (${4 - retries}/3 attempts):`, err.message);
+                    if (retries > 1) {
+                        // Retry after 100ms delay
+                        setTimeout(() => saveSession(retries - 1), 100);
+                        return;
+                    }
+                    res.status(500).json({
+                        success: false,
+                        message: 'Session initialization failed. Please try again.'
+                    });
+                    return;
                 }
+                res.json({
+                    success: true,
+                    admin: {
+                        id: admin._id,
+                        username: admin.username,
+                        fullName: admin.full_name
+                    }
+                });
             });
-        });
+        };
+        saveSession();
     }
     catch (error) {
         console.error('Login error:', error);
@@ -170,16 +179,26 @@ router.post('/student/login', async (req, res) => {
         }
         // Store ONLY student ObjectId in session (never student_number for privacy)
         req.session.studentId = student._id.toString();
-        req.session.save((err) => {
-            if (err) {
-                res.status(500).json({
-                    success: false,
-                    message: 'Session error'
-                });
-                return;
-            }
-            res.json({ success: true });
-        });
+        // Save session with retry mechanism (helps during parallel testing)
+        const saveSession = (retries = 3) => {
+            req.session.save((err) => {
+                if (err) {
+                    console.error(`Session save error (${4 - retries}/3 attempts):`, err.message);
+                    if (retries > 1) {
+                        // Retry after 100ms delay
+                        setTimeout(() => saveSession(retries - 1), 100);
+                        return;
+                    }
+                    res.status(500).json({
+                        success: false,
+                        message: 'Session initialization failed. Please try again.'
+                    });
+                    return;
+                }
+                res.json({ success: true });
+            });
+        };
+        saveSession();
     }
     catch (error) {
         console.error('Error during student login:', error);

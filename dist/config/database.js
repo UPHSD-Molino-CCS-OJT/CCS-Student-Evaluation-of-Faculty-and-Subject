@@ -28,13 +28,14 @@ if (process.env.NODE_ENV !== 'production') {
 // MongoDB connection string - supports both local and MongoDB Atlas
 const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/faculty_evaluation';
 // MongoDB connection options optimized for both local and Vercel
+// Increased pool sizes to handle parallel automated testing (10+ concurrent browsers)
 const options = {
     serverSelectionTimeoutMS: process.env.VERCEL ? 10000 : 30000,
     socketTimeoutMS: 45000,
     family: 4,
     retryWrites: true,
-    maxPoolSize: process.env.VERCEL ? 10 : 100,
-    minPoolSize: process.env.VERCEL ? 1 : 10
+    maxPoolSize: process.env.VERCEL ? 10 : 200, // Increased from 100 to 200 for parallel testing
+    minPoolSize: process.env.VERCEL ? 1 : 20 // Increased from 10 to 20 for parallel testing
 };
 // Connect to MongoDB
 mongoose_1.default.connect(mongoURI, options)
