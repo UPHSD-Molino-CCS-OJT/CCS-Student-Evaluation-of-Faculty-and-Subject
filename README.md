@@ -1,381 +1,228 @@
-# 🎓 UPHSD Student Faculty Evaluation System
+# 🎓 UPHSD Student Faculty Evaluation System (React + Vite)
 
-**Complete Documentation & User Guide**
+A modern, full-stack web application for collecting anonymous student feedback on faculty performance, built with **React.js + Vite** frontend and **Express.js + MongoDB** backend.
 
-This project has been migrated from MySQL to **MongoDB Atlas** for easy cloud hosting!
+## 🌟 Version 2.0 - React Migration
 
-## 📑 Table of Contents
+**Major Update:** The system has been migrated from EJS server-side rendering to a modern React + Vite architecture for improved performance, better user experience, and enhanced developer workflow.
 
-- [Quick Start](#-quick-start-5-minutes)
-- [Project Structure](#-project-structure)
-- [Available Scripts](#️-available-scripts)
-- [Resources & Tips](#-resources--tips)
+## ✨ Key Features
+
+### Student Portal
+- 💾 **Auto-save Draft System** - Automatic progress saving
+- 📊 **Real-time Progress Tracker** - Visual completion indicators  
+- ✅ **Smart Form Validation** - Instant feedback
+- 🎯 **Section Accordion Navigation** - Easy form navigation
+- ⌨️ **Keyboard Shortcuts** - Ctrl+S to save manually
+- 📱 **Fully Responsive** - Works on all devices
+- 🔒 **10-Layer Privacy Protection** - Complete anonymity
+
+### Admin Portal  
+- 🔐 **Secure Authentication** - Session-based login
+- 📊 **Comprehensive Dashboard** - Statistics and analytics
+- 👁️ **Detailed Evaluation Reports** - Color-coded ratings
+- 👨‍🏫 **Teacher Management** - Full CRUD operations
+- 📚 **Course Management** - Organize by program
+- 🎓 **Program Management** - Academic program control
+- 🛡️ **Privacy Audit System** - Compliance monitoring
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18 or higher
+- MongoDB
+- npm or yarn
+
+### Installation
+
+1. **Clone and install:**
+   ```bash
+   git clone <repository-url>
+   cd CCS-Student-Evaluation-of-Faculty-and-Subject
+   npm install
+   cd client && npm install && cd ..
+   ```
+
+2. **Configure environment:**
+   ```bash
+   # Create .env in root directory
+   MONGODB_URI=mongodb://localhost:27017/student_evaluation
+   SESSION_SECRET=your_secret_key_here
+   NODE_ENV=development
+   ```
+
+3. **Initialize database:**
+   ```bash
+   npm run setup-db
+   ```
+
+### Development Mode
+
+**Run full-stack application:**
+```bash
+npm run dev:fullstack
+```
+- Backend API: `http://localhost:3000`
+- Frontend: `http://localhost:5173`
+
+**Or run separately:**
+```bash
+# Terminal 1 - Backend
+npm run dev
+
+# Terminal 2 - Frontend  
+cd client
+npm run dev
+```
+
+### Production Mode
+
+```bash
+# Build React app
+npm run build
+
+# Start production server
+npm start
+```
+Access at `http://localhost:3000`
+
+## 🏗️ Tech Stack
+
+### Frontend
+- **React 18** - UI library
+- **Vite** - Build tool and dev server
+- **React Router v6** - Client-side routing
+- **Tailwind CSS** - Utility-first styling
+- **Axios** - HTTP client
+- **Font Awesome** - Icons
+
+### Backend
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM
+- **bcrypt** - Password hashing
+- **express-session** - Session management
+
+## 📁 Project Structure
+
+```
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/    # Reusable components
+│   │   ├── pages/         # Page components
+│   │   ├── App.jsx        # Main app
+│   │   └── main.jsx       # Entry point
+│   ├── public/            # Static assets
+│   └── vite.config.js     # Vite config
+├── routes/
+│   └── api.js            # API routes
+├── models/                # MongoDB models
+├── middleware/            # Express middleware
+├── utils/                 # Utilities
+├── config/                # Configuration
+├── server.js             # Express server
+└── package.json          # Dependencies
+```
 
 ## 📚 Documentation
 
-- **[Installation Guide](docs/INSTALLATION-GUIDE.md)** - Complete setup instructions
-- **[MongoDB Setup & Troubleshooting](docs/MONGODB-SETUP-TROUBLESHOOTING.md)** - Connection issues and solutions
-- **[Features Guide](docs/FEATURES-GUIDE.md)** - Detailed feature documentation
-- **[Function Reference](docs/FUNCTION-REFERENCE.md)** - API and function documentation
-- **[Privacy & Data Protection](docs/PRIVACY-AND-DATA-PROTECTION.md)** - Complete privacy system guide
+- 📖 [React Migration Guide](REACT-MIGRATION.md) - Migration details
+- 🎯 [Features Guide](docs/FEATURES-GUIDE.md) - Complete feature list
+- 🔐 [Privacy & Data Protection](docs/PRIVACY-AND-DATA-PROTECTION.md) - Privacy system
+- 📦 [Installation Guide](docs/INSTALLATION-GUIDE.md) - Detailed setup
+- 🔧 [Function Reference](docs/FUNCTION-REFERENCE.md) - API reference
 
----
+## 🔐 Default Credentials
 
-## 🚀 Quick Start (5 minutes!)
+**Admin Portal:**
+- Username: `admin`
+- Password: `admin123`
 
-### Quick Setup Steps
+⚠️ **Change these credentials immediately after first login!**
 
-#### 1. Create MongoDB Atlas Account (FREE)
-1. Go to https://www.mongodb.com/cloud/atlas/register
-2. Sign up for free account
-3. Create a new **FREE** M0 cluster
-4. Create database user (username + password)
-5. Whitelist your IP (or allow from anywhere for development)
-6. Get your connection string
+## 🌐 Access URLs
 
-#### 2. Install Dependencies
-```powershell
-npm install
-```
+- **Student Portal:** `http://localhost:3000/student/login`
+- **Admin Portal:** `http://localhost:3000/admin/login`
+- **API Health Check:** `http://localhost:3000/api/health`
 
-#### 3. Configure Environment
-Create `.env` file:
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/faculty_evaluation?retryWrites=true&w=majority
-PORT=3000
-SESSION_SECRET=uphsd_faculty_evaluation_secret_key_2026
-```
+## 🎨 Key Features in Detail
 
-#### 4. Initialize Database
-```powershell
-node setup-db-mongodb.js
-```
+### Auto-Save System
+- Saves every 2 seconds automatically
+- Stores in browser localStorage
+- Resume anytime
+- Clear draft option
+- Ctrl+S manual save
 
-#### 5. Start Server
-```powershell
-npm start
-```
+### Progress Tracking
+- Visual progress bar
+- Percentage completion  
+- Section-by-section status
+- Color-coded indicators
 
-**Done!** Visit http://localhost:3000
+### Privacy Protection
+1. **Cryptographic anonymization** (SHA-512)
+2. **Timing decorrelation** (random delays)
+3. **IP anonymization**
+4. **Automatic decoupling** (24h)
+5. **Differential privacy**
+6. **K-anonymity** (k=5)
+7. **Session security**
+8. **Data minimization**
+9. **Audit logging**
+10. **FERPA/GDPR compliance**
 
-**📖 For detailed setup instructions, see: [Installation Guide](docs/INSTALLATION-GUIDE.md)**
+## 🐛 Troubleshooting
 
----
-
-
-## 📂 Project Structure
-
-```
-├── models/              # Mongoose schemas (NEW!)
-│   ├── Admin.js        # Admin user model
-│   ├── Program.js      # Academic programs
-│   ├── Teacher.js      # Faculty members
-│   ├── Course.js       # Course subjects
-│   └── Evaluation.js   # Student evaluations
-├── config/
-│   └── database.js      # MongoDB connection (UPDATED!)
-├── views/               # EJS templates
-│   ├── index.ejs       # Student evaluation form
-│   └── admin/          # Admin panel views
-│       ├── dashboard.ejs
-│       ├── evaluations.ejs
-│       ├── evaluation-detail.ejs
-│       ├── teachers.ejs
-│       ├── programs.ejs
-│       ├── courses.ejs
-│       ├── login.ejs
-│       └── partials/
-│           └── navbar.ejs
-├── middleware/          # Authentication
-│   └── auth.js         # Auth middleware
-├── public/             # Static files (CSS, JS, images)
-├── database/           # Legacy SQL files (archived)
-│   └── schema.sql
-├── server.js           # Express app (UPDATED for MongoDB!)
-├── setup-db-mongodb.js # Database initialization (NEW!)
-├── .env.example        # MongoDB config template (UPDATED!)
-├── package.json        # Now uses Mongoose! (UPDATED!)
-├── README.md           # This file (comprehensive docs)
-├── FEATURES.md         # Feature documentation
-├── FUNCTIONS.md        # Function reference
-├── INSTALLATION.md     # Installation guide
-└── MONGODB-SETUP-GUIDE.md # Troubleshooting guide
-```
-
----
-
-## ️ Available Scripts
-
-| Script | Purpose | When to Use |
-|--------|---------|-------------|
-| `npm start` | Start the server | Normal operation |
-| `npm run dev` | Start with nodemon (auto-reload) | Development |
-| `node setup-db-mongodb.js` | Initialize MongoDB with sample data | First installation or reset |
-| `node cleanup-duplicates-mongodb.js` | Remove duplicate programs | If programs duplicated |
-| `node cleanup-teacher-duplicates-mongodb.js` | Remove duplicate teachers | If teachers duplicated |
-| `node cleanup-course-duplicates-mongodb.js` | Remove duplicate courses | If courses duplicated |
-| `node check-admin.js` | Verify admin account | Troubleshooting login |
-
----
-
-## 🎓 Resources & Tips
-
-### MongoDB Resources
-
-#### Official Documentation
-- **MongoDB University**: Free courses at https://university.mongodb.com/
-- **Mongoose Docs**: https://mongoosejs.com/docs/
-- **Atlas Docs**: https://docs.atlas.mongodb.com/
-- **Connection Strings**: https://docs.mongodb.com/manual/reference/connection-string/
-
-#### Useful Atlas Features
-- **Performance Advisor**: Suggests indexes for better performance
-- **Real-time Metrics**: View operations, connections, and queries
-- **Query Profiler**: Analyze slow queries
-- **Data Explorer**: Browse and edit data directly in Atlas
-- **Backup & Restore**: Automated backups (limited in free tier)
-
-#### Free Tier Limits
-- **Storage**: 512 MB
-- **RAM**: 512 MB (shared)
-- **Backups**: Limited to recent snapshots
-- **Connections**: 500 max
-
-### Performance Tips
-
-1. **Indexes**: Already configured in models (student_number, teacher_id, etc.)
-2. **Lean queries**: Used for read-only operations (faster)
-3. **Populate**: Only load needed fields from references
-4. **Connection pooling**: Handled automatically by Mongoose
-5. **Aggregation**: Use for complex statistics and reporting
-6. **Limit results**: Use pagination for large datasets
-
-### Security Best Practices
-
-1. **Never commit `.env`** - Already in .gitignore
-2. **Whitelist IPs** - Use specific IPs in production
-3. **Strong passwords** - Use generated passwords for DB users
-4. **Change SESSION_SECRET** - Use random string in production
-5. **Enable Atlas audit logs** - Track database access
-6. **Regular backups** - Export data regularly
-7. **Update dependencies** - Keep packages up to date
-
-### Monitoring with Atlas
-
-Access your cluster in Atlas to see:
-- Real-time performance metrics
-- Slow query analysis
-- Connection statistics
-- Storage usage
-- Operation counts
-- Index usage statistics
-
-### Deployment Ready
-
-This project is ready to deploy to:
-
-**Heroku:**
+### Frontend Issues
 ```bash
-heroku config:set MONGODB_URI=your_uri
-heroku config:set SESSION_SECRET=your_secret
+cd client
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
 ```
 
-**Render:**
-- Add MONGODB_URI in environment variables
-- Add SESSION_SECRET
-- Set NODE_ENV=production
-
-**Vercel:**
-- Configure env vars in project settings
-- MONGODB_URI, SESSION_SECRET, NODE_ENV
-- Optimized for serverless
-
-**Railway:**
-- Auto-detects Node.js
-- Add MONGODB_URI and SESSION_SECRET
-- Set PORT if needed
-
-### Development Workflow
-
-#### For Students Testing:
-1. Open http://localhost:3000
-2. Fill out evaluation form
-3. Test auto-save feature
-4. Submit evaluation
-5. Verify in admin panel
-
-#### For Admin Testing:
-1. Login at http://localhost:3000/admin/login
-2. Check dashboard statistics
-3. Add/edit teachers, programs, courses
-4. View evaluation details
-5. Test on mobile device
-
-#### Testing Responsive Design
-
-**Desktop Testing (Chrome/Firefox):**
-1. Press F12 to open Developer Tools
-2. Click Toggle Device Toolbar (Ctrl+Shift+M)
-3. Test different device sizes:
-   - Mobile: 375x667 (iPhone)
-   - Tablet: 768x1024 (iPad)
-   - Desktop: 1920x1080
-
-**Real Device Testing:**
-1. Make sure your device is on the same network
-2. Find your computer's local IP:
-   ```powershell
-   ipconfig
-   # Look for IPv4 Address
-   ```
-3. Access from phone: `http://YOUR_IP:3000`
-4. Test all features on actual devices
-
-### Useful Commands
-
-**Check MongoDB connection:**
-```javascript
-// Run in Node.js
-const mongoose = require('mongoose');
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected!'))
-    .catch(err => console.error('Error:', err));
+### Backend Issues
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
 ```
 
-**View collections in Atlas:**
-- Go to your cluster in Atlas
-- Click "Browse Collections"
-- Navigate through databases and collections
-
-**Count documents:**
-```javascript
-// In your scripts
-const count = await Evaluation.countDocuments();
-console.log('Total evaluations:', count);
+### Database Issues
+```bash
+npm run setup-db
 ```
 
-**Export data from Atlas:**
-- Use MongoDB Compass (free GUI tool)
-- Or use `mongodump` command-line tool
+## 🤝 Contributing
 
-### Next Steps
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
-#### For Development:
-1. ✅ Change default admin password
-2. ✅ Add your actual teachers
-3. ✅ Add your actual programs
-4. ✅ Add your actual courses
-5. ✅ Test on mobile devices
-6. ✅ Customize the form if needed
-7. ✅ Set up regular backups
+## 📄 License
 
-#### For Production:
-1. ✅ Secure MongoDB Atlas (specific IP whitelist)
-2. ✅ Change SESSION_SECRET to strong random string
-3. ✅ Enable MongoDB Atlas backups
-4. ✅ Set up monitoring and alerts
-5. ✅ Use environment variables
-6. ✅ Deploy to hosting service
-7. ✅ Test thoroughly before launch
-8. ✅ Monitor performance and usage
+ISC License
 
----
+## 👥 Support
 
-## 🆘 Getting Help
+For issues and questions:
+- Create an issue on GitHub
+- Contact the development team
+- Check documentation in `/docs`
 
-### Support Resources
+## 🙏 Acknowledgments
 
-**MongoDB Atlas:**
-- Status: https://status.mongodb.com/
-- Support: https://support.mongodb.com/
-- Community: https://community.mongodb.com/
-
-**Project Issues:**
-- Contact UPHSD Molino CCS IT Department
-- Check documentation files in project
-- Review error messages in console/terminal
-
-### Common Questions
-
-**Q: Can I use this without internet?**
-A: Yes, install MongoDB locally and update MONGODB_URI to `mongodb://localhost:27017/faculty_evaluation`
-
-**Q: Is student data private?**
-A: Yes, student IDs are hidden from admin views but stored for auditing.
-
-**Q: Can I customize the evaluation form?**
-A: Yes, edit `views/index.ejs` and update the Evaluation model schema.
-
-**Q: How do I backup my data?**
-A: Use MongoDB Compass to export, or enable Atlas automated backups.
-
-**Q: Can multiple admins use the system?**
-A: Yes, add more admin accounts in the database.
+- UPHSD for project requirements
+- React community for excellent tools
+- MongoDB team for database solutions
+- All contributors and testers
 
 ---
 
-## 🎉 Success!
-
-If you can see the evaluation form and login to the admin portal, congratulations! Your installation is complete.
-
-### Verification Checklist:
-- ✅ Form loads and shows navigation bar
-- ✅ Admin login button visible
-- ✅ Can login to admin portal
-- ✅ Dashboard shows statistics from MongoDB
-- ✅ Mobile menu works (hamburger icon)
-- ✅ Tables scroll on mobile
-- ✅ Student IDs hidden from admin views
-- ✅ Can add/edit/delete teachers
-- ✅ No duplicate entries allowed (Mongoose validation)
-- ✅ Auto-save works on evaluation form
-- ✅ Progress tracker updates in real-time
-
-### MongoDB Atlas Benefits:
-- ✅ No local database installation needed
-- ✅ Automatic backups (in paid tiers)
-- ✅ Built-in monitoring and alerts
-- ✅ Scalable as your needs grow
-- ✅ Access from anywhere
-- ✅ Free tier perfect for development
-- ✅ Easy deployment to cloud platforms
-
-### Start Using:
-1. Test the student form on mobile
-2. Add your actual teachers
-3. Add your actual courses
-4. Test a sample evaluation
-5. View it in the admin dashboard
-6. Monitor in Atlas dashboard
-7. Customize as needed
-
----
-
-## 📝 License
-
-MIT License - See LICENSE file
-
----
-
-## 👥 Credits
-
-**UPHSD Molino - College of Computer Studies**
-- Student Faculty Evaluation System
-- Migrated to MongoDB Atlas: February 2026
-
-**Technologies Used:**
-- Node.js & Express
-- MongoDB & Mongoose
-- EJS Templates
-- Tailwind CSS
-- Font Awesome
-- bcrypt for security
-- Express Session
-
----
-
-**Need help?** Contact the UPHSD Molino CCS IT Department
-
-**MongoDB Atlas Help:** https://support.mongodb.com/
-
-**Last Updated:** February 2026
+**Version 2.0** - React + Vite Architecture  
+Built with ❤️ for UPHSD
