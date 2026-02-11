@@ -921,7 +921,7 @@ Each evaluation:
 
 ### Can Anyone Identify Who Submitted an Evaluation?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Anonymous tokens cannot be reversed (one-way cryptographic function)
@@ -933,7 +933,7 @@ Each evaluation:
 
 ### Can Timing Be Used to Identify Students?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Random 2-8 second delays added
@@ -945,7 +945,7 @@ Each evaluation:
 
 ### Can IP Addresses Reveal Identity?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Last octet/segments removed from IPs
@@ -969,7 +969,7 @@ Each evaluation:
 
 ### Can Statistics Reveal Individual Responses?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Differential privacy noise added
@@ -981,7 +981,7 @@ Each evaluation:
 
 ### Can Small Classes Expose Students?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - K-anonymity minimum: 5 evaluations
@@ -993,7 +993,7 @@ Each evaluation:
 
 ### Can Session Data Be Exploited?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Only ObjectId stored (never student_number)
@@ -1005,7 +1005,7 @@ Each evaluation:
 
 ### Can Multiple Evaluations Be Linked?
 
-**Answer: NO** ✅ **COMPLETELY IMPOSSIBLE**
+**Answer: NO** ✅ 
 
 **Reasons:**
 - Each evaluation has unique random token
