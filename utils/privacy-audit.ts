@@ -746,26 +746,48 @@ class PrivacyAuditor {
      */
     private async checkLayer8_KAnonymity(): Promise<void> {
         try {
+            // Check both server.ts and routes/api.ts
             const serverPath = path.join(__dirname, '..', 'server.ts');
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
             
-            if (!fs.existsSync(serverPath)) {
-                this.addWarning(
-                    'INFO',
-                    '[Layer 8] Server File Not Found',
-                    'Could not read server.ts to check k-anonymity thresholds.',
-                    'Manually verify minimum thresholds are enforced'
-                );
-                return;
+            let hasMinimumCheck = false;
+            let checkLocation = '';
+            
+            // Check routes/api.ts first (most likely location)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                
+                hasMinimumCheck = 
+                    routesContent.includes('K_ANONYMITY_THRESHOLD') ||
+                    routesContent.includes('checkKAnonymity') ||
+                    routesContent.includes('evaluations.length < 5') ||
+                    routesContent.includes('evaluations.length >= 5') ||
+                    routesContent.includes('totalEvaluations >= 5') ||
+                    routesContent.includes('totalEvaluations < 5') ||
+                    routesContent.includes('MIN_EVALUATIONS') ||
+                    routesContent.includes('MINIMUM_RESPONSES');
+                
+                if (hasMinimumCheck) {
+                    checkLocation = 'routes/api.ts';
+                }
             }
-
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
             
-            // Check for minimum threshold checks
-            const hasMinimumCheck = 
-                serverContent.includes('evaluations.length < 5') ||
-                serverContent.includes('evaluations.length >= 5') ||
-                serverContent.includes('MIN_EVALUATIONS') ||
-                serverContent.includes('MINIMUM_RESPONSES');
+            // If not found in routes, check server.ts
+            if (!hasMinimumCheck && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                
+                hasMinimumCheck = 
+                    serverContent.includes('K_ANONYMITY_THRESHOLD') ||
+                    serverContent.includes('checkKAnonymity') ||
+                    serverContent.includes('evaluations.length < 5') ||
+                    serverContent.includes('evaluations.length >= 5') ||
+                    serverContent.includes('MIN_EVALUATIONS') ||
+                    serverContent.includes('MINIMUM_RESPONSES');
+                
+                if (hasMinimumCheck) {
+                    checkLocation = 'server.ts';
+                }
+            }
 
             if (!hasMinimumCheck) {
                 this.addIssue(
@@ -777,7 +799,7 @@ class PrivacyAuditor {
             } else {
                 this.addWarning(
                     'INFO',
-                    '[Layer 8] ✓ K-Anonymity Checks Found',
+                    `[Layer 8] ✓ K-Anonymity Checks Found in ${checkLocation}`,
                     'Found evidence of minimum threshold checks in server code.',
                     'Verify k≥5 for teachers and k≥10 for department-wide reports'
                 );
