@@ -178,6 +178,46 @@ class StudentEvaluationAutomation {
   }
 
   /**
+   * Expand all form sections
+   */
+  async expandAllSections(): Promise<void> {
+    if (!this.page) throw new Error('Browser not initialized');
+
+    console.log('  📂 Expanding all form sections...');
+
+    const sections = [
+      'Section 1: The Teacher',
+      'Section 2: The Learning Process',
+      'Section 3: Classroom Management'
+    ];
+
+    for (const sectionName of sections) {
+      try {
+        // Find the section button by its text content
+        const sectionButton = this.page.locator(`button:has-text("${sectionName}")`).first();
+        
+        // Check if section is already expanded (has blue background)
+        const isExpanded = await sectionButton.evaluate((el) => {
+          return el.className.includes('bg-blue-600');
+        });
+
+        if (!isExpanded) {
+          await sectionButton.scrollIntoViewIfNeeded();
+          await sectionButton.click();
+          await this.page.waitForTimeout(300); // Wait for animation
+          console.log(`    ✓ Expanded: ${sectionName}`);
+        } else {
+          console.log(`    ✓ Already expanded: ${sectionName}`);
+        }
+      } catch (error) {
+        console.error(`    ✗ Failed to expand ${sectionName}:`, (error as Error).message);
+      }
+    }
+
+    console.log('  ✓ All sections expanded');
+  }
+
+  /**
    * Fill evaluation form with random ratings
    */
   async fillEvaluationForm(): Promise<void> {
@@ -188,7 +228,10 @@ class StudentEvaluationAutomation {
     // Wait for the form to load
     await this.page.waitForSelector('form', { timeout: 5000 });
 
-    // Get all radio buttons
+    // First, expand all sections
+    await this.expandAllSections();
+
+    // Get all radio buttons (now that all sections are expanded)
     const ratingFields = await this.page.$$('input[type="radio"]');
     const fieldNames = new Set<string>();
 
@@ -295,6 +338,13 @@ class StudentEvaluationAutomation {
       await this.page.goto(`${this.config.baseUrl}/student/evaluate/${enrollmentId}`);
       await this.page.waitForLoadState('domcontentloaded');
       
+      // Check if already evaluated (error message)
+      const alreadyEvaluatedError = await this.page.$('text=You have already evaluated this subject');
+      if (alreadyEvaluatedError) {
+        console.log('  ⚠️  Subject already evaluated - skipping');
+        return true; // Return true to continue with other subjects
+      }
+
       // Wait for form to be visible
       await this.page.waitForSelector('form', { state: 'visible', timeout: 10000 });
       console.log('  ✓ Evaluation form loaded');
