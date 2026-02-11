@@ -604,7 +604,7 @@ async function main() {
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
 
   const config = parseArgs();
-  const PARALLEL_LIMIT = 5; // Reduced from 10 to 5 to prevent server overload
+  const PARALLEL_LIMIT = 5;
   
   // If no specific student is provided, test all students from database
   if (!config.studentNumber) {
