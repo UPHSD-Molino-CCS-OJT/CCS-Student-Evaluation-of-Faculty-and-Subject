@@ -11,6 +11,8 @@
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "build:server": "tsc",
     "setup-db": "ts-node setup-db-mongodb.ts",
+    "test:evaluate": "npx playwright install chromium && ts-node test-student-evaluation.ts",
+    "test:evaluate:headless": "npx playwright install chromium && ts-node test-student-evaluation.ts --headless",
     "client": "cd client && npm run dev",
     "client:build": "cd client && npm install && npm run build",
     "dev:fullstack": "concurrently \"npm run dev\" \"npm run client\"",
@@ -42,12 +44,14 @@
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@types/bcrypt": "^6.0.0",
     "@types/body-parser": "^1.19.6",
     "@types/connect-flash": "^0.0.40",
     "@types/connect-mongo": "^3.1.2",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.18.2",
+    "playwright": "^1.40.0",
     "@types/node": "^25.2.3",
     "@types/node-cron": "^3.0.11",
     "concurrently": "^8.2.2",
