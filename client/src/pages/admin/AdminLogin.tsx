@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../../components/Navbar'
 
@@ -16,6 +16,8 @@ const AdminLogin: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnUrl = (location.state as any)?.returnUrl || '/admin/dashboard'
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
@@ -28,7 +30,7 @@ const AdminLogin: React.FC = () => {
       })
 
       if (response.data.success) {
-        navigate('/admin/dashboard')
+        navigate(returnUrl)
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

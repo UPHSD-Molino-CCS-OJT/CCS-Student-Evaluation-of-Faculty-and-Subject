@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../../components/Navbar'
 
@@ -8,6 +8,8 @@ const StudentLogin: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnUrl = (location.state as any)?.returnUrl || '/student/subjects'
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
@@ -16,11 +18,12 @@ const StudentLogin: React.FC = () => {
 
     try {
       const response = await axios.post('/api/student/login',
+        { student_number: studentNumber },
         { withCredentials: true }
       )
       
       if (response.data.success) {
-        navigate('/student/subjects')
+        navigate(returnUrl)
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

@@ -98,6 +98,16 @@ router.post('/admin/login', async (req: IRequest, res: Response): Promise<void> 
 
 // ==================== STUDENT ROUTES ====================
 
+// Check if student is authenticated
+router.get('/student/check-auth', (req: IRequest, res: Response): void => {
+    res.json({ 
+        authenticated: !!req.session.studentId,
+        student: req.session.studentId ? {
+            id: req.session.studentId
+        } : null
+    });
+});
+
 // Student Login
 router.post('/student/login', async (req: IRequest, res: Response): Promise<void> => {
     try {

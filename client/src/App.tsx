@@ -12,7 +12,9 @@ import AdminPrograms from './pages/admin/AdminPrograms'
 import AdminCourses from './pages/admin/AdminCourses'
 import AdminStudents from './pages/admin/AdminStudents'
 import AdminPrivacyAudit from './pages/admin/AdminPrivacyAudit'
+import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
+import StudentProtectedRoute from './components/StudentProtectedRoute'
 
 const App: React.FC = () => {
   return (
@@ -21,10 +23,27 @@ const App: React.FC = () => {
         {/* Redirect root to student login */}
         <Route path="/" element={<Navigate to="/student/login" replace />} />
         
+        {/* Unauthorized page */}
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        
         {/* Student Routes */}
         <Route path="/student/login" element={<StudentLogin />} />
-        <Route path="/student/subjects" element={<StudentSubjects />} />
-        <Route path="/student/evaluate/:enrollmentId" element={<StudentEvaluate />} />
+        <Route 
+          path="/student/subjects" 
+          element={
+            <StudentProtectedRoute>
+              <StudentSubjects />
+            </StudentProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/student/evaluate/:enrollmentId" 
+          element={
+            <StudentProtectedRoute>
+              <StudentEvaluate />
+            </StudentProtectedRoute>
+          } 
+        />
         
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

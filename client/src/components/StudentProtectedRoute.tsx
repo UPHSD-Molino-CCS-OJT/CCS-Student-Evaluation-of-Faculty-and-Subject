@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 
-interface ProtectedRouteProps {
+interface StudentProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const StudentProtectedRoute: React.FC<StudentProtectedRouteProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const location = useLocation()
@@ -14,7 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get('/api/admin/check-auth', {
+        const response = await axios.get('/api/student/check-auth', {
           withCredentials: true
         })
         setIsAuthenticated(response.data.authenticated)
@@ -40,10 +40,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={`/unauthorized?context=admin&returnUrl=${encodeURIComponent(location.pathname)}`} replace />
+    return <Navigate to={`/unauthorized?context=student&returnUrl=${encodeURIComponent(location.pathname)}`} replace />
   }
 
   return children
 }
 
-export default ProtectedRoute
+export default StudentProtectedRoute
