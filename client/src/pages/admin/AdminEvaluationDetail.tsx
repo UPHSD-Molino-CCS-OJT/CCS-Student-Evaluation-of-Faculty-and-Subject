@@ -108,7 +108,7 @@ const AdminEvaluationDetail: React.FC = () => {
             <div>
               <p className="text-blue-200 text-sm mb-1">Submitted</p>
               <p className="font-semibold text-lg">
-                {evaluation.created_at && new Date(evaluation.created_at).toLocaleDateString()}
+                {evaluation.createdAt && new Date(evaluation.createdAt).toLocaleDateString()}
               </p>
             </div>
           </div>

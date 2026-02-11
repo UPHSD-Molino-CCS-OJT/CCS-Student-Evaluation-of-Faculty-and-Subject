@@ -68,7 +68,7 @@ export interface Teacher {
   email?: string;
   department?: string;
   status: 'active' | 'inactive';
-  created_at?: Date;
+  createdAt?: Date;
 }
 
 export interface Program {
@@ -156,7 +156,7 @@ export interface Evaluation {
   overall_average: number;
   comments?: string;
   submitted_at: Date;
-  created_at?: Date;
+  createdAt?: Date;
 }
 
 // Dashboard Types

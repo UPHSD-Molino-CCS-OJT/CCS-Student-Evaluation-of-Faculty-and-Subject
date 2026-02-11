@@ -241,7 +241,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-gray-800">{evaluation.teacher?.full_name}</p>
                       <span className="text-xs text-gray-500">
-                        {evaluation.created_at && new Date(evaluation.created_at).toLocaleDateString()}
+                        {evaluation.createdAt && new Date(evaluation.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600">{evaluation.course?.name}</p>

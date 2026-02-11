@@ -459,7 +459,7 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
         const recentEvaluations = await Evaluation.find()
             .populate('teacher_id', 'full_name')
             .populate('course_id', 'name code')
-            .sort({ created_at: -1 })
+            .sort({ createdAt: -1 })
             .limit(10)
             .select('-anonymous_token -ip_address');
         
@@ -485,7 +485,7 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
-            .sort({ created_at: -1 })
+            .sort({ createdAt: -1 })
             .select('-anonymous_token -ip_address');
         
         res.json({ evaluations });

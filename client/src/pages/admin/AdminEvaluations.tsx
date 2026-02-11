@@ -90,7 +90,7 @@ const AdminEvaluations: React.FC = () => {
                     return (
                       <tr key={evaluation._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {evaluation.created_at && new Date(evaluation.created_at).toLocaleDateString()}
+                          {evaluation.createdAt && new Date(evaluation.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {evaluation.teacher?.full_name}
