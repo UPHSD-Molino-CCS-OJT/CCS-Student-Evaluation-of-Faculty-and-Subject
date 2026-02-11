@@ -28,15 +28,15 @@
 
 ### What is Zero-Knowledge Privacy?
 
-This system implements a **zero-knowledge security model** for student evaluations, ensuring complete anonymity and privacy protection. Zero-knowledge privacy means that student evaluations are stored in a way that makes it **impossible to trace back to the student's identity**—even system administrators cannot determine which specific student submitted which evaluation.
+This system implements a **zero-knowledge security model** for student evaluations, providing strong anonymity and privacy protection. Zero-knowledge privacy means that student evaluations are stored in a way designed to make it **extremely difficult to trace back to the student's identity**—even system administrators should not be able to determine which specific student submitted which evaluation under normal circumstances.
 
 ### Why This Matters
 
 **For Students:**
-- 🛡️ Complete protection from retaliation
+- 🛡️ Strong protection from retaliation
 - 💬 Freedom to provide honest feedback
-- 🔒 Personal information never stored with evaluations
-- ✅ Confidence in system anonymity
+- 🔒 Personal information not stored with evaluations
+- ✅ Confidence in multi-layered system protection
 
 **For Institutions:**
 - ⚖️ FERPA and GDPR compliance
@@ -255,9 +255,9 @@ Enrollment {
 
 **Why This Matters:**
 - Grace period allows verification of submission
-- After 24 hours, **no way** to trace back to student
-- Even database backups cannot reveal identity
-- Permanent unlinkability achieved
+- After 24 hours, **extremely difficult** to trace back to student
+- Database backups designed to not reveal identity
+- Permanent unlinkability achieved by design
 
 **Scheduled Task:**
 Runs every hour automatically via `node-cron`.
@@ -921,97 +921,97 @@ Each evaluation:
 
 ### Can Anyone Identify Who Submitted an Evaluation?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
-- Anonymous tokens cannot be reversed (one-way cryptographic function)
-- Student identifiers never stored with evaluations
-- No mathematical or technical way to decrypt tokens
-- Even with database access: still anonymous
+- Anonymous tokens use one-way cryptographic functions designed to prevent reversal
+- Student identifiers not stored with evaluations
+- Cryptographic design makes decryption extremely difficult
+- Even with database access: designed to remain anonymous
 
 ---
 
 ### Can Timing Be Used to Identify Students?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
 - Random 2-8 second delays added
 - Timestamps rounded to nearest hour
-- No precise timing information stored
-- Login-to-submission correlation blocked
+- Precise timing information not stored
+- Login-to-submission correlation prevented by design
 
 ---
 
 ### Can IP Addresses Reveal Identity?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
 - Last octet/segments removed from IPs
-- Cannot identify specific device
-- Network correlation prevented
-- Cross-session linking blocked
+- Designed to prevent identification of specific devices
+- Network correlation prevention implemented
+- Cross-session linking blocked by design
 
 ---
 
 ### Can Database Queries Link Evaluations to Students?
 
-**Answer: NO** ✅ **AFTER 24 HOURS**
+**Answer: Extremely Difficult** ✅ **AFTER 24 HOURS**
 
 **Reasons:**
 - Initial 24-hour grace period (for verification)
 - Links automatically removed after 24 hours
-- Permanent unlinkability achieved
-- Even backups cannot reveal identity
+- Permanent unlinkability achieved by design
+- Backups designed to not reveal identity
 
 ---
 
 ### Can Statistics Reveal Individual Responses?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
 - Differential privacy noise added
 - K-anonymity thresholds enforced
 - Minimum group sizes required
-- Reverse calculation mathematically prevented
+- Reverse calculation designed to be mathematically infeasible
 
 ---
 
 ### Can Small Classes Expose Students?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
 - K-anonymity minimum: 5 evaluations
 - Statistics hidden for small groups
 - Teacher reports require ≥5 evaluations
-- Individual protection in small classes
+- Strong individual protection in small classes
 
 ---
 
 ### Can Session Data Be Exploited?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
-- Only ObjectId stored (never student_number)
+- Only ObjectId stored (not student_number)
 - Automatic session cleanup after submission
-- No identifying information in session
-- Session hijacking cannot reveal identity
+- Minimal identifying information in session
+- Session hijacking protections implemented
 
 ---
 
 ### Can Multiple Evaluations Be Linked?
 
-**Answer: NO** ✅ 
+**Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
 - Each evaluation has unique random token
 - No common identifiers across evaluations
-- Cannot build student profiles
-- Cross-evaluation correlation prevented
+- Designed to prevent building student profiles
+- Cross-evaluation correlation prevention implemented
 
 ---
 
@@ -2188,10 +2188,10 @@ npm test  // If test suite exists
 ```
 Example Privacy Notice:
 
-"Your evaluation responses are completely anonymous. The system uses 
-advanced privacy protection to ensure no one—including administrators—
-can identify who submitted which evaluation. Your honest feedback is 
-protected and valued."
+"Your evaluation responses are designed to be anonymous. The system uses 
+advanced privacy protection with multiple layers to make it extremely 
+difficult for anyone—including administrators—to identify who submitted 
+which evaluation. Your honest feedback is protected and valued."
 ```
 
 **5. Data Retention Policy**
@@ -2283,7 +2283,7 @@ Example Policy:
 
 ### Key Takeaways
 
-1. **Complete Anonymity:** Student evaluations cannot be traced back to individuals
+1. **Strong Anonymity:** Student evaluations designed to prevent tracing back to individuals
 2. **Multiple Protections:** Defense-in-depth approach with 10 layers
 3. **Automatic Protection:** Most features work automatically without configuration
 4. **Proven Techniques:** Uses academic research and industry standards

@@ -15,7 +15,7 @@ A modern, full-stack web application for collecting anonymous student feedback o
 - 🎯 **Section Accordion Navigation** - Easy form navigation
 - ⌨️ **Keyboard Shortcuts** - Ctrl+S to save manually
 - 📱 **Fully Responsive** - Works on all devices
-- 🔒 **10-Layer Privacy Protection** - Complete anonymity
+- 🔒 **10-Layer Privacy Protection** - Strong anonymity protection
 
 ### Admin Portal  
 - 🔐 **Secure Authentication** - Session-based login

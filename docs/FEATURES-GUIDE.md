@@ -207,9 +207,9 @@
 ### 4. 👁️ Detailed Evaluation Reports
 
 **Privacy-focused:**
-- **Student numbers completely hidden from admin view**
+- **Student numbers hidden from admin view**
 - Still stored in database for auditing
-- Protects student identity
+- Designed to protect student identity
 
 **Color-coded ratings:**
 - 🟢 **Green** (4-5) - Outstanding/High Satisfactory
@@ -371,10 +371,10 @@
 
 **🔒 PRIVACY PROTECTION IMPLEMENTED**
 
-This system implements a **10-layer systematic privacy protection system** to ensure complete student anonymity using cutting-edge privacy preservation techniques.
+This system implements a **10-layer systematic privacy protection system** to provide strong student anonymity using cutting-edge privacy preservation techniques.
 
 **Quick Overview:**
-- ✅ **Zero-Knowledge Privacy:** Impossible to trace evaluations to students
+- ✅ **Zero-Knowledge Privacy:** Designed to prevent tracing evaluations to students
 - ✅ **Cryptographic Security:** SHA-512 anonymous tokens
 - ✅ **Timing Protection:** Random delays prevent correlation
 - ✅ **Network Privacy:** IP addresses anonymized
@@ -405,11 +405,11 @@ This system implements a **10-layer systematic privacy protection system** to en
 - **K-Anonymity:** Stats hidden until ≥5 evaluations (k=5)
 
 **Privacy Guarantees:**
-✅ Cannot trace evaluations back to students
-✅ Cannot correlate by timing or IP address  
-✅ Cannot infer individual responses from statistics
-✅ Cannot identify students in small classes
-✅ Cannot exploit sessions or audit logs
+✅ Designed to prevent tracing evaluations back to students
+✅ Designed to prevent correlation by timing or IP address  
+✅ Designed to prevent inferring individual responses from statistics
+✅ Protects student identity in small classes
+✅ Designed to prevent exploitation of sessions or audit logs
 
 **Privacy Audit:**
 - Available in Admin Dashboard

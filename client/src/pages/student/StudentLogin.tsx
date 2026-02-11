@@ -109,7 +109,7 @@ const StudentLogin: React.FC = () => {
                 Privacy Protected
               </h3>
               <p className="text-sm text-blue-700">
-                Your responses are completely anonymous. We use advanced privacy protection to ensure your identity cannot be traced to your evaluations.
+                Your responses are designed to be anonymous. We use advanced privacy protection with multiple layers to make it extremely difficult to trace your identity to your evaluations.
               </p>
             </div>
           </div>
