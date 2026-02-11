@@ -392,9 +392,17 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
             submitted_at: safeTimestamp
         });
         
-        // Update enrollment
+        // Generate receipt hash for student verification (no reversible link)
+        const receiptHash = PrivacyProtection.generateReceiptHash(
+            anonymousToken,
+            safeTimestamp
+        );
+        
+        // Update enrollment - mark as used WITHOUT linking evaluation ID
         enrollment.has_evaluated = true;
-        enrollment.evaluation_id = evaluation._id;
+        enrollment.submission_token_used = true;
+        enrollment.receipt_hash = receiptHash;
+        // NO evaluation_id stored - complete structural unlinkability ✅
         await enrollment.save();
         
         // PRIVACY PROTECTION: Clear session data
@@ -402,7 +410,8 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
         
         res.json({ 
             success: true, 
-            message: 'Evaluation submitted successfully!' 
+            message: 'Evaluation submitted successfully!',
+            receipt: receiptHash // Give student verification receipt
         });
         
     } catch (error) {

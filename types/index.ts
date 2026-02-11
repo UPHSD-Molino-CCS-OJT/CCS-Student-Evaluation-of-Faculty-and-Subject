@@ -69,7 +69,9 @@ export interface IEnrollment extends Document {
   school_year: string;
   semester: '1st Semester' | '2nd Semester' | 'Summer';
   has_evaluated: boolean;
-  evaluation_id?: Types.ObjectId | IEvaluation;
+  submission_token?: string;
+  submission_token_used?: boolean;
+  receipt_hash?: string;
   createdAt: Date;
   updatedAt: Date;
 }

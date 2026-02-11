@@ -513,8 +513,8 @@ class PrivacyAuditor {
     }
 
     /**
-     * LAYER 4: Automatic Evaluation-Enrollment Decoupling
-     * Check if enrollment links are automatically removed
+     * LAYER 4: Cryptographic Receipt Model (No Reversible Links)
+     * Verify that receipt-based system is active and no evaluation_id links exist
      */
     private async checkLayer4_EnrollmentDecoupling(): Promise<void> {
         try {
@@ -526,72 +526,73 @@ class PrivacyAuditor {
                 return; // No enrollments to check
             }
 
-            const enrollmentsWithLink = await Enrollment.countDocuments({
-                has_evaluated: true,
+            // CRITICAL CHECK: No evaluation_id should exist (old model)
+            const enrollmentsWithEvaluationId = await Enrollment.countDocuments({
                 evaluation_id: { $exists: true, $ne: null }
             });
 
-            const decoupledEnrollments = await Enrollment.countDocuments({
-                has_evaluated: true,
-                decoupled_at: { $exists: true, $ne: null }
-            });
-
-            // Store for potential future use
-            // const percentLinked = Math.round((enrollmentsWithLink / totalEvaluatedEnrollments) * 100);
-            // const percentDecoupled = Math.round((decoupledEnrollments / totalEvaluatedEnrollments) * 100);
-
-            // Check if any links are older than grace period (24 hours)
-            const gracePeriodHours = 24;
-            const cutoffTime = new Date();
-            cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
-
-            const oldLinks = await Enrollment.countDocuments({
-                has_evaluated: true,
-                evaluation_id: { $exists: true, $ne: null },
-                updatedAt: { $lt: cutoffTime }
-            });
-
-            if (oldLinks > 0) {
+            if (enrollmentsWithEvaluationId > 0) {
                 this.addIssue(
-                    'HIGH',
-                    `[Layer 4] ${oldLinks} Enrollment Links Overdue for Decoupling`,
-                    'Found enrollment-evaluation links older than 24 hours. Links enable identity tracing!',
-                    'Run privacy scheduler or manual decoupling: node -e "require(\'./utils/privacy-scheduler\').manualDecoupling()"'
-                );
-            } else if (enrollmentsWithLink > 0) {
-                this.addWarning(
-                    'INFO',
-                    `[Layer 4] ✓ Automatic Decoupling Active`,
-                    `${enrollmentsWithLink} recent links within 24-hour grace period, ${decoupledEnrollments} properly decoupled.`,
-                    'Privacy scheduler is working correctly'
-                );
-            } else {
-                this.addWarning(
-                    'INFO',
-                    '[Layer 4] ✓ All Enrollments Decoupled',
-                    `All ${totalEvaluatedEnrollments} evaluated enrollments are properly decoupled.`,
-                    'Excellent privacy protection - no linkage exists'
+                    'CRITICAL',
+                    `[Layer 4] ${enrollmentsWithEvaluationId} Enrollments Using Old Link Model`,
+                    'Found enrollments with evaluation_id field. This creates reversible links! Receipt model should be used instead.',
+                    'Migrate to cryptographic receipt model: Remove evaluation_id, add receipt_hash to enrollments'
                 );
             }
 
-            // Check if privacy scheduler exists
-            const schedulerPath = path.join(__dirname, 'privacy-scheduler.ts');
-            
-            if (!fs.existsSync(schedulerPath)) {
+            // Check receipt model adoption
+            const enrollmentsWithReceipt = await Enrollment.countDocuments({
+                has_evaluated: true,
+                receipt_hash: { $exists: true, $ne: null }
+            });
+
+            const receiptAdoptionRate = totalEvaluatedEnrollments > 0
+                ? Math.round((enrollmentsWithReceipt / totalEvaluatedEnrollments) * 100)
+                : 0;
+
+            if (receiptAdoptionRate === 100) {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 4] ✓ Cryptographic Receipt Model Active',
+                    `All ${totalEvaluatedEnrollments} evaluated enrollments use receipt-based verification. No reversible links exist!`,
+                    'Excellent! Continue using receipt model for maximum privacy protection'
+                );
+            } else if (receiptAdoptionRate > 0) {
                 this.addWarning(
                     'MEDIUM',
-                    '[Layer 4] Privacy Scheduler Not Found',
-                    'privacy-scheduler.ts does not exist. Automatic decoupling may not be running.',
-                    'Create privacy scheduler with hourly decoupling tasks'
+                    `[Layer 4] Partial Receipt Model Adoption (${receiptAdoptionRate}%)`,
+                    `${enrollmentsWithReceipt} of ${totalEvaluatedEnrollments} enrollments using receipt model. Migration in progress.`,
+                    'Complete migration to receipt model to eliminate all reversible links'
+                );
+            } else {
+                this.addWarning(
+                    'HIGH',
+                    '[Layer 4] Receipt Model Not Implemented',
+                    'No enrollments found with receipt_hash field. Old linkage model may still be in use.',
+                    'Implement cryptographic receipt model: generateReceiptHash() and store in enrollment'
+                );
+            }
+
+            // Verify no decoupled_at timestamps (old model indicator)
+            const enrollmentsWithDecoupledAt = await Enrollment.countDocuments({
+                decoupled_at: { $exists: true }
+            });
+
+            if (enrollmentsWithDecoupledAt > 0) {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 4] Legacy Decoupled Records Found',
+                    `Found ${enrollmentsWithDecoupledAt} enrollments with decoupled_at timestamp from old 24h grace period model.`,
+                    'These are from the old system. New submissions use receipt model with no grace period needed'
                 );
             }
 
         } catch (error) {
             this.addWarning(
                 'INFO',
-                '[Layer 4] Enrollment Decoupling Check Failed',
-                `Could not check decoupling status: ${(error as Error).message}`,
-                'Verify enrollment decoupling manually'
+                '[Layer 4] Receipt Model Check Failed',
+                `Could not verify receipt model status: ${(error as Error).message}`,
+                'Manually verify cryptographic receipt model is active'
             );
         }
     }

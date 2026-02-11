@@ -22,50 +22,22 @@ class PrivacyScheduler {
     static initializeScheduledTasks(): void {
         console.log('🔒 Initializing privacy protection scheduled tasks...');
         
-        // Decouple evaluation-enrollment links after grace period (runs every hour)
-        this.scheduleEnrollmentDecoupling();
-        
         // Clean up old session data (runs every 6 hours)
         this.scheduleSessionCleanup();
         
         console.log('✓ Privacy protection tasks scheduled');
+        console.log('ℹ️  Note: Enrollment decoupling not needed - cryptographic receipt model ensures no reversible links exist');
     }
 
     /**
-     * Schedule automatic decoupling of enrollment-evaluation links
-     * Runs every hour to remove evaluation_id from enrollments older than 24 hours
+     * DEPRECATED: Enrollment decoupling no longer needed
+     * Cryptographic receipt model ensures no reversible evaluation links exist
+     * This function maintained for backward compatibility but does nothing
      */
     static scheduleEnrollmentDecoupling(): void {
-        // Run every hour at minute 0
-        cron.schedule('0 * * * *', async () => {
-            try {
-                console.log('🔄 Running enrollment-evaluation decoupling...');
-                
-                const gracePeriodHours = 24;
-                const cutoffTime = new Date();
-                cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
-                
-                // Find enrollments that have been evaluated and are past grace period
-                const result = await Enrollment.updateMany(
-                    {
-                        has_evaluated: true,
-                        evaluation_id: { $ne: null },
-                        updatedAt: { $lt: cutoffTime }
-                    },
-                    {
-                        $unset: { evaluation_id: "" },
-                        $set: { decoupled_at: new Date() }
-                    }
-                );
-                
-                if (result.modifiedCount > 0) {
-                    console.log(`✓ Decoupled ${result.modifiedCount} enrollment(s)`);
-                }
-                
-            } catch (error) {
-                console.error('❌ Error during enrollment decoupling:', error);
-            }
-        });
+        // No-op: Receipt model eliminates need for decoupling
+        // No evaluation_id field means no links to decouple
+        console.log('ℹ️  Enrollment decoupling deprecated - receipt model active');
     }
 
     /**
