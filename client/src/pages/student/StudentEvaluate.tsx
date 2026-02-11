@@ -23,34 +23,34 @@ const StudentEvaluate: React.FC = () => {
 
   // Form data
   const [formData, setFormData] = useState<EvaluationFormData>({
-    // Teacher ratings (1-5)
-    teacher_care: '',
-    teacher_respect: '',
-    teacher_patience: '',
-    teacher_shows_mastery: '',
-    teacher_updated_informed: '',
-    teacher_demonstrates_competence: '',
-    // Learning Process ratings (1-5)
-    learning_clear_objectives: '',
-    learning_syllabus_followed: '',
-    learning_starts_ends_on_time: '',
-    learning_concepts_understood: '',
-    learning_materials_appropriate: '',
-    learning_allows_questions: '',
-    learning_encourages_participation: '',
-    learning_provides_relevant_examples: '',
-    learning_provides_activities: '',
-    learning_relates_to_life: '',
-    learning_relates_to_other_subjects: '',
-    learning_fair_grading: '',
-    learning_returns_outputs_on_time: '',
-    // Classroom Management ratings (1-5)
-    classroom_starts_on_time: '',
-    classroom_time_managed_effectively: '',
-    classroom_student_behavior: '',
-    classroom_conducive_environment: '',
-    classroom_appropriate_strategies: '',
-    classroom_communication_channels: '',
+    // Teacher ratings (6 criteria)
+    teacher_diction: '',
+    teacher_grammar: '',
+    teacher_personality: '',
+    teacher_disposition: '',
+    teacher_dynamic: '',
+    teacher_fairness: '',
+    // Learning Process ratings (13 criteria)
+    learning_motivation: '',
+    learning_critical_thinking: '',
+    learning_organization: '',
+    learning_interest: '',
+    learning_explanation: '',
+    learning_clarity: '',
+    learning_integration: '',
+    learning_mastery: '',
+    learning_methodology: '',
+    learning_values: '',
+    learning_grading: '',
+    learning_synthesis: '',
+    learning_reasonableness: '',
+    // Classroom Management ratings (6 criteria)
+    classroom_attendance: '',
+    classroom_policies: '',
+    classroom_discipline: '',
+    classroom_authority: '',
+    classroom_prayers: '',
+    classroom_punctuality: '',
     // Comments (optional)
     comments: ''
   })
@@ -150,19 +150,15 @@ const StudentEvaluate: React.FC = () => {
     if (window.confirm('Are you sure you want to clear your draft? This cannot be undone.')) {
       localStorage.removeItem(`evaluation_draft_${enrollmentId}`)
       setFormData({
-        teacher_care: '', teacher_respect: '', teacher_patience: '',
-        teacher_shows_mastery: '', teacher_updated_informed: '',
-        teacher_demonstrates_competence: '', learning_clear_objectives: '',
-        learning_syllabus_followed: '', learning_starts_ends_on_time: '',
-        learning_concepts_understood: '', learning_materials_appropriate: '',
-        learning_allows_questions: '', learning_encourages_participation: '',
-        learning_provides_relevant_examples: '', learning_provides_activities: '',
-        learning_relates_to_life: '', learning_relates_to_other_subjects: '',
-        learning_fair_grading: '', learning_returns_outputs_on_time: '',
-        classroom_starts_on_time: '', classroom_time_managed_effectively: '',
-        classroom_student_behavior: '', classroom_conducive_environment: '',
-        classroom_appropriate_strategies: '', classroom_communication_channels: '',
-        comments: ''
+        teacher_diction: '', teacher_grammar: '', teacher_personality: '',
+        teacher_disposition: '', teacher_dynamic: '', teacher_fairness: '',
+        learning_motivation: '', learning_critical_thinking: '', learning_organization: '',
+        learning_interest: '', learning_explanation: '', learning_clarity: '',
+        learning_integration: '', learning_mastery: '', learning_methodology: '',
+        learning_values: '', learning_grading: '', learning_synthesis: '',
+        learning_reasonableness: '', classroom_attendance: '', classroom_policies: '',
+        classroom_discipline: '', classroom_authority: '', classroom_prayers: '',
+        classroom_punctuality: '', comments: ''
       })
     }
   }
@@ -382,12 +378,12 @@ const StudentEvaluate: React.FC = () => {
             </button>
             {openSection === 'teacher' && (
               <div className="p-6 space-y-6">
-                <RatingQuestion name="teacher_care" label="1. Shows care and consideration to students" />
-                <RatingQuestion name="teacher_respect" label="2. Respects students' ideas and opinions" />
-                <RatingQuestion name="teacher_patience" label="3. Exhibits patience in dealing with students" />
-                <RatingQuestion name="teacher_shows_mastery" label="4. Shows mastery of the subject matter" />
-                <RatingQuestion name="teacher_updated_informed" label="5. Is updated and well-informed on current trends" />
-                <RatingQuestion name="teacher_demonstrates_competence" label="6. Demonstrates professional competence" />
+                <RatingQuestion name="teacher_diction" label="1. Diction (clear and understandable speech)" />
+                <RatingQuestion name="teacher_grammar" label="2. Grammar (correct use of language)" />
+                <RatingQuestion name="teacher_personality" label="3. Personality (pleasant and approachable)" />
+                <RatingQuestion name="teacher_disposition" label="4. Disposition (temperament and attitude)" />
+                <RatingQuestion name="teacher_dynamic" label="5. Dynamic (energetic and engaging)" />
+                <RatingQuestion name="teacher_fairness" label="6. Fairness (treats students equally)" />
               </div>
             )}
           </div>
@@ -411,19 +407,19 @@ const StudentEvaluate: React.FC = () => {
             </button>
             {openSection === 'learning' && (
               <div className="p-6 space-y-6">
-                <RatingQuestion name="learning_clear_objectives" label="7. Explains learning objectives clearly" />
-                <RatingQuestion name="learning_syllabus_followed" label="8. Follows the prescribed syllabus/course outline" />
-                <RatingQuestion name="learning_starts_ends_on_time" label="9. Starts and ends classes on time" />
-                <RatingQuestion name="learning_concepts_understood" label="10. Ensures concepts are clearly understood" />
-                <RatingQuestion name="learning_materials_appropriate" label="11. Uses appropriate and relevant teaching materials" />
-                <RatingQuestion name="learning_allows_questions" label="12. Allows students to ask questions" />
-                <RatingQuestion name="learning_encourages_participation" label="13. Encourages active student participation" />
-                <RatingQuestion name="learning_provides_relevant_examples" label="14. Provides relevant and practical examples" />
-                <RatingQuestion name="learning_provides_activities" label="15. Provides meaningful learning activities" />
-                <RatingQuestion name="learning_relates_to_life" label="16. Relates lessons to real-life situations" />
-                <RatingQuestion name="learning_relates_to_other_subjects" label="17. Relates subject matter to other courses" />
-                <RatingQuestion name="learning_fair_grading" label="18. Applies fair and objective grading system" />
-                <RatingQuestion name="learning_returns_outputs_on_time" label="19. Returns checked outputs on time with feedback" />
+                <RatingQuestion name="learning_motivation" label="7. Motivation (inspires and encourages learning)" />
+                <RatingQuestion name="learning_critical_thinking" label="8. Critical Thinking (promotes analytical skills)" />
+                <RatingQuestion name="learning_organization" label="9. Organization (well-structured lessons)" />
+                <RatingQuestion name="learning_interest" label="10. Interest (makes subject engaging)" />
+                <RatingQuestion name="learning_explanation" label="11. Explanation (clear and easy to understand)" />
+                <RatingQuestion name="learning_clarity" label="12. Clarity (presents ideas clearly)" />
+                <RatingQuestion name="learning_integration" label="13. Integration (connects theory and practice)" />
+                <RatingQuestion name="learning_mastery" label="14. Mastery (demonstrates subject expertise)" />
+                <RatingQuestion name="learning_methodology" label="15. Methodology (effective teaching methods)" />
+                <RatingQuestion name="learning_values" label="16. Values (promotes ethical values)" />
+                <RatingQuestion name="learning_grading" label="17. Grading (fair assessment system)" />
+                <RatingQuestion name="learning_synthesis" label="18. Synthesis (brings ideas together)" />
+                <RatingQuestion name="learning_reasonableness" label="19. Reasonableness (realistic expectations)" />
               </div>
             )}
           </div>
@@ -447,12 +443,12 @@ const StudentEvaluate: React.FC = () => {
             </button>
             {openSection === 'classroom' && (
               <div className="p-6 space-y-6">
-                <RatingQuestion name="classroom_starts_on_time" label="20. Comes to class on time and prepared" />
-                <RatingQuestion name="classroom_time_managed_effectively" label="21. Manages time effectively during class" />
-                <RatingQuestion name="classroom_student_behavior" label="22. Manages student behavior appropriately" />
-                <RatingQuestion name="classroom_conducive_environment" label="23. Creates a conducive learning environment" />
-                <RatingQuestion name="classroom_appropriate_strategies" label="24. Uses appropriate classroom management strategies" />
-                <RatingQuestion name="classroom_communication_channels" label="25. Establishes clear communication channels" />
+                <RatingQuestion name="classroom_attendance" label="20. Attendance (monitors student attendance)\" />
+                <RatingQuestion name="classroom_policies" label="21. Policies (implements class policies)\" />
+                <RatingQuestion name="classroom_discipline" label="22. Discipline (maintains order and discipline)\" />
+                <RatingQuestion name="classroom_authority" label="23. Authority (commands respect and attention)\" />
+                <RatingQuestion name="classroom_prayers" label="24. Prayers (facilitates spiritual activities)\" />
+                <RatingQuestion name="classroom_punctuality" label="25. Punctuality (starts and ends on time)\" />
               </div>
             )}
           </div>

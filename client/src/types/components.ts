@@ -3,34 +3,34 @@ import { Evaluation } from './index';
 
 // Form data for evaluation
 export interface EvaluationFormData {
-  // Teacher ratings (1-5)
-  teacher_care: string;
-  teacher_respect: string;
-  teacher_patience: string;
-  teacher_shows_mastery: string;
-  teacher_updated_informed: string;
-  teacher_demonstrates_competence: string;
-  // Learning Process ratings (1-5)
-  learning_clear_objectives: string;
-  learning_syllabus_followed: string;
-  learning_starts_ends_on_time: string;
-  learning_concepts_understood: string;
-  learning_materials_appropriate: string;
-  learning_allows_questions: string;
-  learning_encourages_participation: string;
-  learning_provides_relevant_examples: string;
-  learning_provides_activities: string;
-  learning_relates_to_life: string;
-  learning_relates_to_other_subjects: string;
-  learning_fair_grading: string;
-  learning_returns_outputs_on_time: string;
-  // Classroom Management ratings (1-5)
-  classroom_starts_on_time: string;
-  classroom_time_managed_effectively: string;
-  classroom_student_behavior: string;
-  classroom_conducive_environment: string;
-  classroom_appropriate_strategies: string;
-  classroom_communication_channels: string;
+  // Teacher ratings (6 criteria)
+  teacher_diction: string;
+  teacher_grammar: string;
+  teacher_personality: string;
+  teacher_disposition: string;
+  teacher_dynamic: string;
+  teacher_fairness: string;
+  // Learning Process ratings (13 criteria)
+  learning_motivation: string;
+  learning_critical_thinking: string;
+  learning_organization: string;
+  learning_interest: string;
+  learning_explanation: string;
+  learning_clarity: string;
+  learning_integration: string;
+  learning_mastery: string;
+  learning_methodology: string;
+  learning_values: string;
+  learning_grading: string;
+  learning_synthesis: string;
+  learning_reasonableness: string;
+  // Classroom Management ratings (6 criteria)
+  classroom_attendance: string;
+  classroom_policies: string;
+  classroom_discipline: string;
+  classroom_authority: string;
+  classroom_prayers: string;
+  classroom_punctuality: string;
   // Comments (optional)
   comments: string;
 }

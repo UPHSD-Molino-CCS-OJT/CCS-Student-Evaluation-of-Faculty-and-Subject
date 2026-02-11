@@ -182,12 +182,12 @@ const AdminEvaluationDetail: React.FC = () => {
               <i className="fas fa-chalkboard-teacher text-blue-600 mr-2"></i>
               The Teacher
             </h2>
-            <RatingItem label="1. Shows care and consideration to students" rating={evaluation.teacher_care} />
-            <RatingItem label="2. Respects students' ideas and opinions" rating={evaluation.teacher_respect} />
-            <RatingItem label="3. Exhibits patience in dealing with students" rating={evaluation.teacher_patience} />
-            <RatingItem label="4. Shows mastery of the subject matter" rating={evaluation.teacher_shows_mastery} />
-            <RatingItem label="5. Is updated and well-informed on current trends" rating={evaluation.teacher_updated_informed} />
-            <RatingItem label="6. Demonstrates professional competence" rating={evaluation.teacher_demonstrates_competence} />
+            <RatingItem label="1. Diction (clear and understandable speech)" rating={evaluation.teacher_diction} />
+            <RatingItem label="2. Grammar (correct use of language)" rating={evaluation.teacher_grammar} />
+            <RatingItem label="3. Personality (pleasant and approachable)" rating={evaluation.teacher_personality} />
+            <RatingItem label="4. Disposition (temperament and attitude)" rating={evaluation.teacher_disposition} />
+            <RatingItem label="5. Dynamic (energetic and engaging)" rating={evaluation.teacher_dynamic} />
+            <RatingItem label="6. Fairness (treats students equally)" rating={evaluation.teacher_fairness} />
           </div>
 
           {/* Learning Process Section */}
@@ -196,19 +196,19 @@ const AdminEvaluationDetail: React.FC = () => {
               <i className="fas fa-book-reader text-blue-600 mr-2"></i>
               The Learning Process
             </h2>
-            <RatingItem label="7. Explains learning objectives clearly" rating={evaluation.learning_clear_objectives} />
-            <RatingItem label="8. Follows the prescribed syllabus/course outline" rating={evaluation.learning_syllabus_followed} />
-            <RatingItem label="9. Starts and ends classes on time" rating={evaluation.learning_starts_ends_on_time} />
-            <RatingItem label="10. Ensures concepts are clearly understood" rating={evaluation.learning_concepts_understood} />
-            <RatingItem label="11. Uses appropriate and relevant teaching materials" rating={evaluation.learning_materials_appropriate} />
-            <RatingItem label="12. Allows students to ask questions" rating={evaluation.learning_allows_questions} />
-            <RatingItem label="13. Encourages active student participation" rating={evaluation.learning_encourages_participation} />
-            <RatingItem label="14. Provides relevant and practical examples" rating={evaluation.learning_provides_relevant_examples} />
-            <RatingItem label="15. Provides meaningful learning activities" rating={evaluation.learning_provides_activities} />
-            <RatingItem label="16. Relates lessons to real-life situations" rating={evaluation.learning_relates_to_life} />
-            <RatingItem label="17. Relates subject matter to other courses" rating={evaluation.learning_relates_to_other_subjects} />
-            <RatingItem label="18. Applies fair and objective grading system" rating={evaluation.learning_fair_grading} />
-            <RatingItem label="19. Returns checked outputs on time with feedback" rating={evaluation.learning_returns_outputs_on_time} />
+            <RatingItem label="7. Motivation (inspires and encourages learning)" rating={evaluation.learning_motivation} />
+            <RatingItem label="8. Critical Thinking (promotes analytical skills)" rating={evaluation.learning_critical_thinking} />
+            <RatingItem label="9. Organization (well-structured lessons)" rating={evaluation.learning_organization} />
+            <RatingItem label="10. Interest (makes subject engaging)" rating={evaluation.learning_interest} />
+            <RatingItem label="11. Explanation (clear and easy to understand)" rating={evaluation.learning_explanation} />
+            <RatingItem label="12. Clarity (presents ideas clearly)" rating={evaluation.learning_clarity} />
+            <RatingItem label="13. Integration (connects theory and practice)" rating={evaluation.learning_integration} />
+            <RatingItem label="14. Mastery (demonstrates subject expertise)" rating={evaluation.learning_mastery} />
+            <RatingItem label="15. Methodology (effective teaching methods)" rating={evaluation.learning_methodology} />
+            <RatingItem label="16. Values (promotes ethical values)" rating={evaluation.learning_values} />
+            <RatingItem label="17. Grading (fair assessment system)" rating={evaluation.learning_grading} />
+            <RatingItem label="18. Synthesis (brings ideas together)" rating={evaluation.learning_synthesis} />
+            <RatingItem label="19. Reasonableness (realistic expectations)" rating={evaluation.learning_reasonableness} />
           </div>
 
           {/* Classroom Management Section */}
@@ -217,12 +217,12 @@ const AdminEvaluationDetail: React.FC = () => {
               <i className="fas fa-door-open text-blue-600 mr-2"></i>
               Classroom Management
             </h2>
-            <RatingItem label="20. Comes to class on time and prepared" rating={evaluation.classroom_starts_on_time} />
-            <RatingItem label="21. Manages time effectively during class" rating={evaluation.classroom_time_managed_effectively} />
-            <RatingItem label="22. Manages student behavior appropriately" rating={evaluation.classroom_student_behavior} />
-            <RatingItem label="23. Creates a conducive learning environment" rating={evaluation.classroom_conducive_environment} />
-            <RatingItem label="24. Uses appropriate classroom management strategies" rating={evaluation.classroom_appropriate_strategies} />
-            <RatingItem label="25. Establishes clear communication channels" rating={evaluation.classroom_communication_channels} />
+            <RatingItem label="20. Attendance (monitors student attendance)" rating={evaluation.classroom_attendance} />
+            <RatingItem label="21. Policies (implements class policies)" rating={evaluation.classroom_policies} />
+            <RatingItem label="22. Discipline (maintains order and discipline)" rating={evaluation.classroom_discipline} />
+            <RatingItem label="23. Authority (commands respect and attention)" rating={evaluation.classroom_authority} />
+            <RatingItem label="24. Prayers (facilitates spiritual activities)" rating={evaluation.classroom_prayers} />
+            <RatingItem label="25. Punctuality (starts and ends on time)" rating={evaluation.classroom_punctuality} />
           </div>
 
           {/* Comments Section */}

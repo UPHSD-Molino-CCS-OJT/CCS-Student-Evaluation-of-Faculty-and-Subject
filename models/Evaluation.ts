@@ -74,7 +74,90 @@ const evaluationSchema = new Schema<IEvaluation>({
   submitted_at: { type: Date, default: Date.now }
 }, {
   timestamps: true,
-  collection: 'evaluations'
+  collection: 'evaluations',
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Virtual property for teacher average
+evaluationSchema.virtual('teacher_average').get(function() {
+  return (
+    this.teacher_diction +
+    this.teacher_grammar +
+    this.teacher_personality +
+    this.teacher_disposition +
+    this.teacher_dynamic +
+    this.teacher_fairness
+  ) / 6;
+});
+
+// Virtual property for learning process average
+evaluationSchema.virtual('learning_average').get(function() {
+  return (
+    this.learning_motivation +
+    this.learning_critical_thinking +
+    this.learning_organization +
+    this.learning_interest +
+    this.learning_explanation +
+    this.learning_clarity +
+    this.learning_integration +
+    this.learning_mastery +
+    this.learning_methodology +
+    this.learning_values +
+    this.learning_grading +
+    this.learning_synthesis +
+    this.learning_reasonableness
+  ) / 13;
+});
+
+// Virtual property for classroom management average
+evaluationSchema.virtual('classroom_average').get(function() {
+  return (
+    this.classroom_attendance +
+    this.classroom_policies +
+    this.classroom_discipline +
+    this.classroom_authority +
+    this.classroom_prayers +
+    this.classroom_punctuality
+  ) / 6;
+});
+
+// Virtual property for overall average
+evaluationSchema.virtual('overall_average').get(function() {   const teacherAvg = (
+    this.teacher_diction +
+    this.teacher_grammar +
+    this.teacher_personality +
+    this.teacher_disposition +
+    this.teacher_dynamic +
+    this.teacher_fairness
+  ) / 6;
+  
+  const learningAvg = (
+    this.learning_motivation +
+    this.learning_critical_thinking +
+    this.learning_organization +
+    this.learning_interest +
+    this.learning_explanation +
+    this.learning_clarity +
+    this.learning_integration +
+    this.learning_mastery +
+    this.learning_methodology +
+    this.learning_values +
+    this.learning_grading +
+    this.learning_synthesis +
+    this.learning_reasonableness
+  ) / 13;
+  
+  const classroomAvg = (
+    this.classroom_attendance +
+    this.classroom_policies +
+    this.classroom_discipline +
+    this.classroom_authority +
+    this.classroom_prayers +
+    this.classroom_punctuality
+  ) / 6;
+  
+  return (teacherAvg + learningAvg + classroomAvg) / 3;
 });
 
 const Evaluation: Model<IEvaluation> = mongoose.model<IEvaluation>('Evaluation', evaluationSchema);

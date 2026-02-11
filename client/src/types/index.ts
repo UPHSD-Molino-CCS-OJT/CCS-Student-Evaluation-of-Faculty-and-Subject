@@ -114,43 +114,46 @@ export interface Evaluation {
   _id: string;
   school_year: string;
   program_id: string | Program;
+  program?: Program;
   year_level: string;
   status: string;
   course_id: string | Course;
+  course?: Course;
   teacher_id: string | Teacher;
+  teacher?: Teacher;
   
-  // Teacher ratings
-  teacher_care: number;
-  teacher_respect: number;
-  teacher_patience: number;
-  teacher_shows_mastery: number;
-  teacher_updated_informed: number;
-  teacher_demonstrates_competence: number;
+  // Teacher ratings (6 criteria)
+  teacher_diction: number;
+  teacher_grammar: number;
+  teacher_personality: number;
+  teacher_disposition: number;
+  teacher_dynamic: number;
+  teacher_fairness: number;
   teacher_average: number;
   
-  // Learning process ratings
-  learning_clear_objectives: number;
-  learning_syllabus_followed: number;
-  learning_starts_ends_on_time: number;
-  learning_concepts_understood: number;
-  learning_materials_appropriate: number;
-  learning_allows_questions: number;
-  learning_encourages_participation: number;
-  learning_provides_relevant_examples: number;
-  learning_provides_activities: number;
-  learning_relates_to_life: number;
-  learning_relates_to_other_subjects: number;
-  learning_fair_grading: number;
-  learning_returns_outputs_on_time: number;
+  // Learning process ratings (13 criteria)
+  learning_motivation: number;
+  learning_critical_thinking: number;
+  learning_organization: number;
+  learning_interest: number;
+  learning_explanation: number;
+  learning_clarity: number;
+  learning_integration: number;
+  learning_mastery: number;
+  learning_methodology: number;
+  learning_values: number;
+  learning_grading: number;
+  learning_synthesis: number;
+  learning_reasonableness: number;
   learning_average: number;
   
-  // Classroom management ratings
-  classroom_starts_on_time: number;
-  classroom_time_managed_effectively: number;
-  classroom_student_behavior: number;
-  classroom_conducive_environment: number;
-  classroom_appropriate_strategies: number;
-  classroom_communication_channels: number;
+  // Classroom management ratings (6 criteria)
+  classroom_attendance: number;
+  classroom_policies: number;
+  classroom_discipline: number;
+  classroom_authority: number;
+  classroom_prayers: number;
+  classroom_punctuality: number;
   classroom_average: number;
   
   overall_average: number;
