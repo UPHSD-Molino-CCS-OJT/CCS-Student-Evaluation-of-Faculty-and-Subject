@@ -113,14 +113,6 @@ const StudentLogin: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Help Text */}
-          <div className="text-center mt-6 text-gray-600">
-            <p className="text-sm">
-              <i className="fas fa-question-circle mr-1"></i>
-              Need help? Contact the registrar's office
-            </p>
-          </div>
         </div>
       </div>
     </div>
