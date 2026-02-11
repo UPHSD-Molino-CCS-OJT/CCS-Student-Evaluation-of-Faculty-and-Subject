@@ -261,16 +261,38 @@ class PrivacyAuditor {
             else {
                 this.addWarning('INFO', '[Layer 2] ✓ Submission Timing Fuzzing Detected', 'Submission delay function found in privacy utilities.', 'Ensure delays are applied before saving evaluations to database');
             }
-            // Check server.ts for delay implementation
+            // Check both server.ts and routes/api.ts for delay implementation
             const serverPath = path.join(__dirname, '..', 'server.ts');
-            if (!fs.existsSync(serverPath)) {
-                return; // Skip if server.ts doesn't exist
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
+            let hasDelayImplementation = false;
+            let implementationLocation = '';
+            // Check routes/api.ts first (most likely location for route handlers)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                if (routesContent.includes('calculateSubmissionDelay') ||
+                    (routesContent.includes('submit-evaluation') &&
+                        routesContent.includes('await new Promise') &&
+                        routesContent.includes('setTimeout'))) {
+                    hasDelayImplementation = true;
+                    implementationLocation = 'routes/api.ts';
+                }
             }
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
-            if (!serverContent.includes('calculateSubmissionDelay') &&
-                !serverContent.includes('await new Promise') &&
-                !serverContent.includes('setTimeout')) {
+            // If not found in routes, check server.ts
+            if (!hasDelayImplementation && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                if (serverContent.includes('calculateSubmissionDelay') ||
+                    (serverContent.includes('submit-evaluation') &&
+                        serverContent.includes('await new Promise') &&
+                        serverContent.includes('setTimeout'))) {
+                    hasDelayImplementation = true;
+                    implementationLocation = 'server.ts';
+                }
+            }
+            if (!hasDelayImplementation) {
                 this.addWarning('MEDIUM', '[Layer 2] Timing Delays Not Applied in Server', 'Could not verify that submission delays are actually being used in submission handler.', 'Add await delay logic in POST /submit-evaluation route');
+            }
+            else {
+                this.addWarning('INFO', `[Layer 2] ✓ Submission Delays Active in ${implementationLocation}`, 'Timing delays are properly implemented in the submission handler.', 'Continue using 2-8 second random delays to prevent timing correlation attacks');
             }
         }
         catch (error) {
@@ -392,31 +414,59 @@ class PrivacyAuditor {
      */
     async checkLayer6_SessionDataMinimization() {
         try {
-            const serverTsPath = path.join(__dirname, '..', 'server.ts');
-            if (!fs.existsSync(serverTsPath)) {
+            const serverPath = path.join(__dirname, '..', 'server.ts');
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
+            let serverContent = '';
+            let routesContent = '';
+            let hasServerFile = false;
+            let hasRoutesFile = false;
+            // Read both files if they exist
+            if (fs.existsSync(serverPath)) {
+                serverContent = fs.readFileSync(serverPath, 'utf-8');
+                hasServerFile = true;
+            }
+            if (fs.existsSync(routesPath)) {
+                routesContent = fs.readFileSync(routesPath, 'utf-8');
+                hasRoutesFile = true;
+            }
+            if (!hasServerFile && !hasRoutesFile) {
                 this.addWarning('INFO', 'Session Code Review', 'Could not automatically scan source code. Manual review recommended.', 'Manually verify that req.session only stores studentId (ObjectId), never student_number');
                 return;
             }
-            const serverContent = fs.readFileSync(serverTsPath, 'utf-8');
-            // Check for student_number in session
-            if (serverContent.includes('req.session.studentNumber') ||
-                serverContent.includes('session.student_number') ||
-                serverContent.includes('req.session.student_number')) {
-                this.addIssue('CRITICAL', 'Session Contains student_number', 'The server code stores student_number in session data. This violates zero-knowledge privacy.', 'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).');
+            // Combine content for checking
+            const combinedContent = serverContent + '\n' + routesContent;
+            // Check for student_number in session (CRITICAL violation)
+            if (combinedContent.includes('req.session.studentNumber') ||
+                combinedContent.includes('session.student_number') ||
+                combinedContent.includes('req.session.student_number')) {
+                this.addIssue('CRITICAL', '[Layer 6] Session Contains student_number', 'The server code stores student_number in session data. This violates zero-knowledge privacy.', 'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).');
             }
-            // Verify only studentId is stored
+            // Verify studentId is stored properly
             const sessionStudentIdPattern = /req\.session\.studentId\s*=/;
-            if (!sessionStudentIdPattern.test(serverContent)) {
-                this.addWarning('MEDIUM', 'Session StudentId Not Found', 'Could not verify that studentId is being stored in session properly.', 'Ensure req.session.studentId = student._id is used in login routes');
+            let hasStudentIdAssignment = false;
+            let implementationLocation = '';
+            if (sessionStudentIdPattern.test(routesContent)) {
+                hasStudentIdAssignment = true;
+                implementationLocation = 'routes/api.ts';
+            }
+            else if (sessionStudentIdPattern.test(serverContent)) {
+                hasStudentIdAssignment = true;
+                implementationLocation = 'server.ts';
+            }
+            if (!hasStudentIdAssignment) {
+                this.addWarning('MEDIUM', '[Layer 6] Session StudentId Not Found', 'Could not verify that studentId is being stored in session properly.', 'Ensure req.session.studentId = student._id is used in login routes');
+            }
+            else {
+                this.addWarning('INFO', `[Layer 6] ✓ Session StudentId Properly Set in ${implementationLocation}`, 'Session correctly stores only studentId (ObjectId), not student_number.', 'Continue storing only ObjectId references in session for privacy protection');
             }
             // Check for console.log statements that might leak student data
             const consoleLogPattern = /console\.log.*student_number|console\.log.*studentNumber/i;
-            if (consoleLogPattern.test(serverContent)) {
-                this.addWarning('MEDIUM', 'Potential Console Logging of Student IDs', 'Found console.log statements that might be logging student numbers.', 'Remove or sanitize all console.log statements containing student identifiers');
+            if (consoleLogPattern.test(combinedContent)) {
+                this.addWarning('MEDIUM', '[Layer 6] Potential Console Logging of Student IDs', 'Found console.log statements that might be logging student numbers.', 'Remove or sanitize all console.log statements containing student identifiers');
             }
         }
         catch (error) {
-            this.addWarning('INFO', 'Session Code Review', 'Could not automatically scan source code. Manual review recommended.', 'Manually verify that req.session only stores studentId (ObjectId), never student_number');
+            this.addWarning('INFO', '[Layer 6] Session Code Review Failed', `Could not automatically scan source code: ${error.message}`, 'Manually verify that req.session only stores studentId (ObjectId), never student_number');
         }
     }
     /**
