@@ -110,14 +110,32 @@ declare class PrivacyProtection {
      */
     static decryptTemporaryData(encryptedData: string, ivHex: string, key: string): string;
     /**
-     * Schedule evaluation-enrollment link removal
-     * After a grace period, remove the link to prevent tracing
+     * Generate one-time submission token for enrollment
+     * Used to prevent duplicate submissions without linking to evaluation
      *
-     * @param enrollment - Enrollment document
-     * @param gracePeriodHours - Hours before link removal (default 24)
-     * @returns Scheduled removal time
+     * @param enrollmentId - Enrollment ObjectId
+     * @returns One-time submission token (SHA-256)
      */
-    static scheduleEnrollmentDecoupling(_enrollment: IEnrollment, gracePeriodHours?: number): Date;
+    static generateSubmissionToken(enrollmentId: string | Types.ObjectId): string;
+    /**
+     * Generate verification receipt for student
+     * Student can use this to verify their submission without revealing identity
+     *
+     * @param anonymousToken - Evaluation's anonymous token
+     * @param timestamp - Submission timestamp
+     * @returns Receipt hash that student can save
+     */
+    static generateReceiptHash(anonymousToken: string, timestamp: Date): string;
+    /**
+     * Verify submission receipt (if needed for support)
+     * Allows verification without revealing student identity
+     *
+     * @param receipt - Receipt hash provided by student
+     * @param anonymousToken - Anonymous token from evaluation
+     * @param timestamp - Submission timestamp
+     * @returns True if receipt matches
+     */
+    static verifyReceipt(receipt: string, anonymousToken: string, timestamp: Date): boolean;
     /**
      * Create privacy-safe audit log entry
      * Logs actions without exposing student identities

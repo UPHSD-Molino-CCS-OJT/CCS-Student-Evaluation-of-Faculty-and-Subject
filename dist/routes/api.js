@@ -335,8 +335,8 @@ router.post('/student/submit-evaluation', async (req, res) => {
         const safeTimestamp = privacy_protection_1.default.getSafeSubmissionTimestamp();
         // Type guard for populated student
         const populatedStudent = enrollment.student_id;
-        // Create evaluation
-        const evaluation = await Evaluation_1.default.create({
+        // Create evaluation (stored completely separately, no link to enrollment)
+        await Evaluation_1.default.create({
             school_year: enrollment.school_year,
             anonymous_token: anonymousToken,
             program_id: populatedStudent.program_id,
@@ -376,15 +376,20 @@ router.post('/student/submit-evaluation', async (req, res) => {
             ip_address: anonymizedIp,
             submitted_at: safeTimestamp
         });
-        // Update enrollment
+        // Generate receipt hash for student verification (no reversible link)
+        const receiptHash = privacy_protection_1.default.generateReceiptHash(anonymousToken, safeTimestamp);
+        // Update enrollment - mark as used WITHOUT linking evaluation ID
         enrollment.has_evaluated = true;
-        enrollment.evaluation_id = evaluation._id;
+        enrollment.submission_token_used = true;
+        enrollment.receipt_hash = receiptHash;
+        // NO evaluation_id stored - complete structural unlinkability ✅
         await enrollment.save();
         // PRIVACY PROTECTION: Clear session data
         privacy_protection_1.default.clearSensitiveSessionData(req.session);
         res.json({
             success: true,
-            message: 'Evaluation submitted successfully!'
+            message: 'Evaluation submitted successfully!',
+            receipt: receiptHash // Give student verification receipt
         });
     }
     catch (error) {

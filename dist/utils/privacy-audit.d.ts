@@ -58,7 +58,7 @@ declare class PrivacyAuditor {
      */
     private checkEvaluationRecords;
     /**
-     * Check enrollment linkage to ensure evaluation IDs don't expose student info
+     * Check enrollment linkage - verify receipt model adoption
      */
     private checkEnrollmentLinkage;
     /**
@@ -77,8 +77,8 @@ declare class PrivacyAuditor {
      */
     private checkLayer3_IpAddressAnonymization;
     /**
-     * LAYER 4: Automatic Evaluation-Enrollment Decoupling
-     * Check if enrollment links are automatically removed
+     * LAYER 4: Cryptographic Receipt Model (No Reversible Links)
+     * Verify that receipt-based system is active and no evaluation_id links exist
      */
     private checkLayer4_EnrollmentDecoupling;
     /**

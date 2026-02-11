@@ -4,49 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_cron_1 = __importDefault(require("node-cron"));
-const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 const mongoose_1 = __importDefault(require("mongoose"));
+/**
+ * Privacy-Preserving Scheduled Tasks
+ * Handles automatic privacy protection operations
+ */
 class PrivacyScheduler {
     /**
      * Initialize all privacy-related scheduled tasks
      */
     static initializeScheduledTasks() {
         console.log('🔒 Initializing privacy protection scheduled tasks...');
-        // Decouple evaluation-enrollment links after grace period (runs every hour)
-        this.scheduleEnrollmentDecoupling();
         // Clean up old session data (runs every 6 hours)
         this.scheduleSessionCleanup();
         console.log('✓ Privacy protection tasks scheduled');
-    }
-    /**
-     * Schedule automatic decoupling of enrollment-evaluation links
-     * Runs every hour to remove evaluation_id from enrollments older than 24 hours
-     */
-    static scheduleEnrollmentDecoupling() {
-        // Run every hour at minute 0
-        node_cron_1.default.schedule('0 * * * *', async () => {
-            try {
-                console.log('🔄 Running enrollment-evaluation decoupling...');
-                const gracePeriodHours = 24;
-                const cutoffTime = new Date();
-                cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
-                // Find enrollments that have been evaluated and are past grace period
-                const result = await Enrollment_1.default.updateMany({
-                    has_evaluated: true,
-                    evaluation_id: { $ne: null },
-                    updatedAt: { $lt: cutoffTime }
-                }, {
-                    $unset: { evaluation_id: "" },
-                    $set: { decoupled_at: new Date() }
-                });
-                if (result.modifiedCount > 0) {
-                    console.log(`✓ Decoupled ${result.modifiedCount} enrollment(s)`);
-                }
-            }
-            catch (error) {
-                console.error('❌ Error during enrollment decoupling:', error);
-            }
-        });
     }
     /**
      * Schedule cleanup of old session data
@@ -71,36 +42,6 @@ class PrivacyScheduler {
                 console.error('❌ Error during session cleanup:', error);
             }
         });
-    }
-    /**
-     * Manual trigger for enrollment decoupling (for admin use)
-     */
-    static async manualDecoupling() {
-        try {
-            const gracePeriodHours = 24;
-            const cutoffTime = new Date();
-            cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
-            const result = await Enrollment_1.default.updateMany({
-                has_evaluated: true,
-                evaluation_id: { $ne: null },
-                updatedAt: { $lt: cutoffTime }
-            }, {
-                $unset: { evaluation_id: "" },
-                $set: { decoupled_at: new Date() }
-            });
-            return {
-                success: true,
-                decoupled: result.modifiedCount,
-                message: `Successfully decoupled ${result.modifiedCount} enrollment(s)`
-            };
-        }
-        catch (error) {
-            const err = error;
-            return {
-                success: false,
-                error: err.message
-            };
-        }
     }
 }
 exports.default = PrivacyScheduler;

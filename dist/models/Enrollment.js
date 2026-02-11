@@ -67,9 +67,18 @@ const enrollmentSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false
     },
-    evaluation_id: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Evaluation',
+    submission_token: {
+        type: String,
+        default: null,
+        sparse: true,
+        index: true
+    },
+    submission_token_used: {
+        type: Boolean,
+        default: false
+    },
+    receipt_hash: {
+        type: String,
         default: null
     }
 }, {
