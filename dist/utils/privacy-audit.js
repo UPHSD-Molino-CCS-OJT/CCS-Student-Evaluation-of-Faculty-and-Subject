@@ -600,15 +600,27 @@ class PrivacyAuditor {
                 return;
             }
             const auditContent = fs.readFileSync(privacyAuditPath, 'utf-8');
-            // Check for potential student ID logging (excluding TypeScript type definitions and comments)
-            const studentNumberMatches = auditContent.match(/student_number/g) || [];
-            const commentedMatches = (auditContent.match(/\/\/.*student_number|\*.*student_number|'student_number'|"student_number"/g) || []).length;
-            const actualCodeReferences = studentNumberMatches.length - commentedMatches;
+            // Check for potential student ID logging (excluding comments, strings, and legitimate audit checks)
+            // Remove comments and string literals to find actual code references
+            let cleanedContent = auditContent
+                // Remove single-line comments
+                .replace(/\/\/.*$/gm, '')
+                // Remove multi-line comments
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                // Remove string literals (single quotes)
+                .replace(/'[^']*'/g, "''")
+                // Remove string literals (double quotes)
+                .replace(/"[^"]*"/g, '""')
+                // Remove template literals
+                .replace(/`[^`]*`/g, '``');
+            // Now check for student_number in the cleaned content
+            const actualCodeMatches = cleanedContent.match(/student_number/g) || [];
+            const actualCodeReferences = actualCodeMatches.length;
             if (actualCodeReferences > 0) {
-                this.addWarning('HIGH', '[Layer 9] Audit Logging May Include Student IDs', `Found ${actualCodeReferences} uncommented student_number references in privacy audit code.`, 'Replace with audit_token or anonymous_token in all audit logs');
+                this.addWarning('HIGH', '[Layer 9] Audit Logging May Include Student IDs', `Found ${actualCodeReferences} potential student_number references in audit code (after excluding comments/strings).`, 'Verify these are only used for checking field existence, not logging actual values');
             }
             else {
-                this.addWarning('INFO', '[Layer 9] ✓ Audit Code is Privacy-Safe', 'Privacy audit code properly avoids logging student identifiers in code.', 'Continue using anonymous_token in all audit operations');
+                this.addWarning('INFO', '[Layer 9] ✓ Audit Code is Privacy-Safe', 'Privacy audit code properly avoids logging student identifiers in executable code.', 'Continue using anonymous_token in all audit operations');
             }
             // Check server.ts and routes/api.ts for audit logging practices
             const filesToCheck = [
