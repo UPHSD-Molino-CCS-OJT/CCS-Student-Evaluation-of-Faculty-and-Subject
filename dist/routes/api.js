@@ -50,6 +50,10 @@ const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 const privacy_protection_1 = __importDefault(require("../utils/privacy-protection"));
 // Import middleware
 const auth_1 = require("../middleware/auth");
+// K-ANONYMITY THRESHOLD
+// Minimum number of evaluations required before displaying aggregate statistics
+// This ensures individual responses cannot be identified or inferred
+const K_ANONYMITY_THRESHOLD = 5;
 const router = (0, express_1.Router)();
 // ==================== ADMIN AUTH ROUTES ====================
 // Check if admin is authenticated
@@ -61,6 +65,25 @@ router.get('/admin/check-auth', (req, res) => {
             username: req.session.username
         } : null
     });
+});
+// Test endpoint - Get students for automated testing (no auth required)
+// This endpoint is specifically for test automation scripts
+router.get('/test/students', async (req, res) => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+        let query = Student_1.default.find().select('student_number full_name').sort({ student_number: 1 });
+        if (limit && limit > 0) {
+            query = query.limit(limit);
+        }
+        const students = await query;
+        res.json(students.map(s => ({
+            student_number: s.student_number,
+            full_name: s.full_name
+        })));
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Error fetching students for testing' });
+    }
 });
 // Admin Login
 router.post('/admin/login', async (req, res) => {
@@ -368,6 +391,19 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
         const totalEvaluations = await Evaluation_1.default.countDocuments();
         const totalTeachers = await Teacher_1.default.countDocuments({ status: 'active' });
         const totalPrograms = await Program_1.default.countDocuments();
+        // K-ANONYMITY CHECK: Ensure minimum group size for privacy protection
+        if (!privacy_protection_1.default.checkKAnonymity(totalEvaluations, K_ANONYMITY_THRESHOLD)) {
+            res.json({
+                totalEvaluations,
+                totalTeachers,
+                totalPrograms,
+                averageRatings: { teacher: 0, learning: 0, classroom: 0, overall: 0 },
+                topTeachers: [],
+                recentEvaluations: [],
+                privacyNotice: `Insufficient data for privacy protection. At least ${K_ANONYMITY_THRESHOLD} evaluations required to display statistics.`
+            });
+            return;
+        }
         // Calculate average ratings
         const avgRatings = await Evaluation_1.default.aggregate([
             {
@@ -453,6 +489,8 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
                     evaluation_count: { $sum: 1 }
                 }
             },
+            // K-ANONYMITY: Filter out teachers with less than 5 evaluations
+            { $match: { evaluation_count: { $gte: 5 } } },
             { $sort: { average_rating: -1 } },
             { $limit: 5 },
             {
@@ -473,14 +511,17 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
                 }
             }
         ]);
-        // Recent evaluations (privacy protected - no student IDs)
-        const recentEvaluationsRaw = await Evaluation_1.default.find()
-            .populate('teacher_id', 'full_name')
-            .populate('course_id', 'name code')
-            .sort({ createdAt: -1 })
-            .limit(10)
-            .select('-anonymous_token -ip_address')
-            .lean();
+        // K-ANONYMITY: Only show recent evaluations if there are enough total evaluations
+        let recentEvaluationsRaw = [];
+        if (totalEvaluations >= K_ANONYMITY_THRESHOLD) {
+            recentEvaluationsRaw = await Evaluation_1.default.find()
+                .populate('teacher_id', 'full_name')
+                .populate('course_id', 'name code')
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .select('-anonymous_token -ip_address')
+                .lean();
+        }
         // Transform to match frontend expectation (teacher, course instead of teacher_id, course_id)
         const recentEvaluations = recentEvaluationsRaw.map((evaluation) => {
             // Calculate averages (virtuals not available with .lean())

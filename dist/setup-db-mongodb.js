@@ -153,108 +153,68 @@ async function createSampleData(clearExistingData = true) {
         { name: 'Mobile Game Development', code: 'IT401', program_id: programs[1]._id }
     ]);
     console.log(`✓ Created ${courses.length} courses`);
-    // Create sample students
+    // Create sample students (50 students with randomized data)
     console.log('👨‍🎓 Creating sample students...');
-    const students = await Student_1.default.create([
-        {
-            student_number: '21-1234-567',
-            full_name: 'Juan Dela Cruz',
-            email: 'juan.delacruz@student.uphsd.edu.ph',
-            program_id: programs[0]._id,
-            year_level: '3rd',
-            section: 'CS-3A',
+    const yearLevels = ['1st', '2nd', '3rd', '4th'];
+    const studentsData = [];
+    for (let i = 1; i <= 50; i++) {
+        // Generate random student number in format 00-0000-000
+        const batch = 20 + Math.floor(Math.random() * 5); // 20-24
+        const sequence1 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        const sequence2 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        const studentNumber = `${batch}-${sequence1}-${sequence2}`;
+        // Randomly assign to a program
+        const programIndex = Math.floor(Math.random() * programs.length);
+        const programCode = programs[programIndex].get('code');
+        const yearLevel = yearLevels[Math.floor(Math.random() * yearLevels.length)];
+        // Generate section based on program
+        const sectionLetter = String.fromCharCode(65 + Math.floor(Math.random() * 3)); // A, B, or C
+        const sectionPrefix = programCode.startsWith('BSCS') ? 'CS' : 'IT';
+        const sectionYear = yearLevel.charAt(0);
+        const section = `${sectionPrefix}-${sectionYear}${sectionLetter}`;
+        studentsData.push({
+            student_number: studentNumber,
+            full_name: `Firstname${i} Lastname${i}`,
+            email: `email${i}@student.uphsd.edu.ph`,
+            program_id: programs[programIndex]._id,
+            year_level: yearLevel,
+            section: section,
             status: 'Regular'
-        },
-        {
-            student_number: '21-1234-568',
-            full_name: 'Maria Garcia',
-            email: 'maria.garcia@student.uphsd.edu.ph',
-            program_id: programs[0]._id,
-            year_level: '3rd',
-            section: 'CS-3A',
-            status: 'Regular'
-        },
-        {
-            student_number: '21-5678-901',
-            full_name: 'Pedro Santos',
-            email: 'pedro.santos@student.uphsd.edu.ph',
-            program_id: programs[1]._id,
-            year_level: '2nd',
-            section: 'IT-2A',
-            status: 'Regular'
-        }
-    ]);
+        });
+    }
+    const students = await Student_1.default.create(studentsData);
     console.log(`✓ Created ${students.length} students`);
-    // Create sample enrollments
+    // Create sample enrollments (randomized for all students)
     console.log('📝 Creating sample enrollments...');
-    const enrollments = await Enrollment_1.default.create([
-        // Student 1 (Juan) - BSCS-DS enrollments
-        {
-            student_id: students[0]._id,
-            course_id: courses[0]._id,
-            teacher_id: teachers[0]._id,
-            section_code: 'CS-3A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        {
-            student_id: students[0]._id,
-            course_id: courses[1]._id,
-            teacher_id: teachers[2]._id,
-            section_code: 'CS-3A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        {
-            student_id: students[0]._id,
-            course_id: courses[2]._id,
-            teacher_id: teachers[4]._id,
-            section_code: 'CS-3A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        // Student 2 (Maria) - BSCS-DS enrollments
-        {
-            student_id: students[1]._id,
-            course_id: courses[0]._id,
-            teacher_id: teachers[0]._id,
-            section_code: 'CS-3A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        {
-            student_id: students[1]._id,
-            course_id: courses[1]._id,
-            teacher_id: teachers[2]._id,
-            section_code: 'CS-3A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        // Student 3 (Pedro) -BSIT-GD enrollments
-        {
-            student_id: students[2]._id,
-            course_id: courses[5]._id,
-            teacher_id: teachers[1]._id,
-            section_code: 'IT-2A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
-        },
-        {
-            student_id: students[2]._id,
-            course_id: courses[7]._id,
-            teacher_id: teachers[3]._id,
-            section_code: 'IT-2A',
-            school_year: '2025-2026',
-            semester: '1st Semester',
-            has_evaluated: false
+    const enrollmentsData = [];
+    for (const student of students) {
+        // Get student's program ID as ObjectId
+        const studentProgramId = student.program_id;
+        // Get courses for this program
+        const programCourses = courses.filter(c => {
+            const courseProgramId = c.program_id;
+            return courseProgramId.toString() === studentProgramId.toString();
+        });
+        // Randomly select 2-4 courses for this student
+        const numCourses = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
+        const shuffledCourses = programCourses.sort(() => Math.random() - 0.5);
+        const selectedCourses = shuffledCourses.slice(0, Math.min(numCourses, programCourses.length));
+        // Create enrollment for each selected course
+        for (const course of selectedCourses) {
+            // Randomly assign a teacher
+            const randomTeacher = teachers[Math.floor(Math.random() * teachers.length)];
+            enrollmentsData.push({
+                student_id: student._id,
+                course_id: course._id,
+                teacher_id: randomTeacher._id,
+                section_code: student.section,
+                school_year: '2025-2026',
+                semester: '1st Semester',
+                has_evaluated: false
+            });
         }
-    ]);
+    }
+    const enrollments = await Enrollment_1.default.create(enrollmentsData);
     console.log(`✓ Created ${enrollments.length} enrollments`);
     // Summary
     console.log('\n✅ Database initialized successfully!');
@@ -285,10 +245,14 @@ if (require.main === module) {
             // Create sample data (will clear existing data by default)
             await createSampleData();
             console.log('🚀 You can now run: npm start');
-            console.log('\n📝 Sample Student Logins:');
-            console.log('  • 21-1234-567 (Juan Dela Cruz - BSCS-DS)');
-            console.log('  • 21-1234-568 (Maria Garcia - BSCS-DS)');
-            console.log('  • 21-5678-901 (Pedro Santos - BSIT-GD)\n');
+            console.log('\n📝 Sample Student Logins (first 5 students):');
+            // Fetch and display first 5 students as examples
+            const sampleStudents = await Student_1.default.find({}).limit(5).select('student_number full_name');
+            sampleStudents.forEach((student, index) => {
+                console.log(`  ${index + 1}. ${student.get('student_number')} (${student.get('full_name')})`);
+            });
+            console.log(`  ... and 45 more students\n`);
+            console.log('💡 Use any student number above to test the system\n');
         }
         catch (error) {
             const err = error;
