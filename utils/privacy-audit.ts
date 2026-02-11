@@ -374,15 +374,15 @@ class PrivacyAuditor {
      */
     private async checkLayer2_SubmissionTimeFuzzing(): Promise<void> {
         try {
-            // Check if privacy-protection.js exists and has timing functions
-            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.js');
+            // Check if privacy-protection.ts exists and has timing functions
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.ts');
             
             if (!fs.existsSync(privacyProtectionPath)) {
                 this.addIssue(
                     'CRITICAL',
                     '[Layer 2] Privacy Protection Module Missing',
-                    'The privacy-protection.js utility file does not exist.',
-                    'Create privacy-protection.js with calculateSubmissionDelay() function'
+                    'The privacy-protection.ts utility file does not exist.',
+                    'Create privacy-protection.ts with calculateSubmissionDelay() function'
                 );
                 return;
             }
@@ -395,7 +395,7 @@ class PrivacyAuditor {
                 this.addIssue(
                     'HIGH',
                     '[Layer 2] Submission Timing Fuzzing Not Implemented',
-                    'No submission delay function found in privacy-protection.js.',
+                    'No submission delay function found in privacy-protection.ts.',
                     'Implement calculateSubmissionDelay() with random 2-8 second delays'
                 );
             } else {
@@ -407,8 +407,11 @@ class PrivacyAuditor {
                 );
             }
 
-            // Check server.js for delay implementation
-            const serverPath = path.join(__dirname, '..', 'server.js');
+            // Check server.ts for delay implementation
+            const serverPath = path.join(__dirname, '..', 'server.ts');
+            if (!fs.existsSync(serverPath)) {
+                return; // Skip if server.ts doesn't exist
+            }
             const serverContent = fs.readFileSync(serverPath, 'utf-8');
             
             if (!serverContent.includes('calculateSubmissionDelay') &&
@@ -541,13 +544,13 @@ class PrivacyAuditor {
             }
 
             // Check if privacy scheduler exists
-            const schedulerPath = path.join(__dirname, 'privacy-scheduler.js');
+            const schedulerPath = path.join(__dirname, 'privacy-scheduler.ts');
             
             if (!fs.existsSync(schedulerPath)) {
                 this.addWarning(
                     'MEDIUM',
                     '[Layer 4] Privacy Scheduler Not Found',
-                    'privacy-scheduler.js does not exist. Automatic decoupling may not be running.',
+                    'privacy-scheduler.ts does not exist. Automatic decoupling may not be running.',
                     'Create privacy scheduler with hourly decoupling tasks'
                 );
             }
@@ -614,8 +617,17 @@ class PrivacyAuditor {
      */
     private async checkLayer6_SessionDataMinimization(): Promise<void> {
         try {
-            const serverJsPath = path.join(__dirname, '..', 'server.js');
-            const serverContent = fs.readFileSync(serverJsPath, 'utf-8');
+            const serverTsPath = path.join(__dirname, '..', 'server.ts');
+            if (!fs.existsSync(serverTsPath)) {
+                this.addWarning(
+                    'INFO',
+                    'Session Code Review',
+                    'Could not automatically scan source code. Manual review recommended.',
+                    'Manually verify that req.session only stores studentId (ObjectId), never student_number'
+                );
+                return;
+            }
+            const serverContent = fs.readFileSync(serverTsPath, 'utf-8');
             
             // Check for student_number in session
             if (serverContent.includes('req.session.studentNumber') || 
@@ -624,7 +636,7 @@ class PrivacyAuditor {
                 this.addIssue(
                     'CRITICAL',
                     'Session Contains student_number',
-                    'The server.js file stores student_number in session data. This violates zero-knowledge privacy.',
+                    'The server code stores student_number in session data. This violates zero-knowledge privacy.',
                     'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).'
                 );
             }
@@ -667,14 +679,14 @@ class PrivacyAuditor {
      */
     private async checkLayer7_DifferentialPrivacy(): Promise<void> {
         try {
-            // Check if privacy-protection.js has differential privacy implementation
-            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.js');
+            // Check if privacy-protection.ts has differential privacy implementation
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.ts');
             
             if (!fs.existsSync(privacyProtectionPath)) {
                 this.addIssue(
                     'HIGH',
                     '[Layer 7] Differential Privacy Module Missing',
-                    'privacy-protection.js not found. Aggregate statistics may not have Laplace noise.',
+                    'privacy-protection.ts not found. Aggregate statistics may not have Laplace noise.',
                     'Create differential privacy utilities with ε=0.1 for teacher statistics'
                 );
                 return;
@@ -701,8 +713,8 @@ class PrivacyAuditor {
                 );
             }
 
-            // Check server.js for noise application in statistics routes
-            const serverPath = path.join(__dirname, '..', 'server.js');
+            // Check server.ts for noise application in statistics routes
+            const serverPath = path.join(__dirname, '..', 'server.ts');
             if (fs.existsSync(serverPath)) {
                 const serverContent = fs.readFileSync(serverPath, 'utf-8');
                 
@@ -734,13 +746,13 @@ class PrivacyAuditor {
      */
     private async checkLayer8_KAnonymity(): Promise<void> {
         try {
-            const serverPath = path.join(__dirname, '..', 'server.js');
+            const serverPath = path.join(__dirname, '..', 'server.ts');
             
             if (!fs.existsSync(serverPath)) {
                 this.addWarning(
                     'INFO',
                     '[Layer 8] Server File Not Found',
-                    'Could not read server.js to check k-anonymity thresholds.',
+                    'Could not read server.ts to check k-anonymity thresholds.',
                     'Manually verify minimum thresholds are enforced'
                 );
                 return;
@@ -828,8 +840,8 @@ class PrivacyAuditor {
                 );
             }
 
-            // Check server.js for audit logging practices
-            const serverPath = path.join(__dirname, '..', 'server.js');
+            // Check server.ts for audit logging practices
+            const serverPath = path.join(__dirname, '..', 'server.ts');
             if (fs.existsSync(serverPath)) {
                 const serverContent = fs.readFileSync(serverPath, 'utf-8');
                 
@@ -881,13 +893,13 @@ class PrivacyAuditor {
      */
     private async checkLayer10_SubmissionDataValidation(): Promise<void> {
         try {
-            const serverPath = path.join(__dirname, '..', 'server.js');
+            const serverPath = path.join(__dirname, '..', 'server.ts');
             
             if (!fs.existsSync(serverPath)) {
                 this.addWarning(
                     'INFO',
                     '[Layer 10] Server File Not Found',
-                    'Could not read server.js to check validation logic.',
+                    'Could not read server.ts to check validation logic.',
                     'Manually verify validateAnonymousSubmission() before database saves'
                 );
                 return;
