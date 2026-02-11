@@ -1,0 +1,665 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PrivacyAuditor = void 0;
+exports.runPrivacyAudit = runPrivacyAudit;
+const Evaluation_1 = __importDefault(require("../models/Evaluation"));
+const Enrollment_1 = __importDefault(require("../models/Enrollment"));
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+class PrivacyAuditor {
+    constructor() {
+        this.auditResults = {
+            timestamp: new Date(),
+            status: 'passed',
+            issues: [],
+            warnings: [],
+            summary: {
+                totalEvaluations: 0,
+                evaluationsChecked: 0,
+                issuesFound: 0,
+                warningsFound: 0
+            }
+        };
+    }
+    /**
+     * Main audit function that runs all privacy checks
+     */
+    async runFullAudit() {
+        console.log('Starting privacy audit...');
+        // Reset audit results
+        this.resetAudit();
+        // Run all audit checks for 10-layer privacy protection
+        await this.checkLayer1_AnonymousTokens();
+        await this.checkLayer2_SubmissionTimeFuzzing();
+        await this.checkLayer3_IpAddressAnonymization();
+        await this.checkLayer4_EnrollmentDecoupling();
+        await this.checkLayer5_TimestampRounding();
+        await this.checkLayer6_SessionDataMinimization();
+        await this.checkLayer7_DifferentialPrivacy();
+        await this.checkLayer8_KAnonymity();
+        await this.checkLayer9_PrivacySafeAuditLogging();
+        await this.checkLayer10_SubmissionDataValidation();
+        // Legacy checks for schema and records
+        await this.checkEvaluationSchema();
+        await this.checkEvaluationRecords();
+        await this.checkEnrollmentLinkage();
+        // Determine overall status
+        if (this.auditResults.issues.length > 0) {
+            this.auditResults.status = 'failed';
+        }
+        else if (this.auditResults.warnings.length > 0) {
+            this.auditResults.status = 'warning';
+        }
+        this.auditResults.summary.issuesFound = this.auditResults.issues.length;
+        this.auditResults.summary.warningsFound = this.auditResults.warnings.length;
+        console.log('Privacy audit completed:', this.auditResults.status);
+        return this.auditResults;
+    }
+    /**
+     * Reset audit results
+     */
+    resetAudit() {
+        this.auditResults = {
+            timestamp: new Date(),
+            status: 'passed',
+            issues: [],
+            warnings: [],
+            summary: {
+                totalEvaluations: 0,
+                evaluationsChecked: 0,
+                issuesFound: 0,
+                warningsFound: 0
+            }
+        };
+    }
+    /**
+     * Check if Evaluation schema contains student_number field
+     */
+    async checkEvaluationSchema() {
+        const schemaFields = Object.keys(Evaluation_1.default.schema.paths);
+        // Critical: student_number should NOT exist in schema
+        if (schemaFields.includes('student_number')) {
+            this.addIssue('CRITICAL', 'Evaluation Schema Contains student_number Field', 'The Evaluation model schema contains a student_number field. This violates zero-knowledge privacy.', 'Remove student_number from the Evaluation schema in models/Evaluation.js');
+        }
+        // Verify anonymous_token exists
+        if (!schemaFields.includes('anonymous_token')) {
+            this.addIssue('CRITICAL', 'Missing Anonymous Token Field', 'The Evaluation model schema does not have an anonymous_token field.', 'Add anonymous_token field to the Evaluation schema');
+        }
+        // Verify student_id is NOT in schema
+        if (schemaFields.includes('student_id')) {
+            this.addIssue('CRITICAL', 'Evaluation Schema Contains student_id Reference', 'The Evaluation model contains a direct reference to student_id.', 'Remove student_id reference from Evaluation schema');
+        }
+    }
+    /**
+     * Check existing evaluation records for student identifiers
+     */
+    async checkEvaluationRecords() {
+        try {
+            const totalEvaluations = await Evaluation_1.default.countDocuments();
+            this.auditResults.summary.totalEvaluations = totalEvaluations;
+            if (totalEvaluations === 0) {
+                this.addWarning('INFO', 'No Evaluations Found', 'No evaluation records exist in the database yet.', 'This is normal for a new system');
+                return;
+            }
+            // Check for any records with student_number field
+            const evaluationsWithStudentNumber = await Evaluation_1.default.find({
+                student_number: { $exists: true }
+            }).countDocuments();
+            if (evaluationsWithStudentNumber > 0) {
+                this.addIssue('CRITICAL', `${evaluationsWithStudentNumber} Evaluations Contain student_number`, `Found ${evaluationsWithStudentNumber} evaluation records with student_number field in the database.`, 'Run the migration script to anonymize existing evaluations: npm run migrate-anonymous');
+            }
+            // Check for records with student_id references
+            const evaluationsWithStudentId = await Evaluation_1.default.find({
+                student_id: { $exists: true }
+            }).countDocuments();
+            if (evaluationsWithStudentId > 0) {
+                this.addIssue('CRITICAL', `${evaluationsWithStudentId} Evaluations Contain student_id Reference`, `Found ${evaluationsWithStudentId} evaluation records with student_id reference.`, 'Remove all student_id references from evaluation records');
+            }
+            // Verify all evaluations have anonymous tokens
+            const evaluationsWithoutToken = await Evaluation_1.default.find({
+                $or: [
+                    { anonymous_token: { $exists: false } },
+                    { anonymous_token: null },
+                    { anonymous_token: '' }
+                ]
+            }).countDocuments();
+            if (evaluationsWithoutToken > 0) {
+                this.addIssue('HIGH', `${evaluationsWithoutToken} Evaluations Missing Anonymous Token`, `Found ${evaluationsWithoutToken} evaluations without proper anonymous tokens.`, 'Generate anonymous tokens for all evaluations');
+            }
+            this.auditResults.summary.evaluationsChecked = totalEvaluations;
+        }
+        catch (error) {
+            this.addIssue('ERROR', 'Database Check Failed', `Error checking evaluation records: ${error.message}`, 'Check database connection and model definitions');
+        }
+    }
+    /**
+     * Check enrollment linkage to ensure evaluation IDs don't expose student info
+     */
+    async checkEnrollmentLinkage() {
+        try {
+            // Check if enrollments properly track has_evaluated flag
+            const totalEnrollments = await Enrollment_1.default.countDocuments();
+            if (totalEnrollments === 0) {
+                this.addWarning('INFO', 'No Enrollments Found', 'No enrollment records exist in the database yet.', 'This is normal for a new system');
+                return;
+            }
+            // Verify enrollments that reference evaluation_id are properly flagged
+            const evaluatedEnrollments = await Enrollment_1.default.find({
+                evaluation_id: { $exists: true, $ne: null }
+            }).countDocuments();
+            const flaggedEvaluated = await Enrollment_1.default.find({
+                has_evaluated: true
+            }).countDocuments();
+            if (evaluatedEnrollments !== flaggedEvaluated) {
+                this.addWarning('MEDIUM', 'Enrollment Flag Mismatch', `Found ${evaluatedEnrollments} enrollments with evaluation_id but ${flaggedEvaluated} flagged as evaluated.`, 'Ensure has_evaluated flag is properly set when evaluations are submitted');
+            }
+        }
+        catch (error) {
+            this.addIssue('ERROR', 'Enrollment Check Failed', `Error checking enrollment linkage: ${error.message}`, 'Check database connection and Enrollment model');
+        }
+    }
+    /**
+     * LAYER 1: Anonymous Token System (SHA-512)
+     * Verify anonymous tokens use SHA-512 and are properly generated
+     */
+    async checkLayer1_AnonymousTokens() {
+        try {
+            const evaluations = await Evaluation_1.default.find({
+                anonymous_token: { $exists: true, $nin: [null, ''] }
+            }).select('anonymous_token').lean();
+            if (evaluations.length === 0) {
+                return; // Will be reported in schema checks
+            }
+            // Check for duplicate tokens (should never happen with proper crypto)
+            const tokens = evaluations.map(e => e.anonymous_token);
+            const uniqueTokens = new Set(tokens);
+            if (tokens.length !== uniqueTokens.size) {
+                this.addIssue('CRITICAL', '[Layer 1] Duplicate Anonymous Tokens Found', `Found ${tokens.length - uniqueTokens.size} duplicate anonymous tokens. This severely compromises privacy!`, 'Regenerate duplicate tokens with proper cryptographic randomness using SHA-512');
+            }
+            // Check token format (should be SHA-512 hex = 128 characters, or SHA-256 = 64 characters)
+            const sha512Tokens = evaluations.filter(e => {
+                const token = e.anonymous_token;
+                return token && token.length === 128 && /^[a-f0-9]{128}$/i.test(token);
+            });
+            const sha256Tokens = evaluations.filter(e => {
+                const token = e.anonymous_token;
+                return token && token.length === 64 && /^[a-f0-9]{64}$/i.test(token);
+            });
+            const invalidTokens = evaluations.length - sha512Tokens.length - sha256Tokens.length;
+            if (sha256Tokens.length > 0 && sha512Tokens.length === 0) {
+                this.addWarning('MEDIUM', '[Layer 1] Using SHA-256 Instead of SHA-512', `All ${sha256Tokens.length} tokens use SHA-256. Enhanced security requires SHA-512.`, 'Update token generation to use SHA-512 (128 character hex) for stronger cryptographic protection');
+            }
+            else if (sha512Tokens.length > 0 && sha256Tokens.length > 0) {
+                this.addWarning('MEDIUM', '[Layer 1] Mixed Token Formats', `Found ${sha512Tokens.length} SHA-512 tokens and ${sha256Tokens.length} SHA-256 tokens.`, 'Standardize on SHA-512 for all anonymous tokens');
+            }
+            else if (sha512Tokens.length === evaluations.length) {
+                // Perfect! All using SHA-512
+                this.addWarning('INFO', '[Layer 1] ✓ SHA-512 Tokens Verified', `All ${sha512Tokens.length} anonymous tokens properly use SHA-512 cryptographic hashing.`, 'Continue using SHA-512 for maximum privacy protection');
+            }
+            if (invalidTokens > 0) {
+                this.addIssue('HIGH', `[Layer 1] ${invalidTokens} Invalid Token Formats`, 'Some anonymous tokens do not match SHA-256 or SHA-512 format.', 'Regenerate invalid tokens using proper cryptographic hash functions');
+            }
+        }
+        catch (error) {
+            this.addIssue('ERROR', '[Layer 1] Token Verification Failed', `Error checking anonymous tokens: ${error.message}`, 'Check database query and token generation logic');
+        }
+    }
+    /**
+     * LAYER 2: Submission Time Fuzzing
+     * Check if timing delays are implemented to prevent correlation
+     */
+    async checkLayer2_SubmissionTimeFuzzing() {
+        try {
+            // Check if privacy-protection.js exists and has timing functions
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.js');
+            if (!fs.existsSync(privacyProtectionPath)) {
+                this.addIssue('CRITICAL', '[Layer 2] Privacy Protection Module Missing', 'The privacy-protection.js utility file does not exist.', 'Create privacy-protection.js with calculateSubmissionDelay() function');
+                return;
+            }
+            const privacyContent = fs.readFileSync(privacyProtectionPath, 'utf-8');
+            // Check for submission delay function
+            if (!privacyContent.includes('calculateSubmissionDelay') &&
+                !privacyContent.includes('getSubmissionDelay')) {
+                this.addIssue('HIGH', '[Layer 2] Submission Timing Fuzzing Not Implemented', 'No submission delay function found in privacy-protection.js.', 'Implement calculateSubmissionDelay() with random 2-8 second delays');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 2] ✓ Submission Timing Fuzzing Detected', 'Submission delay function found in privacy utilities.', 'Ensure delays are applied before saving evaluations to database');
+            }
+            // Check server.js for delay implementation
+            const serverPath = path.join(__dirname, '..', 'server.js');
+            const serverContent = fs.readFileSync(serverPath, 'utf-8');
+            if (!serverContent.includes('calculateSubmissionDelay') &&
+                !serverContent.includes('await new Promise') &&
+                !serverContent.includes('setTimeout')) {
+                this.addWarning('MEDIUM', '[Layer 2] Timing Delays Not Applied in Server', 'Could not verify that submission delays are actually being used in submission handler.', 'Add await delay logic in POST /submit-evaluation route');
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 2] Timing Fuzzing Check Failed', `Could not verify submission timing: ${error.message}`, 'Manually verify 2-8 second random delays are implemented');
+        }
+    }
+    /**
+     * LAYER 3: IP Address Anonymization
+     * Check if IP addresses are properly anonymized
+     */
+    async checkLayer3_IpAddressAnonymization() {
+        try {
+            // Check for non-anonymized IP addresses
+            const evaluationsWithIp = await Evaluation_1.default.find({
+                ip_address: { $exists: true, $nin: [null, ''] }
+            }).select('ip_address').lean();
+            if (evaluationsWithIp.length > 0) {
+                // Check if IPs are properly anonymized (should end with .0 or ::0)
+                const nonAnonymizedIps = evaluationsWithIp.filter(e => {
+                    const ip = e.ip_address;
+                    // IPv4 should end with .0, IPv6 should end with ::0
+                    return ip && !ip.endsWith('.0') && !ip.endsWith('::0');
+                });
+                if (nonAnonymizedIps.length > 0) {
+                    this.addIssue('CRITICAL', `[Layer 3] ${nonAnonymizedIps.length} Non-Anonymized IP Addresses`, 'Found evaluation records with full IP addresses. This enables tracking and correlation!', 'Use anonymizeIpAddress() function to remove last octet (IPv4) or last 80 bits (IPv6)');
+                }
+                else {
+                    this.addWarning('INFO', '[Layer 3] ✓ IP Addresses Properly Anonymized', `All ${evaluationsWithIp.length} stored IP addresses are properly anonymized.`, 'Continue anonymizing IPs by removing last octet/segments');
+                }
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 3] IP Address Check Failed', `Could not check IP addresses: ${error.message}`, 'Verify IP anonymization manually');
+        }
+    }
+    /**
+     * LAYER 4: Automatic Evaluation-Enrollment Decoupling
+     * Check if enrollment links are automatically removed
+     */
+    async checkLayer4_EnrollmentDecoupling() {
+        try {
+            const totalEvaluatedEnrollments = await Enrollment_1.default.countDocuments({
+                has_evaluated: true
+            });
+            if (totalEvaluatedEnrollments === 0) {
+                return; // No enrollments to check
+            }
+            const enrollmentsWithLink = await Enrollment_1.default.countDocuments({
+                has_evaluated: true,
+                evaluation_id: { $exists: true, $ne: null }
+            });
+            const decoupledEnrollments = await Enrollment_1.default.countDocuments({
+                has_evaluated: true,
+                decoupled_at: { $exists: true, $ne: null }
+            });
+            // Store for potential future use
+            // const percentLinked = Math.round((enrollmentsWithLink / totalEvaluatedEnrollments) * 100);
+            // const percentDecoupled = Math.round((decoupledEnrollments / totalEvaluatedEnrollments) * 100);
+            // Check if any links are older than grace period (24 hours)
+            const gracePeriodHours = 24;
+            const cutoffTime = new Date();
+            cutoffTime.setHours(cutoffTime.getHours() - gracePeriodHours);
+            const oldLinks = await Enrollment_1.default.countDocuments({
+                has_evaluated: true,
+                evaluation_id: { $exists: true, $ne: null },
+                updatedAt: { $lt: cutoffTime }
+            });
+            if (oldLinks > 0) {
+                this.addIssue('HIGH', `[Layer 4] ${oldLinks} Enrollment Links Overdue for Decoupling`, 'Found enrollment-evaluation links older than 24 hours. Links enable identity tracing!', 'Run privacy scheduler or manual decoupling: node -e "require(\'./utils/privacy-scheduler\').manualDecoupling()"');
+            }
+            else if (enrollmentsWithLink > 0) {
+                this.addWarning('INFO', `[Layer 4] ✓ Automatic Decoupling Active`, `${enrollmentsWithLink} recent links within 24-hour grace period, ${decoupledEnrollments} properly decoupled.`, 'Privacy scheduler is working correctly');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 4] ✓ All Enrollments Decoupled', `All ${totalEvaluatedEnrollments} evaluated enrollments are properly decoupled.`, 'Excellent privacy protection - no linkage exists');
+            }
+            // Check if privacy scheduler exists
+            const schedulerPath = path.join(__dirname, 'privacy-scheduler.js');
+            if (!fs.existsSync(schedulerPath)) {
+                this.addWarning('MEDIUM', '[Layer 4] Privacy Scheduler Not Found', 'privacy-scheduler.js does not exist. Automatic decoupling may not be running.', 'Create privacy scheduler with hourly decoupling tasks');
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 4] Enrollment Decoupling Check Failed', `Could not check decoupling status: ${error.message}`, 'Verify enrollment decoupling manually');
+        }
+    }
+    /**
+     * LAYER 5: Timestamp Rounding
+     * Check if timestamps are rounded to prevent timing attacks
+     */
+    async checkLayer5_TimestampRounding() {
+        try {
+            const evaluations = await Evaluation_1.default.find({
+                submitted_at: { $exists: true, $ne: null }
+            }).select('submitted_at').limit(100).lean();
+            if (evaluations.length > 0) {
+                // Check if timestamps are rounded to hour (privacy-safe)
+                const preciseTimestamps = evaluations.filter(e => {
+                    const date = new Date(e.submitted_at);
+                    // If minutes, seconds, or milliseconds are non-zero, it's not rounded
+                    return date.getMinutes() !== 0 || date.getSeconds() !== 0 || date.getMilliseconds() !== 0;
+                });
+                if (preciseTimestamps.length > 0) {
+                    const percentPrecise = Math.round((preciseTimestamps.length / evaluations.length) * 100);
+                    this.addIssue('MEDIUM', '[Layer 5] Precise Timestamps Enable Correlation', `${percentPrecise}% of sampled evaluations have precise timestamps (not rounded to hour).`, 'Use getSafeSubmissionTimestamp() to round timestamps to nearest hour');
+                }
+                else {
+                    this.addWarning('INFO', '[Layer 5] ✓ Timestamps Properly Rounded', `All ${evaluations.length} sampled evaluations have timestamps rounded to the hour.`, 'Continue rounding timestamps for timing attack prevention');
+                }
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 5] Timestamp Check Failed', `Could not check timestamp precision: ${error.message}`, 'Verify timestamp handling manually');
+        }
+    }
+    /**
+     * LAYER 6: Session Data Minimization
+     * Check for session data leakage
+     */
+    async checkLayer6_SessionDataMinimization() {
+        try {
+            const serverJsPath = path.join(__dirname, '..', 'server.js');
+            const serverContent = fs.readFileSync(serverJsPath, 'utf-8');
+            // Check for student_number in session
+            if (serverContent.includes('req.session.studentNumber') ||
+                serverContent.includes('session.student_number') ||
+                serverContent.includes('req.session.student_number')) {
+                this.addIssue('CRITICAL', 'Session Contains student_number', 'The server.js file stores student_number in session data. This violates zero-knowledge privacy.', 'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).');
+            }
+            // Verify only studentId is stored
+            const sessionStudentIdPattern = /req\.session\.studentId\s*=/;
+            if (!sessionStudentIdPattern.test(serverContent)) {
+                this.addWarning('MEDIUM', 'Session StudentId Not Found', 'Could not verify that studentId is being stored in session properly.', 'Ensure req.session.studentId = student._id is used in login routes');
+            }
+            // Check for console.log statements that might leak student data
+            const consoleLogPattern = /console\.log.*student_number|console\.log.*studentNumber/i;
+            if (consoleLogPattern.test(serverContent)) {
+                this.addWarning('MEDIUM', 'Potential Console Logging of Student IDs', 'Found console.log statements that might be logging student numbers.', 'Remove or sanitize all console.log statements containing student identifiers');
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', 'Session Code Review', 'Could not automatically scan source code. Manual review recommended.', 'Manually verify that req.session only stores studentId (ObjectId), never student_number');
+        }
+    }
+    /**
+     * LAYER 7: Differential Privacy for Statistics
+     * Check if Laplace noise is applied to aggregate statistics
+     */
+    async checkLayer7_DifferentialPrivacy() {
+        try {
+            // Check if privacy-protection.js has differential privacy implementation
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.js');
+            if (!fs.existsSync(privacyProtectionPath)) {
+                this.addIssue('HIGH', '[Layer 7] Differential Privacy Module Missing', 'privacy-protection.js not found. Aggregate statistics may not have Laplace noise.', 'Create differential privacy utilities with ε=0.1 for teacher statistics');
+                return;
+            }
+            const privacyContent = fs.readFileSync(privacyProtectionPath, 'utf-8');
+            // Check for Laplace noise functions
+            if (!privacyContent.includes('laplace') &&
+                !privacyContent.includes('Laplace') &&
+                !privacyContent.includes('addNoise')) {
+                this.addIssue('MEDIUM', '[Layer 7] Laplace Noise Not Implemented', 'No differential privacy noise functions found in privacy utilities.', 'Implement addLaplaceNoise(value, epsilon=0.1) for aggregate statistics');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 7] ✓ Differential Privacy Detected', 'Found Laplace noise implementation in privacy utilities.', 'Ensure ε=0.1 is used for teacher statistics and noise is applied before returning aggregates');
+            }
+            // Check server.js for noise application in statistics routes
+            const serverPath = path.join(__dirname, '..', 'server.js');
+            if (fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                if (!serverContent.includes('addLaplaceNoise') &&
+                    !serverContent.includes('laplace') &&
+                    serverContent.includes('aggregate') || serverContent.includes('$avg')) {
+                    this.addWarning('MEDIUM', '[Layer 7] Statistics May Lack Noise', 'Found aggregation queries but no evidence of Laplace noise application.', 'Apply differential privacy noise to all aggregate statistics before displaying');
+                }
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 7] Differential Privacy Check Failed', `Could not verify differential privacy: ${error.message}`, 'Manually verify Laplace noise with ε=0.1 is applied to statistics');
+        }
+    }
+    /**
+     * LAYER 8: K-Anonymity Thresholds
+     * Check if minimum group sizes are enforced (k=5 for teachers, k=10 for reports)
+     */
+    async checkLayer8_KAnonymity() {
+        try {
+            const serverPath = path.join(__dirname, '..', 'server.js');
+            if (!fs.existsSync(serverPath)) {
+                this.addWarning('INFO', '[Layer 8] Server File Not Found', 'Could not read server.js to check k-anonymity thresholds.', 'Manually verify minimum thresholds are enforced');
+                return;
+            }
+            const serverContent = fs.readFileSync(serverPath, 'utf-8');
+            // Check for minimum threshold checks
+            const hasMinimumCheck = serverContent.includes('evaluations.length < 5') ||
+                serverContent.includes('evaluations.length >= 5') ||
+                serverContent.includes('MIN_EVALUATIONS') ||
+                serverContent.includes('MINIMUM_RESPONSES');
+            if (!hasMinimumCheck) {
+                this.addIssue('HIGH', '[Layer 8] K-Anonymity Thresholds Missing', 'No evidence of minimum group size checks (k≥5) in server code.', 'Add checks: if (evaluations.length < 5) return "Insufficient data for privacy protection"');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 8] ✓ K-Anonymity Checks Found', 'Found evidence of minimum threshold checks in server code.', 'Verify k≥5 for teachers and k≥10 for department-wide reports');
+            }
+            // Check actual evaluation counts per teacher
+            const teachersWithFewEvals = await Evaluation_1.default.aggregate([
+                { $group: { _id: '$teacher_id', count: { $sum: 1 } } },
+                { $match: { count: { $lt: 5 } } }
+            ]);
+            if (teachersWithFewEvals.length > 0) {
+                this.addWarning('MEDIUM', `[Layer 8] ${teachersWithFewEvals.length} Teachers Below K=5 Threshold`, 'Some teachers have fewer than 5 evaluations. Their data should not be displayed.', 'Hide statistics for teachers with <5 evaluations to maintain k-anonymity');
+            }
+            else {
+                const totalTeachers = await Evaluation_1.default.distinct('teacher_id');
+                if (totalTeachers.length > 0) {
+                    this.addWarning('INFO', '[Layer 8] ✓ All Teachers Meet K-Anonymity', `All ${totalTeachers.length} evaluated teachers have ≥5 responses.`, 'Continue enforcing k-anonymity thresholds');
+                }
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 8] K-Anonymity Check Failed', `Could not verify k-anonymity thresholds: ${error.message}`, 'Manually verify k≥5 minimum thresholds are enforced');
+        }
+    }
+    /**
+     * LAYER 9: Privacy-Safe Audit Logging
+     * Check if audit logs avoid storing student identifiers
+     */
+    async checkLayer9_PrivacySafeAuditLogging() {
+        try {
+            // Check privacy-audit.js itself (this file)
+            const privacyAuditPath = path.join(__dirname, 'privacy-audit.js');
+            const auditContent = fs.readFileSync(privacyAuditPath, 'utf-8');
+            // Check for potential student ID logging
+            if (auditContent.includes('student_number') &&
+                !auditContent.includes('// student_number') &&
+                !auditContent.includes('* student_number')) {
+                this.addWarning('HIGH', '[Layer 9] Audit Logging May Include Student IDs', 'Found references to student_number in privacy audit code.', 'Replace with audit_token or anonymous_token in all audit logs');
+            }
+            // Check server.js for audit logging practices
+            const serverPath = path.join(__dirname, '..', 'server.js');
+            if (fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                // Look for logging that might include student data
+                const hasStudentLogging = serverContent.includes('console.log.*student_number') ||
+                    serverContent.includes('logger.*student_number');
+                if (hasStudentLogging) {
+                    this.addIssue('MEDIUM', '[Layer 9] Server Logs May Contain Student IDs', 'Found logging statements that might include student_number.', 'Replace all student_number with anonymous_token in logs: console.log(anonymousToken)');
+                }
+                else {
+                    this.addWarning('INFO', '[Layer 9] ✓ Privacy-Safe Logging Verified', 'No evidence of student_number in logging statements.', 'Continue using anonymous tokens for all audit logging');
+                }
+                // Check for audit token usage
+                if (serverContent.includes('anonymous_token') || serverContent.includes('audit_token')) {
+                    this.addWarning('INFO', '[Layer 9] ✓ Audit Tokens In Use', 'Server code uses anonymous tokens for tracking.', 'Excellent! Continue using anonymous tokens instead of student IDs');
+                }
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 9] Audit Logging Check Failed', `Could not verify audit logging practices: ${error.message}`, 'Manually verify logs use anonymous_token instead of student_number');
+        }
+    }
+    /**
+     * LAYER 10: Pre-Storage Data Validation
+     * Check if validation prevents storing identifying information
+     */
+    async checkLayer10_SubmissionDataValidation() {
+        try {
+            const serverPath = path.join(__dirname, '..', 'server.js');
+            if (!fs.existsSync(serverPath)) {
+                this.addWarning('INFO', '[Layer 10] Server File Not Found', 'Could not read server.js to check validation logic.', 'Manually verify validateAnonymousSubmission() before database saves');
+                return;
+            }
+            const serverContent = fs.readFileSync(serverPath, 'utf-8');
+            // Check for validation function
+            const hasValidation = serverContent.includes('validateAnonymousSubmission') ||
+                serverContent.includes('validateSubmission') ||
+                serverContent.includes('validate(req.body');
+            if (!hasValidation) {
+                this.addIssue('HIGH', '[Layer 10] Pre-Storage Validation Missing', 'No evidence of validation function before saving evaluations.', 'Add validateAnonymousSubmission(data) to check for student_number, names, and identifying text');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 10] ✓ Validation Function Found', 'Found evidence of validation before storage.', 'Ensure validation rejects: student_number, student names, email addresses, and identifying text');
+            }
+            // Check for blacklist/sanitization patterns
+            const hasSanitization = serverContent.includes('sanitize') ||
+                serverContent.includes('blacklist') ||
+                serverContent.includes('forbidden_patterns') ||
+                serverContent.includes('prohibited_words');
+            if (!hasSanitization) {
+                this.addWarning('MEDIUM', '[Layer 10] Text Sanitization Not Found', 'Could not find evidence of text sanitization or pattern matching.', 'Add blacklist patterns to detect and reject: student_number, names, emails in free text');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 10] ✓ Sanitization Logic Detected', 'Found sanitization or blacklist patterns in submission handler.', 'Continue blocking identifying information in evaluation text fields');
+            }
+            // Check actual evaluation data for potential leaks
+            const suspiciousEvaluations = await Evaluation_1.default.find({
+                $or: [
+                    { 'ratings.comments': /student_number|ID|identifier/i },
+                    { 'ratings.comments': /\b\d{4}-\d{5}\b/ }, // Student ID pattern
+                    { 'ratings.comments': /@.*\.edu|@.*\.com/ } // Email pattern
+                ]
+            }).limit(10).lean();
+            if (suspiciousEvaluations.length > 0) {
+                this.addIssue('CRITICAL', '[Layer 10] Identifying Information in Evaluations', `Found ${suspiciousEvaluations.length} evaluations with potential identifying information in comments.`, 'Strengthen validation to reject submissions containing student IDs, emails, or identifying patterns');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 10] ✓ No Identifying Data in Evaluations', 'Sampled evaluations contain no obvious identifying information.', 'Continue validating and sanitizing all submission data');
+            }
+        }
+        catch (error) {
+            this.addWarning('INFO', '[Layer 10] Validation Check Failed', `Could not verify pre-storage validation: ${error.message}`, 'Manually verify validateAnonymousSubmission() prevents storing identifying data');
+        }
+    }
+    /**
+     * Add a critical issue to audit results
+     */
+    addIssue(severity, title, description, recommendation) {
+        this.auditResults.issues.push({
+            severity,
+            title,
+            description,
+            recommendation,
+            timestamp: new Date()
+        });
+    }
+    /**
+     * Add a warning to audit results
+     */
+    addWarning(level, title, description, recommendation) {
+        this.auditResults.warnings.push({
+            level,
+            title,
+            description,
+            recommendation,
+            timestamp: new Date()
+        });
+    }
+    /**
+     * Generate a summary report
+     */
+    generateReport() {
+        const report = {
+            ...this.auditResults,
+            reportGenerated: new Date(),
+            conclusion: this.generateConclusion()
+        };
+        return report;
+    }
+    /**
+     * Generate conclusion based on audit results
+     */
+    generateConclusion() {
+        if (this.auditResults.issues.length === 0 && this.auditResults.warnings.length === 0) {
+            return {
+                status: 'EXCELLENT',
+                message: 'All privacy checks passed. Student identities are fully protected.',
+                color: 'green'
+            };
+        }
+        else if (this.auditResults.issues.length === 0) {
+            return {
+                status: 'GOOD',
+                message: 'No critical issues found, but some warnings exist. Review recommendations.',
+                color: 'yellow'
+            };
+        }
+        else {
+            const criticalCount = this.auditResults.issues.filter(i => i.severity === 'CRITICAL').length;
+            if (criticalCount > 0) {
+                return {
+                    status: 'CRITICAL',
+                    message: `${criticalCount} critical privacy issues found. Immediate action required!`,
+                    color: 'red'
+                };
+            }
+            else {
+                return {
+                    status: 'ATTENTION NEEDED',
+                    message: 'Privacy issues detected. Please address the recommendations.',
+                    color: 'orange'
+                };
+            }
+        }
+    }
+}
+exports.PrivacyAuditor = PrivacyAuditor;
+/**
+ * Helper function to run a quick audit
+ */
+async function runPrivacyAudit() {
+    const auditor = new PrivacyAuditor();
+    await auditor.runFullAudit();
+    return auditor.generateReport();
+}
+//# sourceMappingURL=privacy-audit.js.map
