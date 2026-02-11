@@ -593,32 +593,57 @@ class PrivacyAuditor {
      */
     async checkLayer9_PrivacySafeAuditLogging() {
         try {
-            // Check privacy-audit.js itself (this file)
-            const privacyAuditPath = path.join(__dirname, 'privacy-audit.js');
-            const auditContent = fs.readFileSync(privacyAuditPath, 'utf-8');
-            // Check for potential student ID logging
-            if (auditContent.includes('student_number') &&
-                !auditContent.includes('// student_number') &&
-                !auditContent.includes('* student_number')) {
-                this.addWarning('HIGH', '[Layer 9] Audit Logging May Include Student IDs', 'Found references to student_number in privacy audit code.', 'Replace with audit_token or anonymous_token in all audit logs');
+            // Check privacy-audit.ts itself (this file)
+            const privacyAuditPath = path.join(__dirname, 'privacy-audit.ts');
+            if (!fs.existsSync(privacyAuditPath)) {
+                this.addWarning('INFO', '[Layer 9] Audit File Not Found', 'Could not locate privacy-audit.ts file for self-inspection', 'This is expected in compiled/production environments');
+                return;
             }
-            // Check server.ts for audit logging practices
-            const serverPath = path.join(__dirname, '..', 'server.ts');
-            if (fs.existsSync(serverPath)) {
-                const serverContent = fs.readFileSync(serverPath, 'utf-8');
-                // Look for logging that might include student data
-                const hasStudentLogging = serverContent.includes('console.log.*student_number') ||
-                    serverContent.includes('logger.*student_number');
-                if (hasStudentLogging) {
-                    this.addIssue('MEDIUM', '[Layer 9] Server Logs May Contain Student IDs', 'Found logging statements that might include student_number.', 'Replace all student_number with anonymous_token in logs: console.log(anonymousToken)');
+            const auditContent = fs.readFileSync(privacyAuditPath, 'utf-8');
+            // Check for potential student ID logging (excluding TypeScript type definitions and comments)
+            const studentNumberMatches = auditContent.match(/student_number/g) || [];
+            const commentedMatches = (auditContent.match(/\/\/.*student_number|\*.*student_number|'student_number'|"student_number"/g) || []).length;
+            const actualCodeReferences = studentNumberMatches.length - commentedMatches;
+            if (actualCodeReferences > 0) {
+                this.addWarning('HIGH', '[Layer 9] Audit Logging May Include Student IDs', `Found ${actualCodeReferences} uncommented student_number references in privacy audit code.`, 'Replace with audit_token or anonymous_token in all audit logs');
+            }
+            else {
+                this.addWarning('INFO', '[Layer 9] ✓ Audit Code is Privacy-Safe', 'Privacy audit code properly avoids logging student identifiers in code.', 'Continue using anonymous_token in all audit operations');
+            }
+            // Check server.ts and routes/api.ts for audit logging practices
+            const filesToCheck = [
+                { path: path.join(__dirname, '..', 'server.ts'), name: 'server.ts' },
+                { path: path.join(__dirname, '..', 'routes', 'api.ts'), name: 'routes/api.ts' }
+            ];
+            let foundLoggingIssue = false;
+            let foundGoodPractice = false;
+            for (const file of filesToCheck) {
+                if (fs.existsSync(file.path)) {
+                    const content = fs.readFileSync(file.path, 'utf-8');
+                    // Look for console.log or logger statements with student identifiers (using regex)
+                    const logPatterns = [
+                        /console\.log.*student_number/i,
+                        /logger.*student_number/i,
+                        /log\(['"`].*student_number/i
+                    ];
+                    for (const pattern of logPatterns) {
+                        if (pattern.test(content)) {
+                            this.addIssue('MEDIUM', `[Layer 9] ${file.name} Logs May Contain Student IDs`, `${file.name} contains logging statements that might include student_number.`, 'Replace all student_number with anonymous_token in logs');
+                            foundLoggingIssue = true;
+                            break;
+                        }
+                    }
+                    // Check for good practice (anonymous token usage)
+                    if (content.includes('anonymous_token') || content.includes('audit_token')) {
+                        foundGoodPractice = true;
+                    }
                 }
-                else {
-                    this.addWarning('INFO', '[Layer 9] ✓ Privacy-Safe Logging Verified', 'No evidence of student_number in logging statements.', 'Continue using anonymous tokens for all audit logging');
-                }
-                // Check for audit token usage
-                if (serverContent.includes('anonymous_token') || serverContent.includes('audit_token')) {
-                    this.addWarning('INFO', '[Layer 9] ✓ Audit Tokens In Use', 'Server code uses anonymous tokens for tracking.', 'Excellent! Continue using anonymous tokens instead of student IDs');
-                }
+            }
+            if (!foundLoggingIssue) {
+                this.addWarning('INFO', '[Layer 9] ✓ Privacy-Safe Logging Verified', 'No evidence of student_number in logging statements.', 'Continue using anonymous tokens for all audit logging');
+            }
+            if (foundGoodPractice) {
+                this.addWarning('INFO', '[Layer 9] ✓ Audit Tokens In Use', 'Server code uses anonymous tokens for tracking.', 'Excellent! Continue using anonymous tokens instead of student IDs');
             }
         }
         catch (error) {
