@@ -42,7 +42,7 @@ const AdminPrivacyAudit: React.FC = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <h2 className="font-bold text-lg text-blue-800 mb-3 flex items-center">
             <i className="fas fa-shield-alt mr-2"></i>
-            10-Layer Privacy Protection System
+            11-Layer Privacy Protection System
           </h2>
           <p className="text-blue-700 mb-4">
             This system implements comprehensive privacy protection measures including:
@@ -57,6 +57,7 @@ const AdminPrivacyAudit: React.FC = () => {
             <li>✓ Session security</li>
             <li>✓ Data minimization</li>
             <li>✓ Audit logging</li>
+            <li>✓ Field-level encryption (AES-256-GCM)</li>
             <li>✓ Compliance with FERPA and GDPR principles</li>
           </ul>
         </div>
