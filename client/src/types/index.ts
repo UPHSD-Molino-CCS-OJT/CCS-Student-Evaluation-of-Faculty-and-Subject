@@ -1,0 +1,225 @@
+/**
+ * Frontend Type Definitions
+ * Shared types for React components and utilities
+ */
+
+// API Response Types
+export interface ApiResponse<T = any> {
+  success?: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+// Evaluation Types
+export interface Rating {
+  label: string;
+  color: string;
+}
+
+export interface RatingScale {
+  [key: number]: Rating;
+}
+
+export interface EvaluationQuestion {
+  id: string;
+  category: string;
+  text: string;
+  field?: string;
+}
+
+export interface EvaluationSection {
+  title: string;
+  description: string;
+  icon: string;
+  questions: EvaluationQuestion[];
+}
+
+export interface EvaluationSections {
+  [key: string]: EvaluationSection;
+}
+
+export interface FormData {
+  [key: string]: any;
+}
+
+export interface EvaluationDraft {
+  formData: FormData;
+  timestamp: string;
+  enrollmentId: string;
+}
+
+// Validation Types
+export interface ValidationErrors {
+  [key: string]: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationErrors;
+  missingFields?: string[];
+}
+
+// Entity Types (frontend representations)
+export interface Teacher {
+  _id: string;
+  full_name: string;
+  employee_id?: string;
+  email?: string;
+  department?: string;
+  status: 'active' | 'inactive';
+  created_at?: Date;
+}
+
+export interface Program {
+  _id: string;
+  name: string;
+  code: string;
+}
+
+export interface Course {
+  _id: string;
+  name: string;
+  code: string;
+  program_id: string | Program;
+}
+
+export interface Student {
+  _id: string;
+  full_name: string;
+  student_number: string;
+  program_id: string | Program;
+  program?: Program;
+  year_level: '1st' | '2nd' | '3rd' | '4th';
+  status: 'Regular' | 'Irregular' | 'Transferee';
+  school_year: string;
+  semester: string;
+}
+
+export interface Enrollment {
+  _id: string;
+  student_id: string | Student;
+  course_id: string | Course;
+  course?: Course;
+  teacher_id: string | Teacher;
+  teacher?: Teacher;
+  section_code?: string;
+  school_year: string;
+  semester: '1st Semester' | '2nd Semester' | 'Summer';
+  has_evaluated: boolean;
+  evaluation_id?: string;
+}
+
+export interface Evaluation {
+  _id: string;
+  school_year: string;
+  program_id: string | Program;
+  year_level: string;
+  status: string;
+  course_id: string | Course;
+  teacher_id: string | Teacher;
+  
+  // Teacher ratings
+  teacher_care: number;
+  teacher_respect: number;
+  teacher_patience: number;
+  teacher_shows_mastery: number;
+  teacher_updated_informed: number;
+  teacher_demonstrates_competence: number;
+  teacher_average: number;
+  
+  // Learning process ratings
+  learning_clear_objectives: number;
+  learning_syllabus_followed: number;
+  learning_starts_ends_on_time: number;
+  learning_concepts_understood: number;
+  learning_materials_appropriate: number;
+  learning_allows_questions: number;
+  learning_encourages_participation: number;
+  learning_provides_relevant_examples: number;
+  learning_provides_activities: number;
+  learning_relates_to_life: number;
+  learning_relates_to_other_subjects: number;
+  learning_fair_grading: number;
+  learning_returns_outputs_on_time: number;
+  learning_average: number;
+  
+  // Classroom management ratings
+  classroom_starts_on_time: number;
+  classroom_time_managed_effectively: number;
+  classroom_student_behavior: number;
+  classroom_conducive_environment: number;
+  classroom_appropriate_strategies: number;
+  classroom_communication_channels: number;
+  classroom_average: number;
+  
+  overall_average: number;
+  comments?: string;
+  submitted_at: Date;
+  created_at?: Date;
+}
+
+// Dashboard Types
+export interface DashboardStats {
+  totalEvaluations: number;
+  totalTeachers: number;
+  totalPrograms: number;
+  averageRatings: {
+    teacher: number;
+    learning: number;
+    classroom: number;
+    overall: number;
+  };
+  topTeachers: Array<{
+    _id: string;
+    full_name: string;
+    average_rating: number;
+    evaluation_count: number;
+  }>;
+  recentEvaluations: Evaluation[];
+}
+
+// Privacy Audit Types
+export interface AuditIssue {
+  severity: string;
+  title: string;
+  description: string;
+  recommendation: string;
+  timestamp?: Date;
+}
+
+export interface AuditResults {
+  timestamp: Date;
+  status: string;
+  issues: AuditIssue[];
+  warnings: AuditIssue[];
+  summary: {
+    totalEvaluations: number;
+    evaluationsChecked: number;
+    issuesFound: number;
+    warningsFound: number;
+  };
+}
+
+// Auth Types
+export interface LoginCredentials {
+  username?: string;
+  password?: string;
+  student_number?: string;
+  birthdate?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  fullName?: string;
+}
+
+export interface AuthState {
+  authenticated: boolean;
+  admin?: AdminUser;
+  student?: Student;
+}
+
+// Re-export component types
+export * from './components'
