@@ -24,17 +24,28 @@ npm run client
 
 ## 3. Run Automated Testing
 
-**Single Student (with browser visible):**
+**All Students (Default - Browser Visible):**
 ```powershell
 npm run test:evaluate
+```
+This will automatically test all 3 students from the database setup with browser visible.
+
+**All Students (Headless Mode - Faster):**
+```powershell
+npm run test:evaluate -- --headless
+```
+
+**Single Student (with browser visible):**
+```powershell
+npm run test:evaluate -- --student 21-1234-567
 ```
 
 **Single Student (headless mode):**
 ```powershell
-npm run test:evaluate:headless
+npm run test:evaluate -- --student 21-1234-567 --headless
 ```
 
-**All Students at Once:**
+**Batch Script (Alternative):**
 ```powershell
 .\test-all-students.ps1
 ```
@@ -46,15 +57,38 @@ npm run test:evaluate -- --student 21-1234-568
 
 ## What It Does
 
-✅ Automatically logs in as a student  
+✅ **Tests all students by default** - Automatically runs evaluations for all 3 sample students  
+✅ **Browser visible** - Watch the automation in action (use `--headless` for faster testing)  
+✅ Automatically logs in as each student  
 ✅ Finds all unevaluated subjects  
 ✅ Fills evaluation forms with random ratings  
 ✅ Submits evaluations  
-✅ Respects all privacy protections (SHA-512 tokens, IP anonymization, timestamp rounding)
+✅ Respects all privacy protections (SHA-512 tokens, IP anonymization, timestamp rounding)  
+✅ Shows detailed progress for each student
 
 ## Output Example
 
 ```
+╔═══════════════════════════════════════════════════════════╗
+║   STUDENT EVALUATION AUTOMATION SCRIPT                   ║
+║   Automated Testing for CCS Faculty Evaluation System    ║
+╚═══════════════════════════════════════════════════════════╝
+
+Configuration:
+  Testing Mode: ALL STUDENTS (3 students)
+  Base URL: http://localhost:3000 (default)
+  Headless: false
+  Slow Motion: 100ms
+
+Students to test:
+  1. Juan Dela Cruz (21-1234-567)
+  2. Maria Garcia (21-1234-568)
+  3. Pedro Santos (21-5678-901)
+
+============================================================
+[1/3] Testing: Juan Dela Cruz (21-1234-567)
+============================================================
+
 🚀 Starting browser automation...
 📝 Logging in as student: 21-1234-567
 ✓ Successfully logged in
@@ -62,9 +96,20 @@ npm run test:evaluate -- --student 21-1234-568
 ✓ Found 2 unevaluated subjects
 📊 Evaluating: Data Structures and Algorithms
   ✓ Evaluation submitted successfully!
+✓ Successfully completed evaluations for Juan Dela Cruz
+
 ============================================================
-✓ Successfully evaluated: 2 subjects
+[2/3] Testing: Maria Garcia (21-1234-568)
 ============================================================
+...
+
+============================================================
+BATCH AUTOMATION COMPLETE
+============================================================
+✓ Successful: 3 students
+============================================================
+
+✅ All automation tests completed successfully!
 ```
 
 ## Troubleshooting
