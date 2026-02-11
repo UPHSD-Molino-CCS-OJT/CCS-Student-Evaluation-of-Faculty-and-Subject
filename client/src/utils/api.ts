@@ -21,6 +21,7 @@ import type {
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,
+  timeout: 20000, // 20 second timeout (accounts for 2-8s backend delay + processing)
   headers: {
     'Content-Type': 'application/json',
   },

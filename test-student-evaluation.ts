@@ -82,13 +82,23 @@ class StudentEvaluationAutomation {
       // Click login button
       await this.page.click('button[type="submit"]');
       
-      // Wait for navigation with longer timeout
-      await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 10000 });
+      // Wait for navigation with extended timeout (accounts for session save retries)
+      await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 15000 });
       
       console.log('✓ Successfully logged in\n');
       return true;
     } catch (error) {
-      console.error('✗ Login failed:', (error as Error).message);
+      const errorMessage = (error as Error).message;
+      console.error('✗ Login failed:', errorMessage);
+      
+      // Enhanced error logging for debugging
+      if (errorMessage.includes('timeout')) {
+        console.error('  🕐 Timeout Error: Server took too long to respond');
+        console.error('     Possible causes: Session store overload, database connection issues');
+      } else if (errorMessage.includes('net::ERR')) {
+        console.error('  🌐 Network Error: Cannot connect to server');
+        console.error('     Check if server is running on', this.config.baseUrl);
+      }
       
       // Take screenshot on login failure
       try {
@@ -273,21 +283,30 @@ class StudentEvaluationAutomation {
       await dialogPromise;
       console.log('  ✓ Confirmation accepted');
 
-      // Wait for success modal or redirect
+      // Wait for success modal or redirect (extended timeout for backend delay + processing)
       try {
-        await this.page.waitForSelector('.modal, .success', { timeout: 5000 });
+        await this.page.waitForSelector('.modal, .success', { timeout: 8000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
         // Wait for navigation back to subjects page
-        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 5000 });
+        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 8000 });
       } catch {
         // Sometimes it redirects directly without modal
-        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 8000 });
+        // Backend has 2-8s random delay + database operations, so allow up to 15s total
+        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 15000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
       }
 
       return true;
     } catch (error) {
-      console.error('  ✗ Submission failed:', (error as Error).message);
+      const errorMessage = (error as Error).message;
+      console.error('  ✗ Submission failed:', errorMessage);
+      
+      // Enhanced error logging
+      if (errorMessage.includes('timeout')) {
+        console.error('  🕐 Timeout Error: Submission exceeded time limit');
+        console.error('     Backend implements 2-8s random delay + database operations');
+        console.error('     This may indicate server overload during parallel testing');
+      }
       
       // Take screenshot on failure for debugging
       try {
@@ -537,7 +556,13 @@ async function processStudentBatch(
   console.log('='.repeat(60) + '\n');
 
   const results = await Promise.allSettled(
-    students.map(async (student) => {
+    students.map(async (student, index) => {
+      // Stagger browser launches by 2 seconds each to prevent connection pool exhaustion
+      // This helps avoid overwhelming the database and session store during parallel testing
+      if (index > 0) {
+        await new Promise(resolve => setTimeout(resolve, index * 2000));
+      }
+      
       const studentConfig = {
         ...config,
         studentNumber: student.number,
@@ -575,11 +600,11 @@ async function main() {
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║   STUDENT EVALUATION AUTOMATION SCRIPT                   ║');
   console.log('║   Automated Testing for CCS Faculty Evaluation System    ║');
-  console.log('║   🚀 Supports 10 Parallel Browsers for Fast Testing      ║');
+  console.log('║   🚀 Supports Parallel Testing with Rate Limiting        ║');
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
 
   const config = parseArgs();
-  const PARALLEL_LIMIT = 10; // Number of simultaneous browsers
+  const PARALLEL_LIMIT = 5; // Reduced from 10 to 5 to prevent server overload
   
   // If no specific student is provided, test all students from database
   if (!config.studentNumber) {
