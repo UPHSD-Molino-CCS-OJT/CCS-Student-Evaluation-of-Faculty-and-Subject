@@ -233,8 +233,8 @@ class StudentEvaluationAutomation {
       await label.scrollIntoViewIfNeeded();
       await label.click();
       
-      // Small delay between fields for stability
-      await this.page.waitForTimeout(50);
+      // Wait for the input to be checked
+      await this.page.waitForSelector(`input[name="${fieldName}"][value="${rating}"]:checked`, { timeout: 1000 });
     }
 
     // Fill comments (optional)
@@ -246,9 +246,6 @@ class StudentEvaluationAutomation {
     }
 
     console.log('  ✓ Form filled successfully');
-    
-    // Wait a moment to ensure all state updates are complete
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -280,9 +277,10 @@ class StudentEvaluationAutomation {
       try {
         await this.page.waitForSelector('.modal, .success', { timeout: 5000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
-        await this.page.waitForTimeout(1000); // Wait for modal animation
+        // Wait for navigation back to subjects page
+        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 5000 });
       } catch {
-        // Sometimes it redirects directly
+        // Sometimes it redirects directly without modal
         await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 8000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
       }
@@ -383,8 +381,10 @@ class StudentEvaluationAutomation {
         // Skeleton might already be gone
       });
       
-      // Wait a moment for page to fully load
-      await this.page!.waitForTimeout(1000);
+      // Wait for actual content to be visible
+      await this.page!.waitForSelector('.bg-white.rounded-lg.shadow-md:not(.animate-pulse)', { timeout: 5000 }).catch(() => {
+        // No subjects might be available
+      });
 
       const subjects = await this.getUnevaluatedSubjects();
 
@@ -411,9 +411,9 @@ class StudentEvaluationAutomation {
           failCount++;
         }
 
-        // Delay between evaluations to avoid rate limiting
+        // Brief pause between evaluations
         if (subject !== subjects[subjects.length - 1]) {
-          await this.page!.waitForTimeout(1500);
+          await this.page!.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => {});
         }
       }
 
@@ -524,15 +524,62 @@ async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Ar
 }
 
 /**
+ * Process students in parallel batches
+ */
+async function processStudentBatch(
+  students: Array<{ number: string; name: string }>,
+  config: Partial<EvaluationConfig>,
+  batchNumber: number,
+  totalBatches: number
+): Promise<{ success: number; failed: number }> {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`BATCH ${batchNumber}/${totalBatches} - Processing ${students.length} students in parallel`);
+  console.log('='.repeat(60) + '\n');
+
+  const results = await Promise.allSettled(
+    students.map(async (student) => {
+      const studentConfig = {
+        ...config,
+        studentNumber: student.number,
+        baseUrl: config.baseUrl || 'http://localhost:3000',
+        headless: config.headless !== undefined ? config.headless : false
+      };
+
+      const automation = new StudentEvaluationAutomation(studentConfig);
+
+      try {
+        await automation.run();
+        console.log(`✓ [Batch ${batchNumber}] ${student.name} completed successfully`);
+        return { success: true, student };
+      } catch (error) {
+        console.error(`✗ [Batch ${batchNumber}] ${student.name} failed:`, (error as Error).message);
+        return { success: false, student };
+      }
+    })
+  );
+
+  const successCount = results.filter(
+    r => r.status === 'fulfilled' && r.value.success
+  ).length;
+  const failedCount = results.length - successCount;
+
+  console.log(`\n✓ Batch ${batchNumber} complete: ${successCount} successful, ${failedCount} failed\n`);
+
+  return { success: successCount, failed: failedCount };
+}
+
+/**
  * Main execution
  */
 async function main() {
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║   STUDENT EVALUATION AUTOMATION SCRIPT                   ║');
   console.log('║   Automated Testing for CCS Faculty Evaluation System    ║');
+  console.log('║   🚀 Supports 10 Parallel Browsers for Fast Testing      ║');
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
 
   const config = parseArgs();
+  const PARALLEL_LIMIT = 10; // Number of simultaneous browsers
   
   // If no specific student is provided, test all students from database
   if (!config.studentNumber) {
@@ -565,38 +612,35 @@ async function main() {
     if (students.length > 10) {
       console.log(`  ... and ${students.length - 10} more`);
     }
-    console.log('');
+    console.log(`\n🔥 Running with ${PARALLEL_LIMIT} parallel browsers\n`);
 
     let totalSuccess = 0;
     let totalFail = 0;
 
-    for (let i = 0; i < students.length; i++) {
-      const student = students[i];
-      console.log(`\n${'='.repeat(60)}`);
-      console.log(`[${i + 1}/${students.length}] Testing: ${student.name} (${student.number})`);
-      console.log('='.repeat(60) + '\n');
+    // Process students in batches of PARALLEL_LIMIT
+    const batches: Array<typeof students> = [];
+    for (let i = 0; i < students.length; i += PARALLEL_LIMIT) {
+      batches.push(students.slice(i, i + PARALLEL_LIMIT));
+    }
 
-      const studentConfig = {
-        ...config,
-        studentNumber: student.number,
-        baseUrl: config.baseUrl || 'http://localhost:3000',
-        headless: config.headless !== undefined ? config.headless : false
-      };
+    console.log(`📦 Processing ${students.length} students in ${batches.length} batches\n`);
 
-      const automation = new StudentEvaluationAutomation(studentConfig);
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      const batchResults = await processStudentBatch(
+        batch,
+        config,
+        i + 1,
+        batches.length
+      );
 
-      try {
-        await automation.run();
-        console.log(`✓ Successfully completed evaluations for ${student.name}\n`);
-        totalSuccess++;
-      } catch (error) {
-        console.error(`✗ Failed to complete evaluations for ${student.name}:`, error);
-        totalFail++;
-      }
+      totalSuccess += batchResults.success;
+      totalFail += batchResults.failed;
 
-      // Delay between students
-      if (i < students.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      // Brief pause between batches to avoid overwhelming the server
+      if (i < batches.length - 1) {
+        console.log('⏳ Waiting 3 seconds before next batch...\n');
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
