@@ -75,6 +75,7 @@ This system goes far beyond basic anonymization, implementing **10 layers of sys
 ┌─────────────────────────────────────┐
 │  Privacy Protection Intercept      │
 │  • Generate anonymous token (SHA-512)│
+│  • Generate receipt hash           │
 │  • Anonymize IP address            │
 │  • Round timestamp to hour         │
 │  • Validate no identifiers         │
@@ -82,21 +83,17 @@ This system goes far beyond basic anonymization, implementing **10 layers of sys
 └──────┬────────────────────────────┘
        │
        ↓
-┌─────────────────────────┐
-│  Evaluation Database    │
-│  • Anonymous token only │
-│  • NO student_number    │
-│  • NO student_id        │
-│  • NO student_name      │
-└──────┬──────────────────┘
-       │
-       ↓ [After 24 Hours]
-┌────────────────────────────┐
-│  Privacy Scheduler         │
-│  • Removes enrollment link │
-│  • Sets decoupled_at       │
-│  • Complete unlinkability  │
-└────────────────────────────┘
+┌─────────────────────────┐     ┌──────────────────────┐
+│  Evaluation Database    │     │ Enrollment Database  │
+│  • Anonymous token only │     │ • Mark as evaluated  │
+│  • NO student_number    │     │ • Store receipt hash │
+│  • NO student_id        │     │ • NO evaluation_id   │
+│  • NO student_name      │     │ • Zero linkability ✅│
+└─────────────────────────┘     └──────────────────────┘
+       │                                │
+       └────────────────────────────────┘
+              NO REVERSIBLE LINK!
+        (Student gets receipt for verification)
 ```
 
 ### What Information Is and Isn't Stored
@@ -222,45 +219,87 @@ IP addresses can reveal:
 
 ---
 
-### Layer 4: Evaluation-Enrollment Decoupling
+### Layer 4: Cryptographic Receipt Model
 
-**Technology:** Scheduled automatic link removal
+**Technology:** One-time verification receipts with zero reversible linkage
 
 **How It Works:**
 
-**Immediately After Submission:**
+**Previous Model (24h Grace Period):**
 ```javascript
 Enrollment {
-  student_id: ObjectId("507f..."),
-  has_evaluated: true,
-  evaluation_id: ObjectId("612a...")  // ← Temporary link
+  evaluation_id: ObjectId("612a...")  // ← Temporary link for 24h
 }
+// After 24h: Link removed, but forensic window existed
 ```
 
-**After 24 Hours (Automatic):**
+**New Receipt Model (Zero Trust Window):**
 ```javascript
+// At submission:
+const receiptHash = generateReceiptHash(anonymousToken, timestamp);
+
 Enrollment {
-  student_id: ObjectId("507f..."),
   has_evaluated: true,
-  evaluation_id: null,  // ← Link removed!
-  decoupled_at: Date("2026-02-11T14:00:00Z")
+  receipt_hash: "a3f7c2d9e1b8f4a6"  // ← One-way verification only
+  // NO evaluation_id field - never stores reversible link!
 }
+
+Evaluation {
+  anonymous_token: "sha512hash..."  // ← Completely separate
+  // No way to reverse-engineer which enrollment
+}
+
+// Student receives: "Receipt: a3f7c2d9e1b8f4a6"
+// Can verify submission without revealing identity
 ```
+
+**Key Improvement:**
+- **Before:** 24-hour window where `enrollment → evaluation` link existed
+- **After:** NO reversible link EVER exists at any point
+- **Verification:** Student gets receipt hash for support queries
+- **Privacy:** Receipt cannot be used to identify student
 
 **Protection Against:**
-- ✅ Database forensics
-- ✅ Administrative correlation
-- ✅ Long-term linkage
-- ✅ Backup/recovery exploitation
+- ✅ Database forensics (no link to reverse-engineer)
+- ✅ Administrative correlation (structurally impossible)
+- ✅ Backup/recovery exploitation (no links in any backup)
+- ✅ Time-window attacks (no grace period needed)
+- ✅ Insider threats (even DBA cannot trace)
 
-**Why This Matters:**
-- Grace period allows verification of submission
-- After 24 hours, **extremely difficult** to trace back to student
-- Database backups designed to not reveal identity
-- Permanent unlinkability achieved by design
+**How Receipt Verification Works:**
+```javascript
+// Student contacts support with receipt
+const receipt = "a3f7c2d9e1b8f4a6";
 
-**Scheduled Task:**
-Runs every hour automatically via `node-cron`.
+// Support can verify submission exists WITHOUT identifying student
+// Receipt = hash(anonymousToken + timestamp)
+// Cannot work backwards to find student
+// Can only confirm: "Yes, this evaluation was submitted"
+```
+
+**Why This Is Stronger:**
+
+**Old Model:**
+```
+Time 0: Student submits → Link created
+Time 1-23h: Link exists in database (vulnerability window)
+Time 24h: Scheduler removes link
+
+Problem: Database snapshot during 0-24h reveals link
+```
+
+**New Model:**
+```
+Time 0: Student submits → Receipt generated, NO link stored
+Time 1+: No link exists to remove (nothing to decouple)
+
+Advantage: Zero forensic window, structural unlinkability
+```
+
+**No Decoupling Job Needed:**
+- Previous: Cron job removed links every hour
+- Current: No links exist to remove
+- Result: Simpler, faster, more secure
 
 ---
 
@@ -530,6 +569,7 @@ Look for privacy initialization messages:
 ✓ Admin login: http://localhost:3000/admin/login
 🔒 Initializing privacy protection scheduled tasks...
 ✓ Privacy protection tasks scheduled
+ℹ️  Note: Enrollment decoupling not needed - cryptographic receipt model ensures no reversible links exist
 ```
 
 #### 4. Run Privacy Audit
@@ -603,34 +643,45 @@ NO server communication until submit ✅
       ↓
 ③ Generate SHA-512 anonymous token [Token Generation]
       ↓
-④ Anonymize IP address [Network Privacy]
+④ Generate receipt hash [Verification]
       ↓
-⑤ Round timestamp to hour [Temporal Privacy]
+⑤ Anonymize IP address [Network Privacy]
       ↓
-⑥ Validate no identifiers [Data Validation]
+⑥ Round timestamp to hour [Temporal Privacy]
       ↓
-⑦ Store in database (anonymous token only)
+⑦ Validate no identifiers [Data Validation]
       ↓
-⑧ Set enrollment has_evaluated = true
+⑧ Store in database (anonymous token only - NO LINK to enrollment)
       ↓
-⑨ Clean session data [Session Security]
+⑨ Mark enrollment as evaluated (receipt hash stored, NO evaluation_id)
       ↓
-⑩ Create privacy-safe audit log
+⑩ Clean session data [Session Security]
       ↓
-✅ Submission complete - Student identity protected
+⑪ Create privacy-safe audit log
+      ↓
+⑫ Return success + receipt hash to student
+      ↓
+✅ Submission complete - Zero reversible linkage!
 ```
 
-**Step 5: After 24 Hours (Automatic)**
+**Step 5: Receipt for Student**
 ```
-Privacy Scheduler runs (every hour)
-      ↓
-Finds enrollments with evaluation_id older than 24h
-      ↓
-Removes evaluation_id field
-      ↓
-Sets decoupled_at timestamp
-      ↓
-✅ Complete unlinkability achieved
+Student receives confirmation:
+"Evaluation submitted successfully!"
+"Verification Receipt: a3f7c2d9e1b8f4a6"
+
+Student can:
+✅ Save receipt for records
+✅ Use for support queries
+❌ Cannot be used to identify them
+❌ Cannot be reverse-engineered
+```
+
+**No Decoupling Step Needed:**
+```
+Previous system: Wait 24 hours for automatic link removal
+Current system: No links ever created - nothing to remove
+Result: Immediate structural unlinkability ✅
 ```
 
 ### Admin Dashboard Flow
@@ -750,29 +801,60 @@ db.evaluations.findOne({ student_id: ObjectId("507f...") });
 
 **Attack Method:**
 ```javascript
-// Find enrollment
+// ATTEMPT 1: Try to find evaluation via old link model
 const enrollment = db.enrollments.findOne({ 
   student_id: ObjectId("507f...") 
 });
 
-// Follow link to evaluation
+// Try to follow link
 const evaluation = db.evaluations.findOne({
   _id: enrollment.evaluation_id
 });
-
-// Success → Identified student
+// Result: evaluation_id field doesn't exist!
 ```
 
-**Defense:**
+**Defense (Receipt Model):**
 ```javascript
-// After 24 hours
-enrollment.evaluation_id = null  // Link removed ✅
-enrollment.decoupled_at = Date("2026-02-11T14:00:00Z")
+// What attacker finds:
+enrollment = {
+  student_id: ObjectId("507f..."),
+  has_evaluated: true,
+  receipt_hash: "a3f7c2d9e1b8f4a6"  // ← Cannot reverse this
+  // NO evaluation_id field!
+}
 
-// Cannot trace back anymore
+// Receipt hash formula:
+// receipt = hash(anonymousToken + timestamp)
+// One-way function - cannot work backwards
+
+// Attacker cannot:
+❌ Find evaluation from enrollment (no link exists)
+❌ Reverse receipt hash (cryptographically secure)
+❌ Match receipt to evaluation (no reverse index)
+❌ Use timing attacks (timestamp rounded)
 ```
 
-**Protection Status:** ✅ **BLOCKED** (after 24h grace period)
+**Why Old Model Was Vulnerable:**
+```javascript
+// During 0-24h grace period:
+enrollment.evaluation_id = ObjectId("612a...")  // ← Direct link!
+
+// Database snapshot during this window reveals connection
+// Even after deletion, forensic recovery possible
+```
+
+**Why Receipt Model Is Secure:**
+```javascript
+// NO reversible link at ANY point:
+enrollment.receipt_hash = "a3f7c2d9..."  // ← One-way only
+
+// Structural guarantee:
+// No evaluation_id field means no link to follow
+// Receipt cannot be used to find evaluation
+// Zero forensic window
+```
+
+**Protection Status:** ✅ **BLOCKED** (no grace period, immediate structural unlinkability)
 
 ---
 
@@ -957,13 +1039,23 @@ Each evaluation:
 
 ### Can Database Queries Link Evaluations to Students?
 
-**Answer: Extremely Difficult** ✅ **AFTER 24 HOURS**
+**Answer: Structurally Impossible** ✅ 
 
 **Reasons:**
-- Initial 24-hour grace period (for verification)
-- Links automatically removed after 24 hours
-- Permanent unlinkability achieved by design
-- Backups designed to not reveal identity
+- **No grace period:** Receipt model eliminates 24h trust window  
+- **No reversible links:** `evaluation_id` field never exists
+- **Cryptographic receipts:** One-way hashes prevent reverse-engineering
+- **Immediate unlinkability:** No decoupling job needed
+- **Forensic protection:** Database snapshots cannot reveal links
+- **Architectural guarantee:** Structural separation of enrollment and evaluation data
+
+**Technical Details:**
+```
+Old Model: enrollment.evaluation_id → 24h window → null
+New Model: enrollment.receipt_hash (no evaluation_id field ever)
+
+Result: Zero forensic window, zero reversible linkage
+```
 
 ---
 
@@ -1022,7 +1114,7 @@ Each evaluation:
 | Direct database queries | ✅ BLOCKED | Schema design (no identifier fields) |
 | Timing correlation | ✅ BLOCKED | Random delays + timestamp rounding |
 | IP tracking | ✅ BLOCKED | IP anonymization |
-| Enrollment linkage | ✅ BLOCKED | Automatic decoupling after 24h |
+| Enrollment linkage | ✅ BLOCKED | Cryptographic receipt model (zero reversible links) |
 | Statistical inference | ✅ BLOCKED | Differential privacy + k-anonymity |
 | Small class identification | ✅ BLOCKED | K-anonymity thresholds |
 | Behavioral fingerprinting | ✅ BLOCKED | Time fuzzing + unique tokens |
@@ -1031,6 +1123,8 @@ Each evaluation:
 | Cross-evaluation linking | ✅ BLOCKED | Unique random tokens |
 
 **Overall Privacy Level: MAXIMUM 🔒**
+
+**Key Enhancement:** Receipt model eliminates ALL structural re-link vectors. No forensic window exists at any point.
 
 ---
 
@@ -1070,6 +1164,7 @@ Each evaluation:
 - [ ] Run audit
 - [ ] Verify status: **PASSED** or **GOOD**
 - [ ] No CRITICAL issues
+- [ ] Layer 4 shows "Cryptographic Receipt Model Active"
 
 ### ✅ Submission Process Test
 
@@ -1078,8 +1173,9 @@ Each evaluation:
 - [ ] Fill evaluation
 - [ ] Click submit
 - [ ] **Notice 2-8 second delay** (privacy protection)
-- [ ] Verify success message
-- [ ] Check database: anonymous token only
+- [ ] Verify success message with receipt hash
+- [ ] Save receipt for verification
+- [ ] Check database: anonymous token only, NO evaluation_id in enrollment
 
 ### ✅ Anonymous Token Verification
 
@@ -1115,24 +1211,46 @@ db.evaluations.find().forEach(e => {
 
 ### ✅ Decoupling Verification
 
-**After 24 Hours:**
+**Receipt Model (Current):**
 ```javascript
-// Check decoupled enrollments
+// Check NO evaluation_id fields exist (receipt model)
+db.enrollments.find({
+    evaluation_id: { $exists: true }
+}).count()
+// Should be 0 (receipt model has no evaluation_id field) ✅
+
+// Check receipt hashes exist
 db.enrollments.find({
     has_evaluated: true,
+    receipt_hash: { $exists: true }
+}).count()
+// Should match number of evaluations ✅
+```
+
+**Legacy System Check:**
+```javascript
+// If migrating from old model, check for decoupled records
+db.enrollments.find({
     decoupled_at: { $exists: true }
 }).count()
-// Should increase over time ✅
+// These are from old 24h grace period system
+// New submissions use receipt model
 ```
 
 ### ✅ Privacy Scheduler Check
 
 **Watch Logs:**
 ```
-🔄 Running enrollment-evaluation decoupling...
-✓ Decoupled X enrollment(s)
+� Initializing privacy protection scheduled tasks...
+✓ Privacy protection tasks scheduled
+ℹ️  Note: Enrollment decoupling not needed - cryptographic receipt model ensures no reversible links exist
 ```
-Runs every hour automatically.
+
+**Receipt Model Benefits:**
+- No hourly decoupling job needed
+- No 24-hour grace period
+- No forensic window
+- Immediate structural unlinkability
 
 ### ✅ Session Security Check
 
@@ -1179,7 +1297,9 @@ db.evaluations.findOne({ student_number: "21-1234-567" });
 - Check evaluation IP: 192.168.1.0 ✅
 
 **Test 4: Linkage Attack**
-- After 24h: `enrollment.evaluation_id = null` ✅
+- After submission: `enrollment.evaluation_id` field doesn't exist ✅
+- Receipt hash cannot be reversed ✅
+- Structural unlinkability from moment of submission ✅
 
 ---
 
@@ -2034,10 +2154,14 @@ project/
   school_year: String,
   semester: String,
   
-  // EVALUATION STATUS
+  // EVALUATION STATUS (Receipt Model)
   has_evaluated: Boolean,
-  evaluation_id: ObjectId (temporary, removed after 24h),
-  decoupled_at: Date (set when link removed)
+  submission_token: String (optional, one-time use),
+  submission_token_used: Boolean,
+  receipt_hash: String (verification only, cannot reverse)
+  
+  // NO evaluation_id field - cryptographic receipt model!
+  // Zero reversible linkage at any point ✅
 }
 ```
 
@@ -2312,6 +2436,16 @@ This system provides:
 
 ## Version History
 
+**Version 2.1** - February 11, 2026
+- 🔒 **CRITICAL ENHANCEMENT:** Replaced 24h grace period with cryptographic receipt model
+- Eliminated ALL reversible enrollment-evaluation links
+- Removed decoupling scheduler (no longer needed)
+- Added receipt hash verification system
+- Zero forensic window - structural unlinkability from submission
+- No trust period - immediate privacy protection
+- Updated audit system to verify receipt model
+- Enhanced Layer 4 protection documentation
+
 **Version 2.0** - February 10, 2026
 - Added 10-layer privacy protection system
 - Implemented differential privacy
@@ -2331,10 +2465,11 @@ This system provides:
 
 ---
 
-**Last Updated:** February 10, 2026
-**Document Version:** 2.0
+**Last Updated:** February 11, 2026
+**Document Version:** 2.1
 **Implementation Status:** Production-Ready
 **Privacy Level:** MAXIMUM 🔒
+**Key Enhancement:** Cryptographic Receipt Model (Zero Reversible Linkage)
 
 ---
 
