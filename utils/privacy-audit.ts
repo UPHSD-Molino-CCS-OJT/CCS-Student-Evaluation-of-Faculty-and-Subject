@@ -240,11 +240,10 @@ class PrivacyAuditor {
     }
 
     /**
-     * Check enrollment linkage to ensure evaluation IDs don't expose student info
+     * Check enrollment linkage - verify receipt model adoption
      */
     private async checkEnrollmentLinkage(): Promise<void> {
         try {
-            // Check if enrollments properly track has_evaluated flag
             const totalEnrollments = await Enrollment.countDocuments();
             
             if (totalEnrollments === 0) {
@@ -257,21 +256,62 @@ class PrivacyAuditor {
                 return;
             }
 
-            // Verify enrollments that reference evaluation_id are properly flagged
-            const evaluatedEnrollments = await Enrollment.find({
-                evaluation_id: { $exists: true, $ne: null }
-            }).countDocuments();
-
-            const flaggedEvaluated = await Enrollment.find({
+            const evaluatedEnrollments = await Enrollment.countDocuments({
                 has_evaluated: true
-            }).countDocuments();
+            });
 
-            if (evaluatedEnrollments !== flaggedEvaluated) {
+            if (evaluatedEnrollments === 0) {
+                this.addWarning(
+                    'INFO',
+                    'No Evaluated Enrollments Yet',
+                    'No students have submitted evaluations yet.',
+                    'This is normal before evaluation period'
+                );
+                return;
+            }
+
+            // Check for receipt model adoption
+            const enrollmentsWithReceipt = await Enrollment.countDocuments({
+                has_evaluated: true,
+                receipt_hash: { $exists: true, $ne: null }
+            });
+
+            const receiptAdoptionRate = Math.round((enrollmentsWithReceipt / evaluatedEnrollments) * 100);
+
+            if (receiptAdoptionRate === 100) {
+                this.addWarning(
+                    'INFO',
+                    '✓ Receipt Model Fully Adopted',
+                    `All ${evaluatedEnrollments} evaluated enrollments use cryptographic receipt verification.`,
+                    'Excellent privacy protection - no reversible links exist'
+                );
+            } else if (receiptAdoptionRate > 50) {
+                this.addWarning(
+                    'INFO',
+                    `Receipt Model Adoption: ${receiptAdoptionRate}%`,
+                    `${enrollmentsWithReceipt} of ${evaluatedEnrollments} enrollments using receipt model.`,
+                    'Migration to receipt model in progress'
+                );
+            } else {
                 this.addWarning(
                     'MEDIUM',
-                    'Enrollment Flag Mismatch',
-                    `Found ${evaluatedEnrollments} enrollments with evaluation_id but ${flaggedEvaluated} flagged as evaluated.`,
-                    'Ensure has_evaluated flag is properly set when evaluations are submitted'
+                    'Low Receipt Model Adoption',
+                    `Only ${receiptAdoptionRate}% of enrollments use receipt model.`,
+                    'Consider migrating to cryptographic receipt model for maximum privacy'
+                );
+            }
+
+            // CRITICAL: Check for old evaluation_id fields (should not exist)
+            const oldModelCount = await Enrollment.countDocuments({
+                evaluation_id: { $exists: true, $ne: null }
+            });
+
+            if (oldModelCount > 0) {
+                this.addIssue(
+                    'HIGH',
+                    `${oldModelCount} Enrollments Using Deprecated evaluation_id`,
+                    'Found enrollments with evaluation_id field from old model. This creates reversible links!',
+                    'Migrate to receipt model: Remove evaluation_id field, implement receipt_hash'
                 );
             }
 

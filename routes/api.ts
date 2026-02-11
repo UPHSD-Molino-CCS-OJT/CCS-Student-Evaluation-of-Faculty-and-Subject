@@ -346,8 +346,8 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
         // Type guard for populated student
         const populatedStudent = enrollment.student_id as IEnrollment['student_id'] & { program_id: Types.ObjectId; year_level: string; status: string; };
         
-        // Create evaluation
-        const evaluation = await Evaluation.create({
+        // Create evaluation (stored completely separately, no link to enrollment)
+        await Evaluation.create({
             school_year: enrollment.school_year,
             anonymous_token: anonymousToken,
             program_id: populatedStudent.program_id,
