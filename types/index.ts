@@ -1,6 +1,7 @@
 import { Document, Types } from 'mongoose';
 import { Request } from 'express';
 import session from 'express-session';
+import { EncryptedData } from '../utils/encryption';
 
 // Admin Interface
 export interface IAdmin extends Document {
@@ -118,7 +119,8 @@ export interface IEvaluation extends Document {
   classroom_prayers: number;
   classroom_punctuality: number;
   
-  comments?: string;
+  // Comments: AES-256-GCM encrypted at rest (no plaintext support)
+  comments?: EncryptedData;
   ip_address?: string;
   submitted_at: Date;
   createdAt: Date;

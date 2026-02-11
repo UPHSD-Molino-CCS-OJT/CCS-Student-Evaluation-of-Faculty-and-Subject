@@ -88,6 +88,7 @@ class PrivacyAuditor {
         await this.checkLayer8_KAnonymity();
         await this.checkLayer9_PrivacySafeAuditLogging();
         await this.checkLayer10_SubmissionDataValidation();
+        await this.checkLayer11_FieldLevelEncryption();
         
         // Legacy checks for schema and records
         await this.checkEvaluationSchema();
@@ -1193,6 +1194,86 @@ class PrivacyAuditor {
                 '[Layer 10] Validation Check Failed',
                 `Could not verify pre-storage validation: ${(error as Error).message}`,
                 'Manually verify validateAnonymousSubmission() prevents storing identifying data'
+            );
+        }
+    }
+
+    /**
+     * LAYER 11: Field-Level Encryption
+     * 
+     * Verifies that sensitive evaluation comments are encrypted at rest using AES-256-GCM
+     * 
+     * Threat Model Protection:
+     * - MongoDB database breach
+     * - Database administrator access
+     * - Backup/snapshot theft
+     * - Insider threat (requires both DB + server access)
+     */
+    private async checkLayer11_FieldLevelEncryption(): Promise<void> {
+        try {
+            // Import encryption utility
+            const { isEncryptionConfigured } = await import('./encryption');
+            
+            // CRITICAL: Encryption must be configured (no longer optional)
+            if (!isEncryptionConfigured()) {
+                this.addIssue(
+                    'CRITICAL',
+                    '[Layer 11] Field-Level Encryption NOT Configured',
+                    'ENCRYPTION_MASTER_KEY is not configured. Comment submissions will be rejected.',
+                    'REQUIRED: Set ENCRYPTION_MASTER_KEY environment variable (64 hex characters). Generate: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+                );
+                return;
+            }
+            
+            // Check recent evaluations to see if any have encrypted comments
+            const recentEvaluations = await Evaluation.find({ comments: { $exists: true, $ne: '' } })
+                .limit(20)
+                .select('comments')
+                .lean();
+            
+            if (recentEvaluations.length === 0) {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 11] No Comments to Encrypt',
+                    'No evaluation comments found in database.',
+                    'Encryption will be applied automatically when comments are submitted'
+                );
+                return;
+            }
+            
+            let encryptedCount = 0;
+            let invalidCount = 0;
+            
+            for (const evaluation of recentEvaluations) {
+                if (typeof evaluation.comments === 'object' && (evaluation.comments as any).encrypted) {
+                    encryptedCount++;
+                } else {
+                    invalidCount++;
+                }
+            }
+            
+            if (invalidCount > 0) {
+                this.addIssue(
+                    'CRITICAL',
+                    '[Layer 11] Invalid Comment Format Detected',
+                    `Found ${invalidCount} evaluation(s) with non-encrypted comments. Total sampled: ${recentEvaluations.length}.`,
+                    'All comments must be AES-256-GCM encrypted. Investigate and re-encrypt affected records.'
+                );
+            } else {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 11] ✓ Field-Level Encryption Active',
+                    `All ${encryptedCount} sampled evaluation comments are encrypted at rest (AES-256-GCM).`,
+                    'Comments are protected even if database is breached. DB admins cannot read plaintext.'
+                );
+            }
+            
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                '[Layer 11] Encryption Check Failed',
+                `Could not verify field-level encryption: ${(error as Error).message}`,
+                'Manually verify ENCRYPTION_MASTER_KEY is configured and comments are encrypted'
             );
         }
     }

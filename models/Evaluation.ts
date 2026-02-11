@@ -69,7 +69,8 @@ const evaluationSchema = new Schema<IEvaluation>({
   classroom_prayers: { type: Number, required: true, min: 1, max: 5 },
   classroom_punctuality: { type: Number, required: true, min: 1, max: 5 },
   
-  comments: { type: String, default: '' },
+  // Comments: AES-256-GCM encrypted only (no plaintext support)
+  comments: { type: Schema.Types.Mixed, default: '' },
   ip_address: { type: String },
   submitted_at: { type: Date, default: Date.now }
 }, {

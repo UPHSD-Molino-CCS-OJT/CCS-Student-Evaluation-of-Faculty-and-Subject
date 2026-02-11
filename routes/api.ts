@@ -16,6 +16,7 @@ import { Types } from 'mongoose';
 
 // Import Privacy Protection Utilities
 import PrivacyProtection from '../utils/privacy-protection';
+import { encryptField, decryptField, isEncryptionConfigured, EncryptedData } from '../utils/encryption';
 
 // Import middleware
 import { isAuthenticated } from '../middleware/auth';
@@ -24,6 +25,27 @@ import { isAuthenticated } from '../middleware/auth';
 // Minimum number of evaluations required before displaying aggregate statistics
 // This ensures individual responses cannot be identified or inferred
 const K_ANONYMITY_THRESHOLD = 5;
+
+/**
+ * Helper: Decrypt comments field
+ * Returns plaintext string from AES-256-GCM encrypted data
+ */
+function decryptCommentsField(comments: any): string {
+    if (!comments) {
+        return '';
+    }
+    
+    if (typeof comments === 'object' && comments.encrypted) {
+        try {
+            return decryptField(comments as EncryptedData);
+        } catch (error) {
+            console.error('Failed to decrypt comments:', error);
+            return '[Decryption failed - invalid key or corrupted data]';
+        }
+    }
+    
+    return '';
+}
 
 const router: Router = Router();
 
@@ -365,6 +387,29 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
         // Type guard for populated student
         const populatedStudent = enrollment.student_id as IEnrollment['student_id'] & { program_id: Types.ObjectId; year_level: string; status: string; };
         
+        // FIELD-LEVEL ENCRYPTION: Encrypt comments at rest (AES-256-GCM)
+        let encryptedComments: EncryptedData | string = '';
+        if (data.comments && data.comments.trim()) {
+            if (!isEncryptionConfigured()) {
+                console.error('CRITICAL: ENCRYPTION_MASTER_KEY not configured! Refusing to store plaintext comments.');
+                res.status(500).json({
+                    success: false,
+                    message: 'Server configuration error. Please contact administrator.'
+                });
+                return;
+            }
+            try {
+                encryptedComments = encryptField(data.comments.trim());
+            } catch (error) {
+                console.error('Comment encryption failed:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Evaluation processing error. Please try again.'
+                });
+                return;
+            }
+        }
+        
         // Create evaluation (stored completely separately, no link to enrollment)
         await Evaluation.create({
             school_year: enrollment.school_year,
@@ -406,7 +451,7 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
             classroom_prayers: Number(data.classroom_prayers),
             classroom_punctuality: Number(data.classroom_punctuality),
             
-            comments: data.comments || '',
+            comments: encryptedComments, // Encrypted at rest (AES-256-GCM)
             ip_address: anonymizedIp,
             submitted_at: safeTimestamp
         });
@@ -627,6 +672,7 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             
             return {
                 ...evaluation,
+                comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher: evaluation.teacher_id,
                 course: evaluation.course_id,
                 teacher_id: evaluation.teacher_id?._id,
@@ -705,6 +751,7 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
             
             return {
                 ...evaluation,
+                comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher: evaluation.teacher_id,
                 course: evaluation.course_id,
                 program: evaluation.program_id,
@@ -779,6 +826,7 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
         
         const evaluation = {
             ...evaluationRaw,
+            comments: decryptCommentsField((evaluationRaw as any).comments), // Decrypt for admin viewing
             teacher: (evaluationRaw as any).teacher_id,
             course: (evaluationRaw as any).course_id,
             program: (evaluationRaw as any).program_id,
