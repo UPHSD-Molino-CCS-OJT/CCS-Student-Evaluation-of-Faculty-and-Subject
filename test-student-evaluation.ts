@@ -64,21 +64,34 @@ class StudentEvaluationAutomation {
     
     try {
       await this.page.goto(`${this.config.baseUrl}/student/login`);
-      await this.page.waitForLoadState('networkidle');
+      await this.page.waitForLoadState('domcontentloaded');
 
+      // Wait for login form to be visible
+      await this.page.waitForSelector('input[type="text"]', { state: 'visible', timeout: 5000 });
+      
       // Fill in student number
       await this.page.fill('input[type="text"]', this.config.studentNumber);
       
       // Click login button
       await this.page.click('button[type="submit"]');
       
-      // Wait for navigation
-      await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 5000 });
+      // Wait for navigation with longer timeout
+      await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 10000 });
       
       console.log('✓ Successfully logged in\n');
       return true;
     } catch (error) {
       console.error('✗ Login failed:', (error as Error).message);
+      
+      // Take screenshot on login failure
+      try {
+        const timestamp = new Date().getTime();
+        await this.page.screenshot({ path: `login-error-${timestamp}.png`, fullPage: true });
+        console.error(`  📸 Screenshot saved: login-error-${timestamp}.png`);
+      } catch {
+        // Ignore screenshot errors
+      }
+      
       return false;
     }
   }
@@ -91,25 +104,41 @@ class StudentEvaluationAutomation {
 
     console.log('📚 Fetching unevaluated subjects...');
 
-    await this.page.waitForSelector('.bg-white.rounded-lg.shadow-md', { timeout: 5000 });
+    try {
+      // Wait for page to be ready
+      await this.page.waitForSelector('.bg-white.rounded-lg.shadow-md', { timeout: 10000 });
 
-    // Get all evaluation buttons
-    const subjects = await this.page.$$eval('a[href*="/student/evaluate/"]', (links) => {
-      return links.map((link) => {
-        const href = link.getAttribute('href') || '';
-        const enrollmentId = href.split('/').pop() || '';
-        
-        // Find parent card
-        const card = link.closest('.bg-white.rounded-lg.shadow-md');
-        const courseName = card?.querySelector('h3')?.textContent?.trim() || 'Unknown Course';
-        const teacherName = card?.querySelector('.text-gray-600')?.textContent?.replace('Teacher:', '').trim() || 'Unknown Teacher';
+      // Get all evaluation buttons
+      const subjects = await this.page.$$eval('a[href*="/student/evaluate/"]', (links) => {
+        return links.map((link) => {
+          const href = link.getAttribute('href') || '';
+          const enrollmentId = href.split('/').pop() || '';
+          
+          // Find parent card
+          const card = link.closest('.bg-white.rounded-lg.shadow-md');
+          const courseName = card?.querySelector('h3')?.textContent?.trim() || 'Unknown Course';
+          const teacherName = card?.querySelector('.text-gray-600')?.textContent?.replace('Teacher:', '').trim() || 'Unknown Teacher';
 
-        return { enrollmentId, courseName, teacherName };
+          return { enrollmentId, courseName, teacherName };
+        });
       });
-    });
 
-    console.log(`✓ Found ${subjects.length} unevaluated subjects\n`);
-    return subjects;
+      console.log(`✓ Found ${subjects.length} unevaluated subjects\n`);
+      return subjects;
+    } catch (error) {
+      console.error('✗ Error fetching subjects:', (error as Error).message);
+      
+      // Take screenshot to help debug
+      try {
+        const timestamp = new Date().getTime();
+        await this.page.screenshot({ path: `subjects-error-${timestamp}.png`, fullPage: true });
+        console.error(`  📸 Screenshot saved: subjects-error-${timestamp}.png`);
+      } catch {
+        // Ignore screenshot errors
+      }
+      
+      throw new Error(`Failed to fetch unevaluated subjects: ${(error as Error).message}`);
+    }
   }
 
   /**
@@ -174,17 +203,28 @@ class StudentEvaluationAutomation {
     // Fill each rating field
     for (const fieldName of fieldNames) {
       const rating = this.getRandomRating();
-      await this.page.check(`input[name="${fieldName}"][value="${rating}"]`);
+      
+      // Scroll element into view and check
+      const selector = `input[name="${fieldName}"][value="${rating}"]`;
+      await this.page.locator(selector).first().scrollIntoViewIfNeeded();
+      await this.page.check(selector);
+      
+      // Small delay between fields for stability
+      await this.page.waitForTimeout(50);
     }
 
     // Fill comments (optional)
     const comment = this.getRandomComment();
     if (comment) {
+      await this.page.locator('textarea[name="comments"]').scrollIntoViewIfNeeded();
       await this.page.fill('textarea[name="comments"]', comment);
       console.log(`  ✓ Added comment: "${comment.substring(0, 50)}..."`);
     }
 
     console.log('  ✓ Form filled successfully');
+    
+    // Wait a moment to ensure all state updates are complete
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -194,28 +234,48 @@ class StudentEvaluationAutomation {
     if (!this.page) throw new Error('Browser not initialized');
 
     try {
-      // Click submit button
-      await this.page.click('button[type="submit"]');
-
-      // Handle confirmation dialog
-      this.page.on('dialog', async (dialog: Dialog) => {
-        console.log(`  ⚠️  Confirmation dialog: ${dialog.message()}`);
-        await dialog.accept();
+      // Set up dialog handler BEFORE clicking submit
+      const dialogPromise = new Promise<void>((resolve) => {
+        this.page!.once('dialog', async (dialog: Dialog) => {
+          console.log(`  ⚠️  Confirmation dialog: ${dialog.message()}`);
+          await dialog.accept();
+          resolve();
+        });
       });
+
+      // Scroll to submit button and click
+      const submitButton = this.page.locator('button[type="submit"]').first();
+      await submitButton.scrollIntoViewIfNeeded();
+      await submitButton.click();
+
+      // Wait for dialog to be handled
+      await dialogPromise;
+      console.log('  ✓ Confirmation accepted');
 
       // Wait for success modal or redirect
       try {
-        await this.page.waitForSelector('.modal, .success', { timeout: 3000 });
+        await this.page.waitForSelector('.modal, .success', { timeout: 5000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
+        await this.page.waitForTimeout(1000); // Wait for modal animation
       } catch {
         // Sometimes it redirects directly
-        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 5000 });
+        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 8000 });
         console.log('  ✓ Evaluation submitted successfully!\n');
       }
 
       return true;
     } catch (error) {
       console.error('  ✗ Submission failed:', (error as Error).message);
+      
+      // Take screenshot on failure for debugging
+      try {
+        const timestamp = new Date().getTime();
+        await this.page!.screenshot({ path: `error-${timestamp}.png`, fullPage: true });
+        console.error(`  📸 Screenshot saved: error-${timestamp}.png`);
+      } catch (screenshotError) {
+        // Ignore screenshot errors
+      }
+      
       return false;
     }
   }
@@ -233,15 +293,34 @@ class StudentEvaluationAutomation {
     try {
       // Navigate to evaluation page
       await this.page.goto(`${this.config.baseUrl}/student/evaluate/${enrollmentId}`);
-      await this.page.waitForLoadState('networkidle');
+      await this.page.waitForLoadState('domcontentloaded');
+      
+      // Wait for form to be visible
+      await this.page.waitForSelector('form', { state: 'visible', timeout: 10000 });
+      console.log('  ✓ Evaluation form loaded');
 
       // Fill and submit form
       await this.fillEvaluationForm();
-      await this.submitEvaluation();
+      const success = await this.submitEvaluation();
+      
+      if (!success) {
+        throw new Error('Failed to submit evaluation');
+      }
 
       return true;
     } catch (error) {
       console.error(`✗ Failed to evaluate ${courseName}:`, (error as Error).message);
+      
+      // Take screenshot on failure
+      try {
+        const timestamp = new Date().getTime();
+        const filename = `error-${courseName.replace(/[^a-z0-9]/gi, '_')}-${timestamp}.png`;
+        await this.page.screenshot({ path: filename, fullPage: true });
+        console.error(`  📸 Screenshot saved: ${filename}`);
+      } catch {
+        // Ignore screenshot errors
+      }
+      
       return false;
     }
   }
@@ -257,6 +336,9 @@ class StudentEvaluationAutomation {
       if (!loginSuccess) {
         throw new Error('Login failed');
       }
+
+      // Wait a moment after login for page to fully load
+      await this.page!.waitForTimeout(1000);
 
       const subjects = await this.getUnevaluatedSubjects();
 
@@ -283,8 +365,10 @@ class StudentEvaluationAutomation {
           failCount++;
         }
 
-        // Small delay between evaluations
-        await this.page!.waitForTimeout(1000);
+        // Delay between evaluations to avoid rate limiting
+        if (subject !== subjects[subjects.length - 1]) {
+          await this.page!.waitForTimeout(1500);
+        }
       }
 
       console.log('='.repeat(60));
@@ -298,6 +382,18 @@ class StudentEvaluationAutomation {
 
     } catch (error) {
       console.error('❌ Automation error:', error);
+      
+      // Take screenshot on critical failure
+      if (this.page) {
+        try {
+          const timestamp = new Date().getTime();
+          await this.page.screenshot({ path: `critical-error-${timestamp}.png`, fullPage: true });
+          console.error(`📸 Screenshot saved: critical-error-${timestamp}.png`);
+        } catch {
+          // Ignore screenshot errors
+        }
+      }
+      
       throw error;
     } finally {
       await this.cleanup();
