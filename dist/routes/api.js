@@ -48,12 +48,32 @@ const Student_1 = __importDefault(require("../models/Student"));
 const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 // Import Privacy Protection Utilities
 const privacy_protection_1 = __importDefault(require("../utils/privacy-protection"));
+const encryption_1 = require("../utils/encryption");
 // Import middleware
 const auth_1 = require("../middleware/auth");
 // K-ANONYMITY THRESHOLD
 // Minimum number of evaluations required before displaying aggregate statistics
 // This ensures individual responses cannot be identified or inferred
 const K_ANONYMITY_THRESHOLD = 5;
+/**
+ * Helper: Decrypt comments field
+ * Returns plaintext string from AES-256-GCM encrypted data
+ */
+function decryptCommentsField(comments) {
+    if (!comments) {
+        return '';
+    }
+    if (typeof comments === 'object' && comments.encrypted) {
+        try {
+            return (0, encryption_1.decryptField)(comments);
+        }
+        catch (error) {
+            console.error('Failed to decrypt comments:', error);
+            return '[Decryption failed - invalid key or corrupted data]';
+        }
+    }
+    return '';
+}
 const router = (0, express_1.Router)();
 // ==================== ADMIN AUTH ROUTES ====================
 // Check if admin is authenticated
@@ -354,6 +374,29 @@ router.post('/student/submit-evaluation', async (req, res) => {
         const safeTimestamp = privacy_protection_1.default.getSafeSubmissionTimestamp();
         // Type guard for populated student
         const populatedStudent = enrollment.student_id;
+        // FIELD-LEVEL ENCRYPTION: Encrypt comments at rest (AES-256-GCM)
+        let encryptedComments = '';
+        if (data.comments && data.comments.trim()) {
+            if (!(0, encryption_1.isEncryptionConfigured)()) {
+                console.error('CRITICAL: ENCRYPTION_MASTER_KEY not configured! Refusing to store plaintext comments.');
+                res.status(500).json({
+                    success: false,
+                    message: 'Server configuration error. Please contact administrator.'
+                });
+                return;
+            }
+            try {
+                encryptedComments = (0, encryption_1.encryptField)(data.comments.trim());
+            }
+            catch (error) {
+                console.error('Comment encryption failed:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Evaluation processing error. Please try again.'
+                });
+                return;
+            }
+        }
         // Create evaluation (stored completely separately, no link to enrollment)
         await Evaluation_1.default.create({
             school_year: enrollment.school_year,
@@ -391,7 +434,7 @@ router.post('/student/submit-evaluation', async (req, res) => {
             classroom_authority: Number(data.classroom_authority),
             classroom_prayers: Number(data.classroom_prayers),
             classroom_punctuality: Number(data.classroom_punctuality),
-            comments: data.comments || '',
+            comments: encryptedComments, // Encrypted at rest (AES-256-GCM)
             ip_address: anonymizedIp,
             submitted_at: safeTimestamp
         });
@@ -587,6 +630,7 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
             const overall_average = (teacher_average + learning_average + classroom_average) / 3;
             return {
                 ...evaluation,
+                comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher: evaluation.teacher_id,
                 course: evaluation.course_id,
                 teacher_id: evaluation.teacher_id?._id,
@@ -652,6 +696,7 @@ router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
             const overall_average = (teacher_average + learning_average + classroom_average) / 3;
             return {
                 ...evaluation,
+                comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher: evaluation.teacher_id,
                 course: evaluation.course_id,
                 program: evaluation.program_id,
@@ -713,6 +758,7 @@ router.get('/admin/evaluations/:id', auth_1.isAuthenticated, async (req, res) =>
         const overall_average = (teacher_average + learning_average + classroom_average) / 3;
         const evaluation = {
             ...evaluationRaw,
+            comments: decryptCommentsField(evaluationRaw.comments), // Decrypt for admin viewing
             teacher: evaluationRaw.teacher_id,
             course: evaluationRaw.course_id,
             program: evaluationRaw.program_id,

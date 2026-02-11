@@ -1,6 +1,7 @@
 import { Document, Types } from 'mongoose';
 import { Request } from 'express';
 import session from 'express-session';
+import { EncryptedData } from '../utils/encryption';
 export interface IAdmin extends Document {
     _id: Types.ObjectId;
     username: string;
@@ -97,7 +98,7 @@ export interface IEvaluation extends Document {
     classroom_authority: number;
     classroom_prayers: number;
     classroom_punctuality: number;
-    comments?: string;
+    comments?: EncryptedData;
     ip_address?: string;
     submitted_at: Date;
     createdAt: Date;

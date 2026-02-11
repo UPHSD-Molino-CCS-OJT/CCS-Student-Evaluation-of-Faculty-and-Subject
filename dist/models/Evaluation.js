@@ -98,7 +98,8 @@ const evaluationSchema = new mongoose_1.Schema({
     classroom_authority: { type: Number, required: true, min: 1, max: 5 },
     classroom_prayers: { type: Number, required: true, min: 1, max: 5 },
     classroom_punctuality: { type: Number, required: true, min: 1, max: 5 },
-    comments: { type: String, default: '' },
+    // Comments: AES-256-GCM encrypted only (no plaintext support)
+    comments: { type: mongoose_1.Schema.Types.Mixed, default: '' },
     ip_address: { type: String },
     submitted_at: { type: Date, default: Date.now }
 }, {

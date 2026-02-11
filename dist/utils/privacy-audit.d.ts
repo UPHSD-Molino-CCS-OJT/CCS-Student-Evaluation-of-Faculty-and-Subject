@@ -112,6 +112,18 @@ declare class PrivacyAuditor {
      */
     private checkLayer10_SubmissionDataValidation;
     /**
+     * LAYER 11: Field-Level Encryption
+     *
+     * Verifies that sensitive evaluation comments are encrypted at rest using AES-256-GCM
+     *
+     * Threat Model Protection:
+     * - MongoDB database breach
+     * - Database administrator access
+     * - Backup/snapshot theft
+     * - Insider threat (requires both DB + server access)
+     */
+    private checkLayer11_FieldLevelEncryption;
+    /**
      * Add a critical issue to audit results
      */
     private addIssue;
