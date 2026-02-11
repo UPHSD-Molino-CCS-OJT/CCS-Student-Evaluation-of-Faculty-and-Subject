@@ -92,8 +92,8 @@ export interface TopTeacher {
   average_rating: number | null;
 }
 
-// Evaluation with populated fields
-export interface PopulatedEvaluation extends Evaluation {
+// Evaluation with populated fields (using Omit to allow narrower types for populated fields)
+export interface PopulatedEvaluation extends Omit<Evaluation, 'teacher' | 'course' | 'program'> {
   teacher?: {
     _id: string;
     full_name: string;
@@ -106,5 +106,6 @@ export interface PopulatedEvaluation extends Evaluation {
   program?: {
     _id: string;
     name: string;
+    code: string;
   };
 }
