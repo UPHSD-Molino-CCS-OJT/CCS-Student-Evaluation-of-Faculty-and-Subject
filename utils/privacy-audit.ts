@@ -407,21 +407,52 @@ class PrivacyAuditor {
                 );
             }
 
-            // Check server.ts for delay implementation
+            // Check both server.ts and routes/api.ts for delay implementation
             const serverPath = path.join(__dirname, '..', 'server.ts');
-            if (!fs.existsSync(serverPath)) {
-                return; // Skip if server.ts doesn't exist
-            }
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
             
-            if (!serverContent.includes('calculateSubmissionDelay') &&
-                !serverContent.includes('await new Promise') &&
-                !serverContent.includes('setTimeout')) {
+            let hasDelayImplementation = false;
+            let implementationLocation = '';
+            
+            // Check routes/api.ts first (most likely location for route handlers)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                
+                if (routesContent.includes('calculateSubmissionDelay') ||
+                    (routesContent.includes('submit-evaluation') && 
+                     routesContent.includes('await new Promise') && 
+                     routesContent.includes('setTimeout'))) {
+                    hasDelayImplementation = true;
+                    implementationLocation = 'routes/api.ts';
+                }
+            }
+            
+            // If not found in routes, check server.ts
+            if (!hasDelayImplementation && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                
+                if (serverContent.includes('calculateSubmissionDelay') ||
+                    (serverContent.includes('submit-evaluation') && 
+                     serverContent.includes('await new Promise') && 
+                     serverContent.includes('setTimeout'))) {
+                    hasDelayImplementation = true;
+                    implementationLocation = 'server.ts';
+                }
+            }
+            
+            if (!hasDelayImplementation) {
                 this.addWarning(
                     'MEDIUM',
                     '[Layer 2] Timing Delays Not Applied in Server',
                     'Could not verify that submission delays are actually being used in submission handler.',
                     'Add await delay logic in POST /submit-evaluation route'
+                );
+            } else {
+                this.addWarning(
+                    'INFO',
+                    `[Layer 2] ✓ Submission Delays Active in ${implementationLocation}`,
+                    'Timing delays are properly implemented in the submission handler.',
+                    'Continue using 2-8 second random delays to prevent timing correlation attacks'
                 );
             }
 
