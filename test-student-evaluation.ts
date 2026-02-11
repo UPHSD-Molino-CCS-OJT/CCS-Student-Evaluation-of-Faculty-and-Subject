@@ -247,10 +247,11 @@ class StudentEvaluationAutomation {
     for (const fieldName of fieldNames) {
       const rating = this.getRandomRating();
       
-      // Scroll element into view and check
-      const selector = `input[name="${fieldName}"][value="${rating}"]`;
-      await this.page.locator(selector).first().scrollIntoViewIfNeeded();
-      await this.page.check(selector);
+      // Click the label that contains the radio input (inputs are hidden with sr-only class)
+      const selector = `label:has(input[name="${fieldName}"][value="${rating}"])`;
+      const label = this.page.locator(selector).first();
+      await label.scrollIntoViewIfNeeded();
+      await label.click();
       
       // Small delay between fields for stability
       await this.page.waitForTimeout(50);
