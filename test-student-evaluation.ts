@@ -4,14 +4,15 @@ import { chromium, Browser, Page, Dialog } from 'playwright';
  * Automated Student Evaluation Testing Script
  * 
  * This script automatically:
- * 1. Logs in as a student
+ * 1. Logs in as students from the database
  * 2. Navigates to subjects page
  * 3. Evaluates all unevaluated subjects with random ratings
  * 
  * Usage:
- *   npm run test:evaluate
- *   npm run test:evaluate -- --student 2020-12345
- *   npm run test:evaluate -- --student 2020-12345 --url http://localhost:3000
+ *   npm run test:evaluate                              # Test all students (browsers visible)
+ *   npm run test:evaluate -- --headless                # Test all students (headless)
+ *   npm run test:evaluate -- --student 21-1234-567     # Test specific student
+ *   npm run test:evaluate -- --url http://localhost:5000 --headless
  */
 
 interface EvaluationConfig {
@@ -28,7 +29,7 @@ class StudentEvaluationAutomation {
 
   constructor(config: Partial<EvaluationConfig> = {}) {
     this.config = {
-      studentNumber: config.studentNumber || '2020-12345',
+      studentNumber: config.studentNumber || '21-1234-567',
       baseUrl: config.baseUrl || 'http://localhost:3000',
       headless: config.headless !== undefined ? config.headless : false,
       slowMo: config.slowMo || 100
@@ -340,6 +341,16 @@ function parseArgs(): Partial<EvaluationConfig> {
 }
 
 /**
+ * Default students from database setup
+ * These students are created by setup-db-mongodb.ts
+ */
+const DEFAULT_STUDENTS = [
+  { number: '21-1234-567', name: 'Juan Dela Cruz' },
+  { number: '21-1234-568', name: 'Maria Garcia' },
+  { number: '21-5678-901', name: 'Pedro Santos' }
+];
+
+/**
  * Main execution
  */
 async function main() {
@@ -350,21 +361,87 @@ async function main() {
 
   const config = parseArgs();
   
-  console.log('Configuration:');
-  console.log(`  Student Number: ${config.studentNumber || '2020-12345 (default)'}`);
-  console.log(`  Base URL: ${config.baseUrl || 'http://localhost:3000 (default)'}`);
-  console.log(`  Headless: ${config.headless || false}`);
-  console.log(`  Slow Motion: ${config.slowMo || 100}ms\n`);
+  // If no specific student is provided, test all default students
+  if (!config.studentNumber) {
+    console.log('Configuration:');
+    console.log(`  Testing Mode: ALL STUDENTS (${DEFAULT_STUDENTS.length} students)`);
+    console.log(`  Base URL: ${config.baseUrl || 'http://localhost:3000 (default)'}`);
+    console.log(`  Headless: ${config.headless !== undefined ? config.headless : false}`);
+    console.log(`  Slow Motion: ${config.slowMo || 100}ms\n`);
+    
+    console.log('Students to test:');
+    DEFAULT_STUDENTS.forEach((student, index) => {
+      console.log(`  ${index + 1}. ${student.name} (${student.number})`);
+    });
+    console.log('');
 
-  const automation = new StudentEvaluationAutomation(config);
+    let totalSuccess = 0;
+    let totalFail = 0;
 
-  try {
-    await automation.run();
-    console.log('✅ Automation completed successfully!');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Automation failed:', error);
-    process.exit(1);
+    for (let i = 0; i < DEFAULT_STUDENTS.length; i++) {
+      const student = DEFAULT_STUDENTS[i];
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`[${i + 1}/${DEFAULT_STUDENTS.length}] Testing: ${student.name} (${student.number})`);
+      console.log('='.repeat(60) + '\n');
+
+      const studentConfig = {
+        ...config,
+        studentNumber: student.number,
+        headless: config.headless !== undefined ? config.headless : false
+      };
+
+      const automation = new StudentEvaluationAutomation(studentConfig);
+
+      try {
+        await automation.run();
+        console.log(`✓ Successfully completed evaluations for ${student.name}\n`);
+        totalSuccess++;
+      } catch (error) {
+        console.error(`✗ Failed to complete evaluations for ${student.name}:`, error);
+        totalFail++;
+      }
+
+      // Delay between students
+      if (i < DEFAULT_STUDENTS.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    console.log('\n' + '='.repeat(60));
+    console.log('BATCH AUTOMATION COMPLETE');
+    console.log('='.repeat(60));
+    console.log(`✓ Successful: ${totalSuccess} students`);
+    if (totalFail > 0) {
+      console.log(`✗ Failed: ${totalFail} students`);
+    }
+    console.log('='.repeat(60) + '\n');
+
+    if (totalFail === 0) {
+      console.log('✅ All automation tests completed successfully!');
+      process.exit(0);
+    } else {
+      console.log('⚠️  Some automation tests failed!');
+      process.exit(1);
+    }
+  } else {
+    // Single student mode
+    console.log('Configuration:');
+    console.log(`  Testing Mode: SINGLE STUDENT`);
+    console.log(`  Student Number: ${config.studentNumber}`);
+    console.log(`  Base URL: ${config.baseUrl || 'http://localhost:3000 (default)'}`);
+    console.log(`  Headless: ${config.headless || false}`);
+    console.log(`  Slow Motion: ${config.slowMo || 100}ms\n`);
+
+    const automation = new StudentEvaluationAutomation(config);
+
+    try {
+      await automation.run();
+      console.log('✅ Automation completed successfully!');
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Automation failed:', error);
+      process.exit(1);
+    }
   }
 }
 
