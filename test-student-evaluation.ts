@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser, Page, Dialog } from 'playwright';
 
 /**
  * Automated Student Evaluation Testing Script
@@ -93,8 +93,8 @@ class StudentEvaluationAutomation {
     await this.page.waitForSelector('.bg-white.rounded-lg.shadow-md', { timeout: 5000 });
 
     // Get all evaluation buttons
-    const subjects = await this.page.$$eval('a[href*="/student/evaluate/"]', (links: Element[]) => {
-      return links.map((link: Element) => {
+    const subjects = await this.page.$$eval('a[href*="/student/evaluate/"]', (links) => {
+      return links.map((link) => {
         const href = link.getAttribute('href') || '';
         const enrollmentId = href.split('/').pop() || '';
         
@@ -197,7 +197,7 @@ class StudentEvaluationAutomation {
       await this.page.click('button[type="submit"]');
 
       // Handle confirmation dialog
-      this.page.on('dialog', async (dialog: any) => {
+      this.page.on('dialog', async (dialog: Dialog) => {
         console.log(`  ⚠️  Confirmation dialog: ${dialog.message()}`);
         await dialog.accept();
       });
