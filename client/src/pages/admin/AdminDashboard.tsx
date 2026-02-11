@@ -45,6 +45,7 @@ const AdminDashboard: React.FC = () => {
   const [topTeachers, setTopTeachers] = useState<TopTeacher[]>([])
   const [recentEvaluations, setRecentEvaluations] = useState<PopulatedEvaluation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [privacyNotice, setPrivacyNotice] = useState<string | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -63,6 +64,7 @@ const AdminDashboard: React.FC = () => {
       })
       setTopTeachers(data.topTeachers || [])
       setRecentEvaluations(data.recentEvaluations || [])
+      setPrivacyNotice(data.privacyNotice || null)
     } catch (error: unknown) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -130,6 +132,28 @@ const AdminDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard</h1>
           <p className="text-gray-600">Overview of evaluation statistics and recent activity</p>
         </div>
+
+        {/* K-Anonymity Privacy Notice */}
+        {privacyNotice && (
+          <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-md">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <i className="fas fa-shield-alt text-yellow-600 text-2xl"></i>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-yellow-800">
+                  Privacy Protection Active
+                </h3>
+                <p className="text-yellow-700 mt-1">
+                  {privacyNotice}
+                </p>
+                <p className="text-sm text-yellow-600 mt-2">
+                  This ensures individual student responses cannot be identified. Statistics will display once sufficient data is available.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
