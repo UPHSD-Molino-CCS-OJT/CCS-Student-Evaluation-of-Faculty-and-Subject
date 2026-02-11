@@ -501,13 +501,56 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             .lean();
         
         // Transform to match frontend expectation (teacher, course instead of teacher_id, course_id)
-        const recentEvaluations = recentEvaluationsRaw.map((evaluation: any) => ({
-            ...evaluation,
-            teacher: evaluation.teacher_id,
-            course: evaluation.course_id,
-            teacher_id: evaluation.teacher_id?._id,
-            course_id: evaluation.course_id?._id
-        }));
+        const recentEvaluations = recentEvaluationsRaw.map((evaluation: any) => {
+            // Calculate averages (virtuals not available with .lean())
+            const teacher_average = (
+                evaluation.teacher_diction +
+                evaluation.teacher_grammar +
+                evaluation.teacher_personality +
+                evaluation.teacher_disposition +
+                evaluation.teacher_dynamic +
+                evaluation.teacher_fairness
+            ) / 6;
+            
+            const learning_average = (
+                evaluation.learning_motivation +
+                evaluation.learning_critical_thinking +
+                evaluation.learning_organization +
+                evaluation.learning_interest +
+                evaluation.learning_explanation +
+                evaluation.learning_clarity +
+                evaluation.learning_integration +
+                evaluation.learning_mastery +
+                evaluation.learning_methodology +
+                evaluation.learning_values +
+                evaluation.learning_grading +
+                evaluation.learning_synthesis +
+                evaluation.learning_reasonableness
+            ) / 13;
+            
+            const classroom_average = (
+                evaluation.classroom_attendance +
+                evaluation.classroom_policies +
+                evaluation.classroom_discipline +
+                evaluation.classroom_authority +
+                evaluation.classroom_prayers +
+                evaluation.classroom_punctuality
+            ) / 6;
+            
+            const overall_average = (teacher_average + learning_average + classroom_average) / 3;
+            
+            return {
+                ...evaluation,
+                teacher: evaluation.teacher_id,
+                course: evaluation.course_id,
+                teacher_id: evaluation.teacher_id?._id,
+                course_id: evaluation.course_id?._id,
+                teacher_average,
+                learning_average,
+                classroom_average,
+                overall_average
+            };
+        });
         
         res.json({
             totalEvaluations,
@@ -536,15 +579,58 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
             .lean();
         
         // Transform to match frontend expectation
-        const evaluations = evaluationsRaw.map((evaluation: any) => ({
-            ...evaluation,
-            teacher: evaluation.teacher_id,
-            course: evaluation.course_id,
-            program: evaluation.program_id,
-            teacher_id: evaluation.teacher_id?._id,
-            course_id: evaluation.course_id?._id,
-            program_id: evaluation.program_id?._id
-        }));
+        const evaluations = evaluationsRaw.map((evaluation: any) => {
+            // Calculate averages (virtuals not available with .lean())
+            const teacher_average = (
+                evaluation.teacher_diction +
+                evaluation.teacher_grammar +
+                evaluation.teacher_personality +
+                evaluation.teacher_disposition +
+                evaluation.teacher_dynamic +
+                evaluation.teacher_fairness
+            ) / 6;
+            
+            const learning_average = (
+                evaluation.learning_motivation +
+                evaluation.learning_critical_thinking +
+                evaluation.learning_organization +
+                evaluation.learning_interest +
+                evaluation.learning_explanation +
+                evaluation.learning_clarity +
+                evaluation.learning_integration +
+                evaluation.learning_mastery +
+                evaluation.learning_methodology +
+                evaluation.learning_values +
+                evaluation.learning_grading +
+                evaluation.learning_synthesis +
+                evaluation.learning_reasonableness
+            ) / 13;
+            
+            const classroom_average = (
+                evaluation.classroom_attendance +
+                evaluation.classroom_policies +
+                evaluation.classroom_discipline +
+                evaluation.classroom_authority +
+                evaluation.classroom_prayers +
+                evaluation.classroom_punctuality
+            ) / 6;
+            
+            const overall_average = (teacher_average + learning_average + classroom_average) / 3;
+            
+            return {
+                ...evaluation,
+                teacher: evaluation.teacher_id,
+                course: evaluation.course_id,
+                program: evaluation.program_id,
+                teacher_id: evaluation.teacher_id?._id,
+                course_id: evaluation.course_id?._id,
+                program_id: evaluation.program_id?._id,
+                teacher_average,
+                learning_average,
+                classroom_average,
+                overall_average
+            };
+        });
         
         res.json({ evaluations });
     } catch (error) {
@@ -568,6 +654,43 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
         }
         
         // Transform to match frontend expectation
+        // Calculate averages (virtuals not available with .lean())
+        const teacher_average = (
+            (evaluationRaw as any).teacher_diction +
+            (evaluationRaw as any).teacher_grammar +
+            (evaluationRaw as any).teacher_personality +
+            (evaluationRaw as any).teacher_disposition +
+            (evaluationRaw as any).teacher_dynamic +
+            (evaluationRaw as any).teacher_fairness
+        ) / 6;
+        
+        const learning_average = (
+            (evaluationRaw as any).learning_motivation +
+            (evaluationRaw as any).learning_critical_thinking +
+            (evaluationRaw as any).learning_organization +
+            (evaluationRaw as any).learning_interest +
+            (evaluationRaw as any).learning_explanation +
+            (evaluationRaw as any).learning_clarity +
+            (evaluationRaw as any).learning_integration +
+            (evaluationRaw as any).learning_mastery +
+            (evaluationRaw as any).learning_methodology +
+            (evaluationRaw as any).learning_values +
+            (evaluationRaw as any).learning_grading +
+            (evaluationRaw as any).learning_synthesis +
+            (evaluationRaw as any).learning_reasonableness
+        ) / 13;
+        
+        const classroom_average = (
+            (evaluationRaw as any).classroom_attendance +
+            (evaluationRaw as any).classroom_policies +
+            (evaluationRaw as any).classroom_discipline +
+            (evaluationRaw as any).classroom_authority +
+            (evaluationRaw as any).classroom_prayers +
+            (evaluationRaw as any).classroom_punctuality
+        ) / 6;
+        
+        const overall_average = (teacher_average + learning_average + classroom_average) / 3;
+        
         const evaluation = {
             ...evaluationRaw,
             teacher: (evaluationRaw as any).teacher_id,
@@ -575,7 +698,11 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
             program: (evaluationRaw as any).program_id,
             teacher_id: (evaluationRaw as any).teacher_id?._id,
             course_id: (evaluationRaw as any).course_id?._id,
-            program_id: (evaluationRaw as any).program_id?._id
+            program_id: (evaluationRaw as any).program_id?._id,
+            teacher_average,
+            learning_average,
+            classroom_average,
+            overall_average
         };
         
         res.json({ evaluation });
