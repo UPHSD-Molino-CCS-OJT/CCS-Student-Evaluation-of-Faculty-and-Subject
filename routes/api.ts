@@ -35,6 +35,29 @@ router.get('/admin/check-auth', (req: IRequest, res: Response): void => {
     });
 });
 
+// Test endpoint - Get students for automated testing (no auth required)
+// This endpoint is specifically for test automation scripts
+router.get('/test/students', async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+        
+        let query = Student.find().select('student_number full_name').sort({ student_number: 1 });
+        
+        if (limit && limit > 0) {
+            query = query.limit(limit);
+        }
+        
+        const students = await query;
+        
+        res.json(students.map(s => ({
+            student_number: s.student_number,
+            full_name: s.full_name
+        })));
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching students for testing' });
+    }
+});
+
 // Admin Login
 router.post('/admin/login', async (req: IRequest, res: Response): Promise<void> => {
     try {
