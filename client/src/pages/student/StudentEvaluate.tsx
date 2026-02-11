@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../../components/Navbar'
+import { EvaluationFormSkeleton } from '../../components/Skeleton'
 import { EvaluationFormData, RatingQuestionProps } from '../../types'
 
 interface PopulatedEnrollment {
@@ -273,11 +274,8 @@ const StudentEvaluate: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar showAdminButton={false} />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p className="text-gray-600">Loading evaluation form...</p>
-          </div>
+        <div className="container mx-auto px-4 py-8">
+          <EvaluationFormSkeleton />
         </div>
       </div>
     )

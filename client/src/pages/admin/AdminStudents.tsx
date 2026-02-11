@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
+import { TableSkeleton } from '../../components/Skeleton'
 import { Student, Program } from '../../types'
 
 interface StudentFormData {
@@ -22,6 +23,7 @@ interface PopulatedStudent extends Omit<Student, 'program_id'> {
 const AdminStudents: React.FC = () => {
   const [students, setStudents] = useState<PopulatedStudent[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingStudent, setEditingStudent] = useState<PopulatedStudent | null>(null)
   const [formData, setFormData] = useState<StudentFormData>({
@@ -46,6 +48,8 @@ const AdminStudents: React.FC = () => {
       setStudents(response.data.students || [])
     } catch (error: unknown) {
       console.error('Error fetching students:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -120,6 +124,21 @@ const AdminStudents: React.FC = () => {
       status: 'Regular'
     })
     setEditingStudent(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </div>
+          <TableSkeleton rows={10} cols={8} />
+        </div>
+      </div>
+    )
   }
 
   return (

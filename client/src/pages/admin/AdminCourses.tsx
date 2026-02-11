@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
+import { TableSkeleton } from '../../components/Skeleton'
 import { Course, Program } from '../../types'
 
 interface CourseFormData {
@@ -16,6 +17,7 @@ interface PopulatedCourse extends Omit<Course, 'program_id'> {
 const AdminCourses: React.FC = () => {
   const [courses, setCourses] = useState<PopulatedCourse[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingCourse, setEditingCourse] = useState<PopulatedCourse | null>(null)
   const [formData, setFormData] = useState<CourseFormData>({ name: '', code: '', program_id: '' })
@@ -31,6 +33,8 @@ const AdminCourses: React.FC = () => {
       setCourses(response.data.courses || [])
     } catch (error: unknown) {
       console.error('Error fetching courses:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -87,6 +91,21 @@ const AdminCourses: React.FC = () => {
   const resetForm = () => {
     setFormData({ name: '', code: '', program_id: '' })
     setEditingCourse(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </div>
+          <TableSkeleton rows={8} cols={4} />
+        </div>
+      </div>
+    )
   }
 
   return (

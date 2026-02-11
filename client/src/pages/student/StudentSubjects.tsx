@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 import Navbar from '../../components/Navbar'
+import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
 
 const StudentSubjects: React.FC = () => {
@@ -38,11 +39,25 @@ const StudentSubjects: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar showAdminButton={false} />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p className="text-gray-600">Loading your subjects...</p>
+        <div className="container mx-auto px-4 py-8">
+          {/* Student Info Skeleton */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 mb-8 animate-pulse">
+            <div className="flex items-center space-x-4">
+              <div className="bg-blue-500 rounded-full w-16 h-16"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-6 bg-blue-500 rounded w-1/3"></div>
+                <div className="h-4 bg-blue-500 rounded w-1/2"></div>
+                <div className="h-3 bg-blue-500 rounded w-2/3"></div>
+              </div>
+            </div>
           </div>
+          
+          <div className="mb-6 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          
+          <SubjectListSkeleton />
         </div>
       </div>
     )

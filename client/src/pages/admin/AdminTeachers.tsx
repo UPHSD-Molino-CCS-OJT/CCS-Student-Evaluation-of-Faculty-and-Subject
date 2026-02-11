@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
+import { TableSkeleton } from '../../components/Skeleton'
 import { Teacher } from '../../types'
 
 interface TeacherFormData {
@@ -13,6 +14,7 @@ interface TeacherFormData {
 
 const AdminTeachers: React.FC = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null)
   const [formData, setFormData] = useState<TeacherFormData>({
@@ -33,6 +35,8 @@ const AdminTeachers: React.FC = () => {
       setTeachers(response.data.teachers || [])
     } catch (error: unknown) {
       console.error('Error fetching teachers:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -92,6 +96,21 @@ const AdminTeachers: React.FC = () => {
       status: 'active'
     })
     setEditingTeacher(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </div>
+          <TableSkeleton rows={8} cols={6} />
+        </div>
+      </div>
+    )
   }
 
   return (

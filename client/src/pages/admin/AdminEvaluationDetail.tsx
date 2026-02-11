@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
+import { EvaluationDetailSkeleton } from '../../components/Skeleton'
 import { PopulatedEvaluation, RatingItemProps } from '../../types'
 
 const AdminEvaluationDetail: React.FC = () => {
@@ -54,11 +55,11 @@ const AdminEvaluationDetail: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <AdminNavbar />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p className="text-gray-600">Loading evaluation details...</p>
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-6 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-32"></div>
           </div>
+          <EvaluationDetailSkeleton />
         </div>
       </div>
     )

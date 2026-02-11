@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
+import { TableSkeleton } from '../../components/Skeleton'
 import { Program } from '../../types'
 
 interface ProgramFormData {
@@ -10,6 +11,7 @@ interface ProgramFormData {
 
 const AdminPrograms: React.FC = () => {
   const [programs, setPrograms] = useState<Program[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingProgram, setEditingProgram] = useState<Program | null>(null)
   const [formData, setFormData] = useState<ProgramFormData>({ name: '', code: '' })
@@ -24,6 +26,8 @@ const AdminPrograms: React.FC = () => {
       setPrograms(response.data.programs || [])
     } catch (error: unknown) {
       console.error('Error fetching programs:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -71,6 +75,21 @@ const AdminPrograms: React.FC = () => {
   const resetForm = () => {
     setFormData({ name: '', code: '' })
     setEditingProgram(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNavbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+          </div>
+          <TableSkeleton rows={6} cols={3} />
+        </div>
+      </div>
+    )
   }
 
   return (
