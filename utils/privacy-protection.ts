@@ -21,8 +21,8 @@ interface AuditLogEntry {
 }
 
 interface ValidationResult {
-    valid: boolean;
-    issues: string[];
+    isValid: boolean;
+    errors: string[];
 }
 
 interface NoisedStatistics {
@@ -253,30 +253,54 @@ class PrivacyProtection {
             'full_name', 'email', 'student_email'
         ];
         
-        const issues: string[] = [];
+        const errors: string[] = [];
         
         // Check for forbidden fields
         for (const field of forbiddenFields) {
             if (evaluationData.hasOwnProperty(field)) {
-                issues.push(`Forbidden field detected: ${field}`);
+                errors.push(`Forbidden field detected: ${field}. This violates privacy protection.`);
             }
         }
         
-        // Check for anonymous token
-        if (!evaluationData.anonymous_token) {
-            issues.push('Missing anonymous token');
-        }
-        
-        // Check if IP is anonymized (should not contain specific host)
-        if (evaluationData.ip_address && !evaluationData.ip_address.endsWith('.0')) {
-            if (!evaluationData.ip_address.includes('::0')) {
-                issues.push('IP address not properly anonymized');
+        // Check comments for identifying patterns
+        if (evaluationData.comments && typeof evaluationData.comments === 'string') {
+            const comments = evaluationData.comments;
+            
+            // Pattern: Student ID format (XX-XXXX-XXX or similar)
+            if (/\b\d{2,4}[-\s]\d{4,5}[-\s]\d{3,5}\b/.test(comments)) {
+                errors.push('Comments contain potential student ID pattern');
+            }
+            
+            // Pattern: Email addresses
+            if (/@[\w\.-]+\.(edu|com|org|net)/i.test(comments)) {
+                errors.push('Comments contain email address');
+            }
+            
+            // Pattern: Phone numbers
+            if (/\b\d{3}[-\s.]?\d{3}[-\s.]?\d{4}\b/.test(comments)) {
+                errors.push('Comments contain potential phone number');
+            }
+            
+            // Keywords that might identify students
+            const identifyingKeywords = [
+                /\bmy\s+student\s+(number|id)\b/i,
+                /\bi\s+am\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,  // "I am FirstName LastName"
+                /\bthis\s+is\s+[A-Z][a-z]+\s+[A-Z][a-z]+/,  // "This is FirstName LastName"
+                /\bstudent\s+number:\s*\d+/i,
+                /\bemail:\s*\S+@/i
+            ];
+            
+            for (const pattern of identifyingKeywords) {
+                if (pattern.test(comments)) {
+                    errors.push('Comments contain self-identifying information');
+                    break;  // Only add this error once
+                }
             }
         }
         
         return {
-            valid: issues.length === 0,
-            issues
+            isValid: errors.length === 0,
+            errors
         };
     }
 

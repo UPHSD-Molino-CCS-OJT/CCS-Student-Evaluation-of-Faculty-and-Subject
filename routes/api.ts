@@ -293,6 +293,17 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
         
         const data = req.body;
         
+        // LAYER 10: Validate anonymous submission data
+        const validationResult = PrivacyProtection.validateAnonymousSubmission(data);
+        if (!validationResult.isValid) {
+            res.status(400).json({
+                success: false,
+                message: validationResult.errors.join('. '),
+                privacyViolation: true
+            });
+            return;
+        }
+        
         // Validate enrollment
         const enrollment = await Enrollment.findById(data.enrollment_id)
             .populate('student_id')

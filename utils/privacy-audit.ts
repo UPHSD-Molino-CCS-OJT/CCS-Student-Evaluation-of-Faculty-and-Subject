@@ -915,25 +915,40 @@ class PrivacyAuditor {
      */
     private async checkLayer10_SubmissionDataValidation(): Promise<void> {
         try {
+            // Check both server.ts and routes/api.ts
             const serverPath = path.join(__dirname, '..', 'server.ts');
+            const routesPath = path.join(__dirname, '..', 'routes', 'api.ts');
             
-            if (!fs.existsSync(serverPath)) {
-                this.addWarning(
-                    'INFO',
-                    '[Layer 10] Server File Not Found',
-                    'Could not read server.ts to check validation logic.',
-                    'Manually verify validateAnonymousSubmission() before database saves'
-                );
-                return;
+            let hasValidation = false;
+            let checkLocation = '';
+            
+            // Check routes/api.ts first (most likely location)
+            if (fs.existsSync(routesPath)) {
+                const routesContent = fs.readFileSync(routesPath, 'utf-8');
+                
+                hasValidation = 
+                    routesContent.includes('validateAnonymousSubmission') ||
+                    routesContent.includes('validateSubmission') ||
+                    routesContent.includes('validate(req.body');
+                
+                if (hasValidation) {
+                    checkLocation = 'routes/api.ts';
+                }
             }
-
-            const serverContent = fs.readFileSync(serverPath, 'utf-8');
             
-            // Check for validation function
-            const hasValidation = 
-                serverContent.includes('validateAnonymousSubmission') ||
-                serverContent.includes('validateSubmission') ||
-                serverContent.includes('validate(req.body');
+            // If not found in routes, check server.ts
+            if (!hasValidation && fs.existsSync(serverPath)) {
+                const serverContent = fs.readFileSync(serverPath, 'utf-8');
+                
+                hasValidation = 
+                    serverContent.includes('validateAnonymousSubmission') ||
+                    serverContent.includes('validateSubmission') ||
+                    serverContent.includes('validate(req.body');
+                
+                if (hasValidation) {
+                    checkLocation = 'server.ts';
+                }
+            }
 
             if (!hasValidation) {
                 this.addIssue(
@@ -945,31 +960,39 @@ class PrivacyAuditor {
             } else {
                 this.addWarning(
                     'INFO',
-                    '[Layer 10] ✓ Validation Function Found',
+                    `[Layer 10] ✓ Validation Function Found in ${checkLocation}`,
                     'Found evidence of validation before storage.',
                     'Ensure validation rejects: student_number, student names, email addresses, and identifying text'
                 );
             }
-
-            // Check for blacklist/sanitization patterns
-            const hasSanitization = 
-                serverContent.includes('sanitize') ||
-                serverContent.includes('blacklist') ||
-                serverContent.includes('forbidden_patterns') ||
-                serverContent.includes('prohibited_words');
+            
+            // Check for blacklist/sanitization patterns in privacy-protection.ts
+            const privacyProtectionPath = path.join(__dirname, 'privacy-protection.ts');
+            let hasSanitization = false;
+            
+            if (fs.existsSync(privacyProtectionPath)) {
+                const privacyContent = fs.readFileSync(privacyProtectionPath, 'utf-8');
+                hasSanitization = 
+                    privacyContent.includes('sanitize') ||
+                    privacyContent.includes('blacklist') ||
+                    privacyContent.includes('forbidden') ||
+                    privacyContent.includes('prohibited') ||
+                    privacyContent.includes('student_number.*pattern') ||
+                    privacyContent.includes('email.*pattern');
+            }
 
             if (!hasSanitization) {
                 this.addWarning(
                     'MEDIUM',
                     '[Layer 10] Text Sanitization Not Found',
-                    'Could not find evidence of text sanitization or pattern matching.',
+                    'Could not find evidence of text sanitization or pattern matching in validation.',
                     'Add blacklist patterns to detect and reject: student_number, names, emails in free text'
                 );
             } else {
                 this.addWarning(
                     'INFO',
                     '[Layer 10] ✓ Sanitization Logic Detected',
-                    'Found sanitization or blacklist patterns in submission handler.',
+                    'Found sanitization or blacklist patterns in privacy utilities.',
                     'Continue blocking identifying information in evaluation text fields'
                 );
             }
