@@ -8,6 +8,10 @@ import { chromium, Browser, Page, Dialog } from 'playwright';
  * 2. Navigates to subjects page
  * 3. Evaluates all unevaluated subjects with random ratings
  * 
+ * Updated to handle Skeleton loading states throughout the application.
+ * The script now properly waits for skeleton loaders to disappear before
+ * interacting with actual content.
+ * 
  * Usage:
  *   npm run test:evaluate                              # Test all students (browsers visible)
  *   npm run test:evaluate -- --headless                # Test all students (headless)
@@ -105,8 +109,16 @@ class StudentEvaluationAutomation {
     console.log('📚 Fetching unevaluated subjects...');
 
     try {
-      // Wait for page to be ready
-      await this.page.waitForSelector('.bg-white.rounded-lg.shadow-md', { timeout: 10000 });
+      // Wait for skeleton loaders to disappear and actual content to load
+      await this.page.waitForSelector('.animate-pulse', { timeout: 5000 }).catch(() => {
+        // Skeleton might already be gone, continue
+      });
+      
+      // Wait for actual subject cards (not skeleton loaders)
+      await this.page.waitForSelector('.bg-white.rounded-lg.shadow-md:not(.animate-pulse)', { timeout: 10000 });
+      
+      // Additional wait for evaluate buttons to ensure content is fully loaded
+      await this.page.waitForSelector('a[href*="/student/evaluate/"]', { timeout: 5000 });
 
       // Get all evaluation buttons
       const subjects = await this.page.$$eval('a[href*="/student/evaluate/"]', (links) => {
@@ -185,8 +197,16 @@ class StudentEvaluationAutomation {
 
     console.log('  📝 Filling evaluation form...');
 
-    // Wait for the form to load
-    await this.page.waitForSelector('form', { timeout: 5000 });
+    // Wait for skeleton loaders to disappear
+    await this.page.waitForSelector('.animate-pulse', { timeout: 5000 }).catch(() => {
+      // Skeleton might already be gone, continue
+    });
+    
+    // Wait for the actual form to load (not skeleton)
+    await this.page.waitForSelector('form:not(.animate-pulse)', { timeout: 10000 });
+    
+    // Wait for radio buttons to be interactive
+    await this.page.waitForSelector('input[type="radio"]:not([disabled])', { timeout: 5000 });
 
     // Get all radio buttons (all sections are now always visible)
     const ratingFields = await this.page.$$('input[type="radio"]');
@@ -303,8 +323,17 @@ class StudentEvaluationAutomation {
         return true; // Return true to continue with other subjects
       }
 
-      // Wait for form to be visible
-      await this.page.waitForSelector('form', { state: 'visible', timeout: 10000 });
+      // Wait for skeleton loaders to finish
+      console.log('  ⏳ Waiting for page to load...');
+      await this.page.waitForSelector('.animate-pulse', { timeout: 3000 }).catch(() => {
+        // Skeleton might load very quickly or not at all
+      });
+      
+      // Wait for skeleton to disappear and form to be visible
+      await this.page.waitForSelector('form:not(.animate-pulse)', { state: 'visible', timeout: 10000 });
+      
+      // Additional check that form fields are interactive
+      await this.page.waitForSelector('input[type="radio"]', { state: 'visible', timeout: 5000 });
       console.log('  ✓ Evaluation form loaded');
 
       // Fill and submit form
@@ -345,7 +374,13 @@ class StudentEvaluationAutomation {
         throw new Error('Login failed');
       }
 
-      // Wait a moment after login for page to fully load
+      // Wait for skeleton loaders to finish after login
+      console.log('⏳ Waiting for subjects page to load...');
+      await this.page!.waitForSelector('.animate-pulse', { timeout: 3000 }).catch(() => {
+        // Skeleton might already be gone
+      });
+      
+      // Wait a moment for page to fully load
       await this.page!.waitForTimeout(1000);
 
       const subjects = await this.getUnevaluatedSubjects();
