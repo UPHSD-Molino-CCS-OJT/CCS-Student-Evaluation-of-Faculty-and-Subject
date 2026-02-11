@@ -569,7 +569,6 @@ Look for privacy initialization messages:
 ✓ Admin login: http://localhost:3000/admin/login
 🔒 Initializing privacy protection scheduled tasks...
 ✓ Privacy protection tasks scheduled
-ℹ️  Note: Enrollment decoupling not needed - cryptographic receipt model ensures no reversible links exist
 ```
 
 #### 4. Run Privacy Audit
@@ -590,8 +589,8 @@ Look for privacy initialization messages:
 
 **Modified Files:**
 - `server.js` - Integrated privacy protections
-- `models/Enrollment.js` - Added `decoupled_at` field
-- `utils/privacy-audit.js` - Enhanced audit checks
+- `models/Enrollment.ts` - Replaced `evaluation_id` with `receipt_hash` field for cryptographic receipt model
+- `utils/privacy-audit.js` - Enhanced audit checks for receipt model verification
 - `package.json` - Added `node-cron` dependency
 
 ### No Migration Required
@@ -1154,8 +1153,10 @@ Result: Zero forensic window, zero reversible linkage
 
 **Enrollment Model Should Have:**
 - [ ] ✅ `has_evaluated` boolean
-- [ ] ✅ `evaluation_id` reference
-- [ ] ✅ `decoupled_at` timestamp (new)
+- [ ] ✅ `receipt_hash` for verification (cryptographic model)
+- [ ] ✅ `submission_token` for one-time use tracking
+- [ ] ❌ NO `evaluation_id` reference
+- [ ] ❌ NO `decoupled_at` timestamp
 
 ### ✅ Privacy Audit Checks
 
@@ -1229,12 +1230,13 @@ db.enrollments.find({
 
 **Legacy System Check:**
 ```javascript
-// If migrating from old model, check for decoupled records
+// If migrating from old model, check for legacy timestamps
 db.enrollments.find({
     decoupled_at: { $exists: true }
 }).count()
-// These are from old 24h grace period system
-// New submissions use receipt model
+// These indicate old 24h grace period system
+// New submissions use receipt model (no decoupled_at field)
+// Consider cleaning up old fields: db.enrollments.updateMany({}, { $unset: { decoupled_at: "" } })
 ```
 
 ### ✅ Privacy Scheduler Check
@@ -1243,7 +1245,6 @@ db.enrollments.find({
 ```
 � Initializing privacy protection scheduled tasks...
 ✓ Privacy protection tasks scheduled
-ℹ️  Note: Enrollment decoupling not needed - cryptographic receipt model ensures no reversible links exist
 ```
 
 **Receipt Model Benefits:**
@@ -1549,10 +1550,6 @@ console.log(report);
 → May indicate old data
 → Future submissions will be rounded
 → Review if percentage is high
-
-"Old enrollment links found"
-→ Check privacy scheduler is running
-→ May need manual decoupling
 ```
 
 **Critical Issues:**
@@ -1576,25 +1573,20 @@ console.log(report);
 
 ### Automated Tasks
 
-#### Task 1: Enrollment Decoupling
+#### Task 1: Session Cleanup
 
-**Frequency:** Every hour (top of the hour)
+**Frequency:** Every 6 hours
 
 **What It Does:**
-1. Finds enrollments with `has_evaluated = true`
-2. Checks if `updatedAt` older than 24 hours
-3. Removes `evaluation_id` field
-4. Sets `decoupled_at` timestamp
+1. Finds expired sessions older than 7 days
+2. Removes them from database
+3. Frees up storage space
 
 **Log Output:**
 ```
-🔄 Running enrollment-evaluation decoupling...
-✓ Decoupled 5 enrollment(s)
+🧹 Running session cleanup...
+✓ Cleaned up 12 old session(s)
 ```
-
-**Manual Trigger:**
-```javascript
-const PrivacyScheduler = require('./utils/privacy-scheduler');
 const result = await PrivacyScheduler.manualDecoupling();
 console.log(result);
 // { success: true, decoupled: 5, message: "..." }
@@ -1849,22 +1841,23 @@ npm install
    );
    ```
 
-#### Audit Shows "Old enrollment links found"
+#### Audit Shows "Enrollments Using Deprecated evaluation_id"
 
-**Problem:** Decoupling not running or backlog exists
-
-**Check:**
-```javascript
-// Manually trigger decoupling
-const PrivacyScheduler = require('./utils/privacy-scheduler');
-await PrivacyScheduler.manualDecoupling();
-```
+**Problem:** Old 24h grace period model detected
 
 **Solution:**
-1. Verify scheduler running (check logs)
-2. Restart server if needed
-3. Run manual decoupling
-4. Monitor logs for automatic decoupling
+1. This indicates legacy data from old model
+2. New submissions automatically use receipt model
+3. Old data can remain (no active links exist)
+4. Optional: Clean up old fields:
+   ```javascript
+   // Remove old evaluation_id and decoupled_at fields
+   db.enrollments.updateMany(
+     {},
+     { $unset: { evaluation_id: "", decoupled_at: "" } }
+   );
+   ```
+5. Verify new submissions use receipt_hash field
 
 ### Submission Issues
 
@@ -2093,13 +2086,7 @@ project/
 // Starts all scheduled privacy tasks
 // Runs on server initialization
 // Logs confirmation messages
-```
 
-#### scheduleEnrollmentDecoupling()
-```javascript
-// Cron: Every hour at minute 0
-// Removes evaluation_id from old enrollments
-// Sets decoupled_at timestamp
 ```
 
 #### scheduleSessionCleanup()
@@ -2107,13 +2094,6 @@ project/
 // Cron: Every 6 hours
 // Removes sessions older than 7 days
 // Frees database space
-```
-
-#### manualDecoupling()
-```javascript
-// Manually trigger decoupling
-// For admin use or troubleshooting
-// Returns: { success, decoupled, message }
 ```
 
 ### Database Schema
