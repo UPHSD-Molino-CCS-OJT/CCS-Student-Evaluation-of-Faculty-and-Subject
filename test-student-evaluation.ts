@@ -12,11 +12,14 @@ import { chromium, Browser, Page, Dialog } from 'playwright';
  * The script now properly waits for skeleton loaders to disappear before
  * interacting with actual content.
  * 
+ * Now supports dynamic student fetching from the database API.
+ * 
  * Usage:
- *   npm run test:evaluate                              # Test all students (browsers visible)
+ *   npm run test:evaluate                              # Test all students from database (browsers visible)
  *   npm run test:evaluate -- --headless                # Test all students (headless)
+ *   npm run test:evaluate -- --limit 10                # Test only first 10 students
  *   npm run test:evaluate -- --student 21-1234-567     # Test specific student
- *   npm run test:evaluate -- --url http://localhost:5000 --headless
+ *   npm run test:evaluate -- --url http://localhost:5000 --headless --limit 5
  */
 
 interface EvaluationConfig {
@@ -457,9 +460,9 @@ class StudentEvaluationAutomation {
 /**
  * Parse command line arguments
  */
-function parseArgs(): Partial<EvaluationConfig> {
+function parseArgs(): Partial<EvaluationConfig> & { limit?: number } {
   const args = process.argv.slice(2);
-  const config: Partial<EvaluationConfig> = {};
+  const config: Partial<EvaluationConfig> & { limit?: number } = {};
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--student' && args[i + 1]) {
@@ -473,6 +476,9 @@ function parseArgs(): Partial<EvaluationConfig> {
     } else if (args[i] === '--slow' && args[i + 1]) {
       config.slowMo = parseInt(args[i + 1], 10);
       i++;
+    } else if (args[i] === '--limit' && args[i + 1]) {
+      config.limit = parseInt(args[i + 1], 10);
+      i++;
     }
   }
 
@@ -480,14 +486,42 @@ function parseArgs(): Partial<EvaluationConfig> {
 }
 
 /**
- * Default students from database setup
- * These students are created by setup-db-mongodb.ts
+ * Fetch students from the database via API
  */
-const DEFAULT_STUDENTS = [
-  { number: '21-1234-567', name: 'Juan Dela Cruz' },
-  { number: '21-1234-568', name: 'Maria Garcia' },
-  { number: '21-5678-901', name: 'Pedro Santos' }
-];
+async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Array<{ number: string; name: string }>> {
+  try {
+    const url = new URL('/api/test/students', baseUrl);
+    if (limit) {
+      url.searchParams.set('limit', limit.toString());
+    }
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data && Array.isArray(data)) {
+      return data.map((student: any) => ({
+        number: student.student_number,
+        name: student.full_name
+      }));
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('⚠️  Could not fetch students from API:', (error as Error).message);
+    console.error('   Make sure the server is running and accessible');
+    console.error(`   Tried: ${baseUrl}/api/test/students\n`);
+    return [];
+  }
+}
 
 /**
  * Main execution
@@ -500,32 +534,52 @@ async function main() {
 
   const config = parseArgs();
   
-  // If no specific student is provided, test all default students
+  // If no specific student is provided, test all students from database
   if (!config.studentNumber) {
+    const baseUrl = config.baseUrl || 'http://localhost:3000';
+    const limit = config.limit; // Optional limit on number of students to test
+    
     console.log('Configuration:');
-    console.log(`  Testing Mode: ALL STUDENTS (${DEFAULT_STUDENTS.length} students)`);
-    console.log(`  Base URL: ${config.baseUrl || 'http://localhost:3000 (default)'}`);
+    console.log(`  Testing Mode: ALL STUDENTS${limit ? ` (limited to ${limit})` : ''}`);
+    console.log(`  Base URL: ${baseUrl}`);
     console.log(`  Headless: ${config.headless !== undefined ? config.headless : false}`);
     console.log(`  Slow Motion: ${config.slowMo || 100}ms\n`);
     
+    console.log('📡 Fetching students from database...\n');
+    const students = await fetchStudentsFromAPI(baseUrl, limit);
+    
+    if (students.length === 0) {
+      console.error('❌ No students found or could not connect to server');
+      console.error('   Please ensure:');
+      console.error('   1. The server is running (npm start)');
+      console.error('   2. The database has been set up (npm run setup-db)');
+      console.error('   3. The base URL is correct\n');
+      process.exit(1);
+    }
+    
+    console.log(`✓ Found ${students.length} students to test\n`);
     console.log('Students to test:');
-    DEFAULT_STUDENTS.forEach((student, index) => {
+    students.slice(0, 10).forEach((student, index) => {
       console.log(`  ${index + 1}. ${student.name} (${student.number})`);
     });
+    if (students.length > 10) {
+      console.log(`  ... and ${students.length - 10} more`);
+    }
     console.log('');
 
     let totalSuccess = 0;
     let totalFail = 0;
 
-    for (let i = 0; i < DEFAULT_STUDENTS.length; i++) {
-      const student = DEFAULT_STUDENTS[i];
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
       console.log(`\n${'='.repeat(60)}`);
-      console.log(`[${i + 1}/${DEFAULT_STUDENTS.length}] Testing: ${student.name} (${student.number})`);
+      console.log(`[${i + 1}/${students.length}] Testing: ${student.name} (${student.number})`);
       console.log('='.repeat(60) + '\n');
 
       const studentConfig = {
         ...config,
         studentNumber: student.number,
+        baseUrl: config.baseUrl || 'http://localhost:3000',
         headless: config.headless !== undefined ? config.headless : false
       };
 
@@ -541,7 +595,7 @@ async function main() {
       }
 
       // Delay between students
-      if (i < DEFAULT_STUDENTS.length - 1) {
+      if (i < students.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
