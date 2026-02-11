@@ -117,6 +117,15 @@ router.post('/admin/login', async (req, res) => {
     }
 });
 // ==================== STUDENT ROUTES ====================
+// Check if student is authenticated
+router.get('/student/check-auth', (req, res) => {
+    res.json({
+        authenticated: !!req.session.studentId,
+        student: req.session.studentId ? {
+            id: req.session.studentId
+        } : null
+    });
+});
 // Student Login
 router.post('/student/login', async (req, res) => {
     try {
@@ -291,30 +300,6 @@ router.post('/student/submit-evaluation', async (req, res) => {
         const anonymizedIp = privacy_protection_1.default.anonymizeIpAddress(rawIp);
         const anonymousToken = privacy_protection_1.default.generateAnonymousToken(enrollment);
         const safeTimestamp = privacy_protection_1.default.getSafeSubmissionTimestamp();
-        // Calculate averages
-        const teacherRatings = [
-            data.teacher_care, data.teacher_respect, data.teacher_patience,
-            data.teacher_shows_mastery, data.teacher_updated_informed,
-            data.teacher_demonstrates_competence
-        ].map(Number);
-        const learningRatings = [
-            data.learning_clear_objectives, data.learning_syllabus_followed,
-            data.learning_starts_ends_on_time, data.learning_concepts_understood,
-            data.learning_materials_appropriate, data.learning_allows_questions,
-            data.learning_encourages_participation, data.learning_provides_relevant_examples,
-            data.learning_provides_activities, data.learning_relates_to_life,
-            data.learning_relates_to_other_subjects, data.learning_fair_grading,
-            data.learning_returns_outputs_on_time
-        ].map(Number);
-        const classroomRatings = [
-            data.classroom_starts_on_time, data.classroom_time_managed_effectively,
-            data.classroom_student_behavior, data.classroom_conducive_environment,
-            data.classroom_appropriate_strategies, data.classroom_communication_channels
-        ].map(Number);
-        const teacher_average = teacherRatings.reduce((a, b) => a + b, 0) / teacherRatings.length;
-        const learning_average = learningRatings.reduce((a, b) => a + b, 0) / learningRatings.length;
-        const classroom_average = classroomRatings.reduce((a, b) => a + b, 0) / classroomRatings.length;
-        const overall_average = (teacher_average + learning_average + classroom_average) / 3;
         // Type guard for populated student
         const populatedStudent = enrollment.student_id;
         // Create evaluation
@@ -326,38 +311,34 @@ router.post('/student/submit-evaluation', async (req, res) => {
             status: populatedStudent.status,
             course_id: enrollment.course_id._id,
             teacher_id: enrollment.teacher_id._id,
-            // Teacher ratings
-            teacher_care: Number(data.teacher_care),
-            teacher_respect: Number(data.teacher_respect),
-            teacher_patience: Number(data.teacher_patience),
-            teacher_shows_mastery: Number(data.teacher_shows_mastery),
-            teacher_updated_informed: Number(data.teacher_updated_informed),
-            teacher_demonstrates_competence: Number(data.teacher_demonstrates_competence),
-            teacher_average,
-            // Learning process ratings
-            learning_clear_objectives: Number(data.learning_clear_objectives),
-            learning_syllabus_followed: Number(data.learning_syllabus_followed),
-            learning_starts_ends_on_time: Number(data.learning_starts_ends_on_time),
-            learning_concepts_understood: Number(data.learning_concepts_understood),
-            learning_materials_appropriate: Number(data.learning_materials_appropriate),
-            learning_allows_questions: Number(data.learning_allows_questions),
-            learning_encourages_participation: Number(data.learning_encourages_participation),
-            learning_provides_relevant_examples: Number(data.learning_provides_relevant_examples),
-            learning_provides_activities: Number(data.learning_provides_activities),
-            learning_relates_to_life: Number(data.learning_relates_to_life),
-            learning_relates_to_other_subjects: Number(data.learning_relates_to_other_subjects),
-            learning_fair_grading: Number(data.learning_fair_grading),
-            learning_returns_outputs_on_time: Number(data.learning_returns_outputs_on_time),
-            learning_average,
-            // Classroom management ratings
-            classroom_starts_on_time: Number(data.classroom_starts_on_time),
-            classroom_time_managed_effectively: Number(data.classroom_time_managed_effectively),
-            classroom_student_behavior: Number(data.classroom_student_behavior),
-            classroom_conducive_environment: Number(data.classroom_conducive_environment),
-            classroom_appropriate_strategies: Number(data.classroom_appropriate_strategies),
-            classroom_communication_channels: Number(data.classroom_communication_channels),
-            classroom_average,
-            overall_average,
+            // Teacher ratings (6 criteria)
+            teacher_diction: Number(data.teacher_diction),
+            teacher_grammar: Number(data.teacher_grammar),
+            teacher_personality: Number(data.teacher_personality),
+            teacher_disposition: Number(data.teacher_disposition),
+            teacher_dynamic: Number(data.teacher_dynamic),
+            teacher_fairness: Number(data.teacher_fairness),
+            // Learning process ratings (13 criteria)
+            learning_motivation: Number(data.learning_motivation),
+            learning_critical_thinking: Number(data.learning_critical_thinking),
+            learning_organization: Number(data.learning_organization),
+            learning_interest: Number(data.learning_interest),
+            learning_explanation: Number(data.learning_explanation),
+            learning_clarity: Number(data.learning_clarity),
+            learning_integration: Number(data.learning_integration),
+            learning_mastery: Number(data.learning_mastery),
+            learning_methodology: Number(data.learning_methodology),
+            learning_values: Number(data.learning_values),
+            learning_grading: Number(data.learning_grading),
+            learning_synthesis: Number(data.learning_synthesis),
+            learning_reasonableness: Number(data.learning_reasonableness),
+            // Classroom management ratings (6 criteria)
+            classroom_attendance: Number(data.classroom_attendance),
+            classroom_policies: Number(data.classroom_policies),
+            classroom_discipline: Number(data.classroom_discipline),
+            classroom_authority: Number(data.classroom_authority),
+            classroom_prayers: Number(data.classroom_prayers),
+            classroom_punctuality: Number(data.classroom_punctuality),
             comments: data.comments || '',
             ip_address: anonymizedIp,
             submitted_at: safeTimestamp
@@ -390,12 +371,41 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
         // Calculate average ratings
         const avgRatings = await Evaluation_1.default.aggregate([
             {
+                $addFields: {
+                    teacher_avg: {
+                        $avg: [
+                            '$teacher_diction', '$teacher_grammar', '$teacher_personality',
+                            '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
+                        ]
+                    },
+                    learning_avg: {
+                        $avg: [
+                            '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
+                            '$learning_interest', '$learning_explanation', '$learning_clarity',
+                            '$learning_integration', '$learning_mastery', '$learning_methodology',
+                            '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
+                        ]
+                    },
+                    classroom_avg: {
+                        $avg: [
+                            '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
+                            '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
+                }
+            },
+            {
                 $group: {
                     _id: null,
-                    teacher: { $avg: '$teacher_average' },
-                    learning: { $avg: '$learning_average' },
-                    classroom: { $avg: '$classroom_average' },
-                    overall: { $avg: '$overall_average' }
+                    teacher: { $avg: '$teacher_avg' },
+                    learning: { $avg: '$learning_avg' },
+                    classroom: { $avg: '$classroom_avg' },
+                    overall: { $avg: '$overall_avg' }
                 }
             }
         ]);
@@ -408,9 +418,38 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
         // Top teachers
         const topTeachers = await Evaluation_1.default.aggregate([
             {
+                $addFields: {
+                    teacher_avg: {
+                        $avg: [
+                            '$teacher_diction', '$teacher_grammar', '$teacher_personality',
+                            '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
+                        ]
+                    },
+                    learning_avg: {
+                        $avg: [
+                            '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
+                            '$learning_interest', '$learning_explanation', '$learning_clarity',
+                            '$learning_integration', '$learning_mastery', '$learning_methodology',
+                            '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
+                        ]
+                    },
+                    classroom_avg: {
+                        $avg: [
+                            '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
+                            '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
+                        ]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
+                }
+            },
+            {
                 $group: {
                     _id: '$teacher_id',
-                    average_rating: { $avg: '$overall_average' },
+                    average_rating: { $avg: '$overall_avg' },
                     evaluation_count: { $sum: 1 }
                 }
             },
@@ -435,12 +474,21 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
             }
         ]);
         // Recent evaluations (privacy protected - no student IDs)
-        const recentEvaluations = await Evaluation_1.default.find()
+        const recentEvaluationsRaw = await Evaluation_1.default.find()
             .populate('teacher_id', 'full_name')
             .populate('course_id', 'name code')
-            .sort({ created_at: -1 })
+            .sort({ createdAt: -1 })
             .limit(10)
-            .select('-anonymous_token -ip_address');
+            .select('-anonymous_token -ip_address')
+            .lean();
+        // Transform to match frontend expectation (teacher, course instead of teacher_id, course_id)
+        const recentEvaluations = recentEvaluationsRaw.map((evaluation) => ({
+            ...evaluation,
+            teacher: evaluation.teacher_id,
+            course: evaluation.course_id,
+            teacher_id: evaluation.teacher_id?._id,
+            course_id: evaluation.course_id?._id
+        }));
         res.json({
             totalEvaluations,
             totalTeachers,
@@ -458,12 +506,23 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
 // ==================== ADMIN EVALUATIONS ====================
 router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
     try {
-        const evaluations = await Evaluation_1.default.find()
+        const evaluationsRaw = await Evaluation_1.default.find()
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
-            .sort({ created_at: -1 })
-            .select('-anonymous_token -ip_address');
+            .sort({ createdAt: -1 })
+            .select('-anonymous_token -ip_address')
+            .lean();
+        // Transform to match frontend expectation
+        const evaluations = evaluationsRaw.map((evaluation) => ({
+            ...evaluation,
+            teacher: evaluation.teacher_id,
+            course: evaluation.course_id,
+            program: evaluation.program_id,
+            teacher_id: evaluation.teacher_id?._id,
+            course_id: evaluation.course_id?._id,
+            program_id: evaluation.program_id?._id
+        }));
         res.json({ evaluations });
     }
     catch (error) {
@@ -473,15 +532,26 @@ router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
 });
 router.get('/admin/evaluations/:id', auth_1.isAuthenticated, async (req, res) => {
     try {
-        const evaluation = await Evaluation_1.default.findById(req.params.id)
+        const evaluationRaw = await Evaluation_1.default.findById(req.params.id)
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
-            .select('-anonymous_token -ip_address');
-        if (!evaluation) {
+            .select('-anonymous_token -ip_address')
+            .lean();
+        if (!evaluationRaw) {
             res.status(404).json({ error: 'Evaluation not found' });
             return;
         }
+        // Transform to match frontend expectation
+        const evaluation = {
+            ...evaluationRaw,
+            teacher: evaluationRaw.teacher_id,
+            course: evaluationRaw.course_id,
+            program: evaluationRaw.program_id,
+            teacher_id: evaluationRaw.teacher_id?._id,
+            course_id: evaluationRaw.course_id?._id,
+            program_id: evaluationRaw.program_id?._id
+        };
         res.json({ evaluation });
     }
     catch (error) {
