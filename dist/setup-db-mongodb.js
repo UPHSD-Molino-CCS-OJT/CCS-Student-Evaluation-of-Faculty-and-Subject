@@ -15,6 +15,7 @@ const Teacher_1 = __importDefault(require("./models/Teacher"));
 const Course_1 = __importDefault(require("./models/Course"));
 const Student_1 = __importDefault(require("./models/Student"));
 const Enrollment_1 = __importDefault(require("./models/Enrollment"));
+const Evaluation_1 = __importDefault(require("./models/Evaluation"));
 // Load environment variables
 dotenv_1.default.config();
 /**
@@ -55,8 +56,23 @@ async function initializeDatabase() {
 /**
  * Create sample data for database
  * Used by both auto-initialization and manual setup script
+ * @param {boolean} clearExistingData - Whether to clear existing data first (default: true)
  */
-async function createSampleData() {
+async function createSampleData(clearExistingData = true) {
+    // Clear existing collections if requested
+    if (clearExistingData) {
+        console.log('📦 Clearing existing collections...');
+        await Promise.all([
+            Admin_1.default.deleteMany({}),
+            Program_1.default.deleteMany({}),
+            Teacher_1.default.deleteMany({}),
+            Course_1.default.deleteMany({}),
+            Student_1.default.deleteMany({}),
+            Enrollment_1.default.deleteMany({}),
+            Evaluation_1.default.deleteMany({})
+        ]);
+        console.log('✓ Collections cleared\n');
+    }
     // Create default admin
     console.log('👤 Creating default admin...');
     const hashedPassword = await bcrypt_1.default.hash('admin123', 10);
@@ -266,16 +282,7 @@ if (require.main === module) {
         .then(async () => {
         console.log('✓ Connected to MongoDB\n');
         try {
-            // Clear existing collections
-            console.log('📦 Clearing existing collections...');
-            await Admin_1.default.deleteMany({});
-            await Program_1.default.deleteMany({});
-            await Teacher_1.default.deleteMany({});
-            await Course_1.default.deleteMany({});
-            await Student_1.default.deleteMany({});
-            await Enrollment_1.default.deleteMany({});
-            console.log('✓ Collections cleared\n');
-            // Create sample data
+            // Create sample data (will clear existing data by default)
             await createSampleData();
             console.log('🚀 You can now run: npm start');
             console.log('\n📝 Sample Student Logins:');
