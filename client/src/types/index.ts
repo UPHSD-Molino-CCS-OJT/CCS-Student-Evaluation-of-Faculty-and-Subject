@@ -107,7 +107,7 @@ export interface Enrollment {
   school_year: string;
   semester: '1st Semester' | '2nd Semester' | 'Summer';
   has_evaluated: boolean;
-  evaluation_id?: string;
+  receipt_hash?: string; // Cryptographic receipt for verification (no reversible link)
 }
 
 export interface Evaluation {
