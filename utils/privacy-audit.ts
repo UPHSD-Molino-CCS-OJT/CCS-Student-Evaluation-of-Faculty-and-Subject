@@ -983,7 +983,15 @@ class PrivacyAuditor {
                 // Remove string literals (double quotes)
                 .replace(/"[^"]*"/g, '""')
                 // Remove template literals
-                .replace(/`[^`]*`/g, '``');
+                .replace(/`[^`]*`/g, '``')
+                // Remove regex patterns /.../ 
+                .replace(/\/[^\/\n]+\/[gimuy]*/g, '//')
+                // Remove object property keys: { student_number: or student_number: {
+                .replace(/\{\s*student_number\s*:/g, '{ :')
+                .replace(/,\s*student_number\s*:/g, ', :')
+                // Remove TypeScript type annotations: student_number?: or : student_number
+                .replace(/student_number\?:/g, '?:')
+                .replace(/:\s*student_number\b/g, ': ');
             
             // Now check for student_number in the cleaned content
             const actualCodeMatches = cleanedContent.match(/student_number/g) || [];
