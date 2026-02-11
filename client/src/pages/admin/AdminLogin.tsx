@@ -23,7 +23,7 @@ const AdminLogin: React.FC = () => {
     setLoading(true)
 
     try {
-      const response = await axios.post('/admin/login', credentials, {
+      const response = await axios.post('/api/admin/login', credentials, {
         withCredentials: true
       })
 

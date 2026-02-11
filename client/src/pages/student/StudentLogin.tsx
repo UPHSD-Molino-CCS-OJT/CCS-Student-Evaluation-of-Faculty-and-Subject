@@ -15,8 +15,7 @@ const StudentLogin: React.FC = () => {
     setLoading(true)
 
     try {
-      const response = await axios.post('/student/login', 
-        { student_number: studentNumber },
+      const response = await axios.post('/api/student/login',
         { withCredentials: true }
       )
       
