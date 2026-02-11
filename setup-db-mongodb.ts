@@ -9,6 +9,7 @@ import Teacher from './models/Teacher';
 import Course from './models/Course';
 import Student from './models/Student';
 import Enrollment from './models/Enrollment';
+import Evaluation from './models/Evaluation';
 
 // Load environment variables
 dotenv.config();
@@ -56,8 +57,24 @@ export async function initializeDatabase(): Promise<boolean> {
 /**
  * Create sample data for database
  * Used by both auto-initialization and manual setup script
+ * @param {boolean} clearExistingData - Whether to clear existing data first (default: true)
  */
-export async function createSampleData(): Promise<void> {
+export async function createSampleData(clearExistingData: boolean = true): Promise<void> {
+  // Clear existing collections if requested
+  if (clearExistingData) {
+    console.log('📦 Clearing existing collections...');
+    await Promise.all([
+      Admin.deleteMany({}),
+      Program.deleteMany({}),
+      Teacher.deleteMany({}),
+      Course.deleteMany({}),
+      Student.deleteMany({}),
+      Enrollment.deleteMany({}),
+      Evaluation.deleteMany({})
+    ]);
+    console.log('✓ Collections cleared\n');
+  }
+
   // Create default admin
   console.log('👤 Creating default admin...');
   const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -278,17 +295,7 @@ if (require.main === module) {
       console.log('✓ Connected to MongoDB\n');
       
       try {
-        // Clear existing collections
-        console.log('📦 Clearing existing collections...');
-        await Admin.deleteMany({});
-        await Program.deleteMany({});
-        await Teacher.deleteMany({});
-        await Course.deleteMany({});
-        await Student.deleteMany({});
-        await Enrollment.deleteMany({});
-        console.log('✓ Collections cleared\n');
-        
-        // Create sample data
+        // Create sample data (will clear existing data by default)
         await createSampleData();
         
         console.log('🚀 You can now run: npm start');
