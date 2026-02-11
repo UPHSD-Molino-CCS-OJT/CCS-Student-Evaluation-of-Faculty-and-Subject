@@ -378,7 +378,7 @@ This system implements a **10-layer systematic privacy protection system** to pr
 - ✅ **Cryptographic Security:** SHA-512 anonymous tokens
 - ✅ **Timing Protection:** Random delays prevent correlation
 - ✅ **Network Privacy:** IP addresses anonymized
-- ✅ **Automatic Decoupling:** Links removed after 24 hours
+- ✅ **Cryptographic Receipt Model:** No reversible links ever created
 - ✅ **Differential Privacy:** Mathematical protection for statistics
 - ✅ **K-Anonymity:** Minimum thresholds protect small groups
 - ✅ **Session Security:** Data minimization and cleanup
@@ -400,7 +400,7 @@ This system implements a **10-layer systematic privacy protection system** to pr
 - **Anonymous Tokens:** SHA-512 cryptographic hashing (cannot be reversed)
 - **Time Fuzzing:** Random 2-8 second delays prevent timing attacks
 - **IP Anonymization:** Last octet/segments removed from stored IPs
-- **Auto-Decoupling:** Evaluation-enrollment links removed after 24 hours
+- **Cryptographic Receipts:** One-way verification hashes (no reversible enrollment links)
 - **Differential Privacy:** Noise added to statistics (ε = 0.1)
 - **K-Anonymity:** Stats hidden until ≥5 evaluations (k=5)
 

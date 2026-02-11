@@ -51,7 +51,7 @@ This system goes far beyond basic anonymization, implementing **10 layers of sys
 - **Cryptographic Security**: SHA-512 anonymous tokens
 - **Timing Protection**: Random delays to prevent correlation
 - **Network Privacy**: IP address anonymization
-- **Temporal Privacy**: Automatic data decoupling after 24 hours
+- **Structural Privacy**: Cryptographic receipt model (no reversible links)
 - **Statistical Privacy**: Differential privacy and k-anonymity
 - **Session Security**: Data minimization and cleanup
 - **Audit Safety**: Privacy-safe logging
@@ -1370,19 +1370,21 @@ checkStatisticalSafety(totalEvaluations, minRequired = 10)
 - minRequired = 5: Less conservative
 - Higher values = Better privacy
 
-#### Decoupling Grace Period
+#### Session Cleanup Period
 
 **File:** `utils/privacy-scheduler.js`
 
 ```javascript
-const gracePeriodHours = 24;
+const sessionCleanupHours = 6;
 ```
 
 **Recommendations:**
-- 24 hours: **Recommended** (allows verification)
-- 48 hours: More time for admin tasks
-- 12 hours: Faster anonymization
-- Never set below 6 hours
+- 6 hours: **Recommended** (frequent cleanup)
+- 12 hours: Less frequent, lower overhead
+- 24 hours: Minimal cleanup frequency
+- More frequent = Better privacy hygiene
+
+**Note:** With the cryptographic receipt model, no decoupling grace period is needed since no reversible links are ever created.
 
 ### Configuration Best Practices
 
@@ -1392,7 +1394,7 @@ submissionDelay: min=3, max=10
 epsilon: 0.05
 k: 10
 minEvaluations: 20
-gracePeriod: 24
+sessionCleanup: 6              // Hours between session cleanup
 ```
 
 **For Balanced Approach (Recommended):**
@@ -1401,7 +1403,7 @@ submissionDelay: min=2, max=8  // ✅ Default
 epsilon: 0.1                    // ✅ Default
 k: 5                           // ✅ Default
 minEvaluations: 10             // ✅ Default
-gracePeriod: 24                // ✅ Default
+sessionCleanup: 6              // ✅ Default
 ```
 
 **For Large Institutions:**
@@ -1410,7 +1412,7 @@ submissionDelay: min=2, max=8
 epsilon: 0.1
 k: 5
 minEvaluations: 15  // More data available
-gracePeriod: 24
+sessionCleanup: 6   // Frequent cleanup for high-volume systems
 ```
 
 ### Environment Variables
@@ -1422,7 +1424,7 @@ gracePeriod: 24
 SESSION_SECRET=your-very-strong-random-secret-key-here
 
 # Privacy Settings (optional)
-PRIVACY_GRACE_PERIOD_HOURS=24
+PRIVACY_SESSION_CLEANUP_HOURS=6
 PRIVACY_MIN_EVALUATIONS=10
 PRIVACY_K_ANONYMITY=5
 
@@ -1479,11 +1481,12 @@ console.log(report);
 ✓ No precise submission times stored
 ```
 
-#### 5. Enrollment Decoupling
+#### 5. Cryptographic Receipt Model
 ```
-✓ Old enrollments have been decoupled
-✓ No links older than grace period
-✓ Decoupling timestamps set correctly
+✓ No evaluation_id field exists in enrollments
+✓ Only receipt_hash stored (one-way verification)
+✓ No reversible links between enrollments and evaluations
+✓ Immediate structural unlinkability confirmed
 ```
 
 #### 6. Session Security
@@ -1643,7 +1646,7 @@ If scheduler not running:
 **How System Complies:**
 - Anonymous tokens prevent identification
 - No direct link between students and evaluations
-- After 24 hours: complete unlinkability
+- Immediate structural unlinkability (receipt model)
 - Admin cannot determine who submitted evaluations
 
 ### GDPR Principles
@@ -1663,7 +1666,7 @@ If scheduler not running:
 ✅ Clear purpose for each data field
 
 **3. Storage Limitation:**
-✅ Enrollment links removed after 24 hours
+✅ No reversible enrollment-evaluation links (receipt model)
 ✅ Sessions cleaned regularly
 ✅ No indefinite data retention
 
@@ -2303,7 +2306,7 @@ which evaluation. Your honest feedback is protected and valued."
 Example Policy:
 
 - Evaluations: Retained for 7 years (aggregate analysis only)
-- Enrollment records: Evaluation links removed after 24 hours
+- Enrollment records: No reversible links to evaluations (receipt model)
 - Sessions: Cleaned automatically after 7 days
 - Audit logs: Do not contain student identifiers
 ```
@@ -2434,7 +2437,7 @@ This system provides:
 - Enhanced anonymous tokens to SHA-512
 - Added IP anonymization
 - Implemented timestamp rounding
-- Added automatic decoupling
+- Implemented cryptographic receipt model (v2.1)
 - Created comprehensive audit system
 
 **Version 1.0** - Original Implementation
