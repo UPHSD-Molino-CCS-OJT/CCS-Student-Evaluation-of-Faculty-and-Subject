@@ -294,28 +294,6 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
         const anonymousToken = PrivacyProtection.generateAnonymousToken(enrollment);
         const safeTimestamp = PrivacyProtection.getSafeSubmissionTimestamp();
         
-        // Calculate averages
-        const teacherRatings = [
-            data.teacher_diction, data.teacher_grammar, data.teacher_personality,
-            data.teacher_disposition, data.teacher_dynamic, data.teacher_fairness
-        ].map(Number);
-        
-        const learningRatings = [
-            data.learning_motivation, data.learning_critical_thinking, data.learning_organization,
-            data.learning_interest, data.learning_explanation, data.learning_clarity,
-            data.learning_integration, data.learning_mastery, data.learning_methodology,
-            data.learning_values, data.learning_grading, data.learning_synthesis, data.learning_reasonableness
-        ].map(Number);
-        
-        const classroomRatings = [
-            data.classroom_attendance, data.classroom_policies, data.classroom_discipline,
-            data.classroom_authority, data.classroom_prayers, data.classroom_punctuality
-        ].map(Number);
-        
-        const teacher_average = teacherRatings.reduce((a, b) => a + b, 0) / teacherRatings.length;
-        const learning_average = learningRatings.reduce((a, b) => a + b, 0) / learningRatings.length;
-        const classroom_average = classroomRatings.reduce((a, b) => a + b, 0) / classroomRatings.length;
-        
         // Type guard for populated student
         const populatedStudent = enrollment.student_id as IEnrollment['student_id'] & { program_id: Types.ObjectId; year_level: string; status: string; };
         
@@ -504,12 +482,22 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
         ]);
         
         // Recent evaluations (privacy protected - no student IDs)
-        const recentEvaluations = await Evaluation.find()
+        const recentEvaluationsRaw = await Evaluation.find()
             .populate('teacher_id', 'full_name')
             .populate('course_id', 'name code')
             .sort({ createdAt: -1 })
             .limit(10)
-            .select('-anonymous_token -ip_address');
+            .select('-anonymous_token -ip_address')
+            .lean();
+        
+        // Transform to match frontend expectation (teacher, course instead of teacher_id, course_id)
+        const recentEvaluations = recentEvaluationsRaw.map((evaluation: any) => ({
+            ...evaluation,
+            teacher: evaluation.teacher_id,
+            course: evaluation.course_id,
+            teacher_id: evaluation.teacher_id?._id,
+            course_id: evaluation.course_id?._id
+        }));
         
         res.json({
             totalEvaluations,
@@ -529,12 +517,24 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
 
 router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
-        const evaluations = await Evaluation.find()
+        const evaluationsRaw = await Evaluation.find()
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
             .sort({ createdAt: -1 })
-            .select('-anonymous_token -ip_address');
+            .select('-anonymous_token -ip_address')
+            .lean();
+        
+        // Transform to match frontend expectation
+        const evaluations = evaluationsRaw.map((evaluation: any) => ({
+            ...evaluation,
+            teacher: evaluation.teacher_id,
+            course: evaluation.course_id,
+            program: evaluation.program_id,
+            teacher_id: evaluation.teacher_id?._id,
+            course_id: evaluation.course_id?._id,
+            program_id: evaluation.program_id?._id
+        }));
         
         res.json({ evaluations });
     } catch (error) {
@@ -545,16 +545,28 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
 
 router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const evaluation = await Evaluation.findById(req.params.id)
+        const evaluationRaw = await Evaluation.findById(req.params.id)
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
-            .select('-anonymous_token -ip_address');
+            .select('-anonymous_token -ip_address')
+            .lean();
         
-        if (!evaluation) {
+        if (!evaluationRaw) {
             res.status(404).json({ error: 'Evaluation not found' });
             return;
         }
+        
+        // Transform to match frontend expectation
+        const evaluation = {
+            ...evaluationRaw,
+            teacher: (evaluationRaw as any).teacher_id,
+            course: (evaluationRaw as any).course_id,
+            program: (evaluationRaw as any).program_id,
+            teacher_id: (evaluationRaw as any).teacher_id?._id,
+            course_id: (evaluationRaw as any).course_id?._id,
+            program_id: (evaluationRaw as any).program_id?._id
+        };
         
         res.json({ evaluation });
     } catch (error) {
