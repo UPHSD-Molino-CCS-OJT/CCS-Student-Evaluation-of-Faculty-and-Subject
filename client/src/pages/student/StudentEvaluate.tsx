@@ -410,14 +410,41 @@ const StudentEvaluate: React.FC = () => {
               <i className="fas fa-comments mr-2 text-blue-600"></i>
               Additional Comments (Optional)
             </h3>
+            
+            {/* Privacy Warning */}
+            <div className="mb-4 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+              <div className="flex items-start">
+                <i className="fas fa-shield-alt text-amber-600 mt-1 mr-3"></i>
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold mb-1">Anonymity Protection Reminder</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Do NOT include your name, student number, email, or other identifying details</li>
+                    <li>Avoid unique or distinctive phrasing that could identify you</li>
+                    <li>Keep comments professional and focused on course/teaching feedback</li>
+                    <li>Comments must be 20-500 characters or left blank</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
             <textarea
               name="comments"
               value={formData.comments}
               onChange={handleInputChange}
               rows={5}
+              minLength={20}
+              maxLength={500}
               placeholder="Share any additional feedback, suggestions, or comments about this course or instructor..."
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             ></textarea>
+            <p className="text-xs text-gray-500 mt-2">
+              {formData.comments.length > 0 && (
+                <span className={formData.comments.length < 20 ? 'text-red-600' : formData.comments.length > 500 ? 'text-red-600' : 'text-gray-600'}>
+                  {formData.comments.length} / 500 characters
+                  {formData.comments.length > 0 && formData.comments.length < 20 && ' (minimum 20 characters required)'}
+                </span>
+              )}
+            </p>
           </div>
 
           {/* Action Buttons */}
