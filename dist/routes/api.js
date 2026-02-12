@@ -385,16 +385,28 @@ router.post('/student/submit-evaluation', async (req, res) => {
                 });
                 return;
             }
-            try {
-                encryptedComments = (0, encryption_1.encryptField)(data.comments.trim());
-            }
-            catch (error) {
-                console.error('Comment encryption failed:', error);
-                res.status(500).json({
+            // LAYER 12: Stylometric protection — sanitize before encryption
+            const sanitizationResult = privacy_protection_1.default.sanitizeCommentForAnonymity(data.comments);
+            if (!sanitizationResult.valid) {
+                res.status(400).json({
                     success: false,
-                    message: 'Evaluation processing error. Please try again.'
+                    message: sanitizationResult.error || 'Comment validation failed'
                 });
                 return;
+            }
+            // Only encrypt if sanitized comment is not empty
+            if (sanitizationResult.sanitized) {
+                try {
+                    encryptedComments = (0, encryption_1.encryptField)(sanitizationResult.sanitized);
+                }
+                catch (error) {
+                    console.error('Comment encryption failed:', error);
+                    res.status(500).json({
+                        success: false,
+                        message: 'Evaluation processing error. Please try again.'
+                    });
+                    return;
+                }
             }
         }
         // Create evaluation (stored completely separately, no link to enrollment)

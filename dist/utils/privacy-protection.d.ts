@@ -147,7 +147,7 @@ declare class PrivacyProtection {
      */
     static createPrivacySafeAuditLog(action: string, category: string, metadata?: Record<string, any>): AuditLogEntry;
     /**
-     * Validate that evaluation data contains no identifying information
+     * Validate that evaluation data contains no identifying information (Layer 10 + Layer 12)
      *
      * @param evaluationData - Evaluation data to validate
      * @returns Validation result
@@ -187,6 +187,29 @@ declare class PrivacyProtection {
      * @returns Safety check result
      */
     static checkStatisticalSafety(totalEvaluations: number, minRequired?: number): StatisticalSafetyResult;
+    /**
+     * LAYER 12: Stylometric Attack Protection
+     *
+     * Sanitize comment text to reduce stylometric fingerprinting risk.
+     * Threat Model: Teacher/admin knows student writing patterns
+     *
+     * Protections Applied:
+     * - Normalize excessive punctuation (!!!, ???, ..., etc.)
+     * - Strip excessive whitespace/newlines
+     * - Enforce length constraints (20-500 chars)
+     * - Preserve semantic content while reducing style markers
+     *
+     * Note: This is NOT perfect — human writing style is hard to fully anonymize.
+     * Primary defense: User warning to avoid identifying language.
+     *
+     * @param comment - Raw comment text
+     * @returns Sanitized comment or validation error
+     */
+    static sanitizeCommentForAnonymity(comment: string): {
+        sanitized: string;
+        valid: boolean;
+        error?: string;
+    };
 }
 export default PrivacyProtection;
 //# sourceMappingURL=privacy-protection.d.ts.map

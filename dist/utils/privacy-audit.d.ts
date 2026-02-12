@@ -124,6 +124,20 @@ declare class PrivacyAuditor {
      */
     private checkLayer11_FieldLevelEncryption;
     /**
+     * LAYER 12: Stylometric Attack Protection
+     *
+     * Verifies protections against writing style de-anonymization.
+     *
+     * Threat Model Protection:
+     * - Teacher knows student writing patterns
+     * - Distinctive phrasing or punctuation reveals identity
+     * - Social engineering through writing style analysis
+     *
+     * Note: This is the weakest privacy layer — human writing style is inherently
+     * difficult to fully anonymize. Primary defense is user education.
+     */
+    private checkLayer12_StylometricProtection;
+    /**
      * Add a critical issue to audit results
      */
     private addIssue;
