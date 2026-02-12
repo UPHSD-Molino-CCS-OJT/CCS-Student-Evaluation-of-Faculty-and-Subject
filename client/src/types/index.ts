@@ -163,6 +163,16 @@ export interface Evaluation {
 }
 
 // Dashboard Types
+export interface DPBudgetStatus {
+  currentBudget: number;
+  queriesUsed: number;
+  windowStart: string;
+  windowEnd: string;
+  budgetExhausted: boolean;
+  maxQueries: number;
+  totalBudget: number;
+}
+
 export interface DashboardStats {
   totalEvaluations: number;
   totalTeachers: number;
@@ -180,6 +190,8 @@ export interface DashboardStats {
     evaluation_count: number;
   }>;
   recentEvaluations: Evaluation[];
+  dpBudgetStatus?: DPBudgetStatus;
+  privacyNotice?: string;
 }
 
 // Privacy Audit Types

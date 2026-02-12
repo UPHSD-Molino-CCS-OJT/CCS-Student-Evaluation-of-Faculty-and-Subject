@@ -17,6 +17,7 @@ import { Types } from 'mongoose';
 // Import Privacy Protection Utilities
 import PrivacyProtection from '../utils/privacy-protection';
 import { encryptField, decryptField, isEncryptionConfigured, EncryptedData } from '../utils/encryption';
+import DPBudgetTracker from '../utils/dp-budget';
 
 // Import middleware
 import { isAuthenticated } from '../middleware/auth';
@@ -523,54 +524,86 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             return;
         }
         
-        // Calculate average ratings
-        const avgRatings = await Evaluation.aggregate([
-            {
-                $addFields: {
-                    teacher_avg: {
-                        $avg: [
-                            '$teacher_diction', '$teacher_grammar', '$teacher_personality',
-                            '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
-                        ]
-                    },
-                    learning_avg: {
-                        $avg: [
-                            '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
-                            '$learning_interest', '$learning_explanation', '$learning_clarity',
-                            '$learning_integration', '$learning_mastery', '$learning_methodology',
-                            '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
-                        ]
-                    },
-                    classroom_avg: {
-                        $avg: [
-                            '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
-                            '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
-                        ]
-                    }
-                }
-            },
-            {
-                $addFields: {
-                    overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
-                }
-            },
-            {
-                $group: {
-                    _id: null,
-                    teacher: { $avg: '$teacher_avg' },
-                    learning: { $avg: '$learning_avg' },
-                    classroom: { $avg: '$classroom_avg' },
-                    overall: { $avg: '$overall_avg' }
-                }
-            }
-        ]);
+        // DIFFERENTIAL PRIVACY WITH BUDGET TRACKING
+        const dpBudget = DPBudgetTracker.getInstance();
         
-        const averageRatings = avgRatings.length > 0 ? {
-            teacher: avgRatings[0].teacher || 0,
-            learning: avgRatings[0].learning || 0,
-            classroom: avgRatings[0].classroom || 0,
-            overall: avgRatings[0].overall || 0
-        } : { teacher: 0, learning: 0, classroom: 0, overall: 0 };
+        // Query 1: Average ratings (with DP budget tracking & caching)
+        const avgRatingsQuery = await dpBudget.executeQuery(
+            {
+                queryType: 'dashboard_average_ratings',
+                parameters: { totalEvaluations }
+            },
+            async (epsilon: number) => {
+                const avgRatings = await Evaluation.aggregate([
+                    {
+                        $addFields: {
+                            teacher_avg: {
+                                $avg: [
+                                    '$teacher_diction', '$teacher_grammar', '$teacher_personality',
+                                    '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
+                                ]
+                            },
+                            learning_avg: {
+                                $avg: [
+                                    '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
+                                    '$learning_interest', '$learning_explanation', '$learning_clarity',
+                                    '$learning_integration', '$learning_mastery', '$learning_methodology',
+                                    '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
+                                ]
+                            },
+                            classroom_avg: {
+                                $avg: [
+                                    '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
+                                    '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        $addFields: {
+                            overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            teacher: { $avg: '$teacher_avg' },
+                            learning: { $avg: '$learning_avg' },
+                            classroom: { $avg: '$classroom_avg' },
+                            overall: { $avg: '$overall_avg' }
+                        }
+                    }
+                ]);
+                
+                // Apply differential privacy noise
+                const rawRatings = avgRatings.length > 0 ? avgRatings[0] : 
+                    { teacher: 0, learning: 0, classroom: 0, overall: 0 };
+                
+                return {
+                    teacher: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.teacher || 0, epsilon, 1),
+                    learning: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.learning || 0, epsilon, 1),
+                    classroom: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.classroom || 0, epsilon, 1),
+                    overall: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.overall || 0, epsilon, 1)
+                };
+            }
+        );
+        
+        // Check if DP budget is exhausted
+        if (!avgRatingsQuery.success) {
+            res.json({
+                totalEvaluations,
+                totalTeachers,
+                totalPrograms,
+                averageRatings: { teacher: 0, learning: 0, classroom: 0, overall: 0 },
+                topTeachers: [],
+                recentEvaluations: [],
+                privacyNotice: `Privacy budget exhausted: ${avgRatingsQuery.error}`,
+                dpBudgetStatus: avgRatingsQuery.budgetStatus
+            });
+            return;
+        }
+        
+        const averageRatings = avgRatingsQuery.result;
         
         // Top teachers
         const topTeachers = await Evaluation.aggregate([
@@ -698,13 +731,21 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             };
         });
         
+        // Add privacy notice if query was cached
+        const privacyNotice = avgRatingsQuery.cached 
+            ? 'Statistics are cached with differential privacy noise. Budget: ' + 
+              `${avgRatingsQuery.budgetStatus?.queriesUsed}/${avgRatingsQuery.budgetStatus?.maxQueries} queries used.`
+            : undefined;
+        
         res.json({
             totalEvaluations,
             totalTeachers,
             totalPrograms,
             averageRatings,
             topTeachers,
-            recentEvaluations
+            recentEvaluations,
+            dpBudgetStatus: avgRatingsQuery.budgetStatus,
+            privacyNotice
         });
     } catch (error) {
         console.error('Error loading dashboard:', error);

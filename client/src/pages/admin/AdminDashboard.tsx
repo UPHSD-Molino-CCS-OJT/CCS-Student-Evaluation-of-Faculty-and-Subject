@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { DashboardSkeleton } from '../../components/Skeleton'
-import { TopTeacher, PopulatedEvaluation } from '../../types'
+import { TopTeacher, PopulatedEvaluation, DPBudgetStatus } from '../../types'
 
 interface DashboardStats {
   totalEvaluations: number;
@@ -46,6 +46,7 @@ const AdminDashboard: React.FC = () => {
   const [recentEvaluations, setRecentEvaluations] = useState<PopulatedEvaluation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [privacyNotice, setPrivacyNotice] = useState<string | null>(null)
+  const [dpBudget, setDPBudget] = useState<DPBudgetStatus | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -65,6 +66,7 @@ const AdminDashboard: React.FC = () => {
       setTopTeachers(data.topTeachers || [])
       setRecentEvaluations(data.recentEvaluations || [])
       setPrivacyNotice(data.privacyNotice || null)
+      setDPBudget(data.dpBudgetStatus || null)
     } catch (error: unknown) {
       console.error('Error fetching dashboard data:', error)
     } finally {
@@ -152,7 +154,89 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
+          
+
+        {/* DP Budget Status */}
+        {dpBudget && (
+          <div className={`mb-8 border-l-4 p-4 rounded-r-lg shadow-md ${
+            dpBudget.budgetExhausted 
+              ? 'bg-red-50 border-red-400' 
+              : dpBudget.currentBudget < 0.3 
+                ? 'bg-orange-50 border-orange-400'
+                : 'bg-blue-50 border-blue-400'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <i className={`fas fa-chart-line text-2xl ${
+                    dpBudget.budgetExhausted 
+                      ? 'text-red-600' 
+                      : dpBudget.currentBudget < 0.3 
+                        ? 'text-orange-600'
+                        : 'text-blue-600'
+                  }`}></i>
+                </div>
+                <div className="ml-4">
+                  <h3 className={`text-lg font-semibold ${
+                    dpBudget.budgetExhausted 
+                      ? 'text-red-800' 
+                      : dpBudget.currentBudget < 0.3 
+                        ? 'text-orange-800'
+                        : 'text-blue-800'
+                  }`}>
+                    Differential Privacy Budget
+                  </h3>
+                  <p className={`text-sm mt-1 ${
+                    dpBudget.budgetExhausted 
+                      ? 'text-red-700' 
+                      : dpBudget.currentBudget < 0.3 
+                        ? 'text-orange-700'
+                        : 'text-blue-700'
+                  }`}>
+                    {dpBudget.budgetExhausted 
+                      ? `Budget exhausted. Resets at ${new Date(dpBudget.windowEnd).toLocaleTimeString()}`
+                      : `${dpBudget.currentBudget.toFixed(2)}ε remaining • ${dpBudget.queriesUsed}/${dpBudget.maxQueries} queries used`
+                    }
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${
+                  dpBudget.budgetExhausted 
+                    ? 'text-red-600' 
+                    : dpBudget.currentBudget < 0.3 
+                      ? 'text-orange-600'
+                      : 'text-blue-600'
+                }`}>
+                  {Math.round((dpBudget.currentBudget / dpBudget.totalBudget) * 100)}%
+                </div>
+                <div className={`text-xs ${
+                  dpBudget.budgetExhausted 
+                    ? 'text-red-600' 
+                    : dpBudget.currentBudget < 0.3 
+                      ? 'text-orange-600'
+                      : 'text-blue-600'
+                }`}>
+                  Budget
+                </div>
+              </div>
+            </div>
+            {!dpBudget.budgetExhausted && (
+              <div className="mt-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      dpBudget.currentBudget < 0.3 
+                        ? 'bg-orange-500' 
+                        : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${(dpBudget.currentBudget / dpBudget.totalBudget) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
+        )}</div>
         )}
 
         {/* Stats Grid */}
