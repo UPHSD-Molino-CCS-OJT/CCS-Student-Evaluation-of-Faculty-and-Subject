@@ -654,7 +654,7 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             { teacher: 0, learning: 0, classroom: 0, overall: 0 };
         
         // Top teachers
-        const topTeachers = await Evaluation.aggregate([
+        const topTeachersRaw = await Evaluation.aggregate([
             {
                 $addFields: {
                     teacher_avg: {
@@ -707,12 +707,18 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             {
                 $project: {
                     _id: '$teacher._id',
-                    full_name: '$teacher.full_name',
+                    full_name: '$teacher.full_name', // Still encrypted at this stage
                     average_rating: 1,
                     evaluation_count: 1
                 }
             }
         ]);
+        
+        // Decrypt teacher names for admin viewing
+        const topTeachers = topTeachersRaw.map((teacher: any) => ({
+            ...teacher,
+            full_name: safeDecrypt(teacher.full_name)
+        }));
         
         // Recent evaluations
         const recentEvaluationsRaw = await Evaluation.find()
@@ -762,11 +768,24 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             
             const overall_average = (teacher_average + learning_average + classroom_average) / 3;
             
+            // Decrypt populated teacher fields
+            const teacher = evaluation.teacher_id ? {
+                _id: evaluation.teacher_id._id,
+                full_name: safeDecrypt(evaluation.teacher_id.full_name)
+            } : evaluation.teacher_id;
+            
+            // Decrypt populated course fields
+            const course = evaluation.course_id ? {
+                _id: evaluation.course_id._id,
+                name: safeDecrypt(evaluation.course_id.name),
+                code: safeDecrypt(evaluation.course_id.code)
+            } : evaluation.course_id;
+            
             return {
                 ...evaluation,
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
-                teacher: evaluation.teacher_id,
-                course: evaluation.course_id,
+                teacher,
+                course,
                 teacher_id: evaluation.teacher_id?._id,
                 course_id: evaluation.course_id?._id,
                 teacher_average,
@@ -842,12 +861,30 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
             
             const overall_average = (teacher_average + learning_average + classroom_average) / 3;
             
+            // Decrypt populated fields for admin viewing
+            const teacher = evaluation.teacher_id ? {
+                _id: evaluation.teacher_id._id,
+                full_name: safeDecrypt(evaluation.teacher_id.full_name),
+                employee_id: safeDecrypt(evaluation.teacher_id.employee_id)
+            } : evaluation.teacher_id;
+            
+            const course = evaluation.course_id ? {
+                _id: evaluation.course_id._id,
+                name: safeDecrypt(evaluation.course_id.name),
+                code: safeDecrypt(evaluation.course_id.code)
+            } : evaluation.course_id;
+            
+            const program = evaluation.program_id ? {
+                _id: evaluation.program_id._id,
+                name: safeDecrypt(evaluation.program_id.name)
+            } : evaluation.program_id;
+            
             return {
                 ...evaluation,
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
-                teacher: evaluation.teacher_id,
-                course: evaluation.course_id,
-                program: evaluation.program_id,
+                teacher,
+                course,
+                program,
                 teacher_id: evaluation.teacher_id?._id,
                 course_id: evaluation.course_id?._id,
                 program_id: evaluation.program_id?._id,
@@ -878,6 +915,24 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
             res.status(404).json({ error: 'Evaluation not found' });
             return;
         }
+        
+        // Decrypt populated fields for admin viewing
+        const teacher = evaluationRaw.teacher_id ? {
+            _id: (evaluationRaw.teacher_id as any)._id,
+            full_name: safeDecrypt((evaluationRaw.teacher_id as any).full_name),
+            employee_id: safeDecrypt((evaluationRaw.teacher_id as any).employee_id)
+        } : evaluationRaw.teacher_id;
+        
+        const course = evaluationRaw.course_id ? {
+            _id: (evaluationRaw.course_id as any)._id,
+            name: safeDecrypt((evaluationRaw.course_id as any).name),
+            code: safeDecrypt((evaluationRaw.course_id as any).code)
+        } : evaluationRaw.course_id;
+        
+        const program = evaluationRaw.program_id ? {
+            _id: (evaluationRaw.program_id as any)._id,
+            name: safeDecrypt((evaluationRaw.program_id as any).name)
+        } : evaluationRaw.program_id;
         
         // Transform to match frontend expectation
         // Calculate averages (virtuals not available with .lean())
@@ -920,9 +975,9 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
         const evaluation = {
             ...evaluationRaw,
             comments: decryptCommentsField((evaluationRaw as any).comments), // Decrypt for admin viewing
-            teacher: (evaluationRaw as any).teacher_id,
-            course: (evaluationRaw as any).course_id,
-            program: (evaluationRaw as any).program_id,
+            teacher, // Use decrypted teacher
+            course,  // Use decrypted course
+            program, // Use decrypted program
             teacher_id: (evaluationRaw as any).teacher_id?._id,
             course_id: (evaluationRaw as any).course_id?._id,
             program_id: (evaluationRaw as any).program_id?._id,
