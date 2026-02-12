@@ -378,9 +378,9 @@ This system implements a **12-layer systematic privacy protection system** to pr
 - ✅ **Timing Protection:** Random delays prevent correlation
 - ✅ **Network Privacy:** IP addresses anonymized
 - ✅ **Cryptographic Receipt Model:** No reversible links ever created
-- ✅ **K-Anonymity:** Minimum thresholds protect small groups
 - ✅ **Field Encryption:** AES-256-GCM for sensitive data at rest
 - ✅ **Session Security:** Data minimization and cleanup
+- ⚙️ **K-Anonymity:** Optional for public-facing statistics
 - ⚙️ **Differential Privacy:** Optional for public-facing statistics
 - ✅ **Compliance:** FERPA and GDPR principles
 
@@ -402,7 +402,7 @@ This system implements a **12-layer systematic privacy protection system** to pr
 - **IP Anonymization:** Last octet/segments removed from stored IPs
 - **Cryptographic Receipts:** One-way verification hashes (no reversible enrollment links)
 - **Field Encryption:** AES-256-GCM encryption for sensitive data
-- **K-Anonymity:** Stats hidden until ≥5 evaluations (k=5)
+- **K-Anonymity:** Optional (for public statistics only, not admin dashboard)
 - **Differential Privacy:** Optional (for public statistics only, not admin dashboard)
 
 **Privacy Guarantees:**

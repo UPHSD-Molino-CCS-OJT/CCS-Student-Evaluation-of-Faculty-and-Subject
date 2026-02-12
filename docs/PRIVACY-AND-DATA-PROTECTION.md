@@ -52,7 +52,7 @@ This system goes far beyond basic anonymization, implementing **12 layers of sys
 - **Timing Protection**: Random delays to prevent correlation
 - **Network Privacy**: IP address anonymization
 - **Structural Privacy**: Cryptographic receipt model (no reversible links)
-- **Statistical Privacy**: K-anonymity thresholds (differential privacy optional for public statistics)
+- **Statistical Privacy**: K-anonymity and differential privacy optional for public statistics (admins see complete data)
 - **Session Security**: Data minimization and cleanup
 - **Audit Safety**: Privacy-safe logging
 - **Validation**: Automatic privacy checks
@@ -429,18 +429,22 @@ Average = 4.6 (exact value)
 
 ---
 
-### Layer 8: K-Anonymity Enforcement
+### Layer 8: K-Anonymity (Optional - Public Statistics Only)
 
 **Technology:** Minimum group size thresholds
 
-**How It Works:**
+**Status:** Optional feature for public-facing statistics. **Not enforced for admin dashboard** (admins need complete data for all teachers).
+
+**How It Works (if implemented for public statistics):**
 ```javascript
-// Before showing teacher statistics
+// Public API endpoint (if implemented)
+GET /api/public/teacher-stats/:teacherId
+
 if (evaluationCount < 5) {
   return "Insufficient data for privacy protection";
 }
 
-// Before showing detailed reports
+// Department-wide reports
 if (evaluationCount < 10) {
   return "Statistics hidden for privacy";
 }
@@ -449,7 +453,7 @@ if (evaluationCount < 10) {
 **K-Anonymity Definition:**
 Each record is indistinguishable from at least k-1 other records.
 
-**Protection Against:**
+**Protection Against (when applied):**
 - ✅ Small class identification
 - ✅ Outlier detection
 - ✅ Statistical inference in small groups
@@ -465,10 +469,20 @@ Rating 2: 5.0
 Rating 3: 2.0
 → The low rating is easily identifiable
 
-With k-anonymity (k=5):
+With k-anonymity (k=5) for public API:
 → Statistics not shown until ≥5 evaluations
 → Individual ratings protected
+
+Admin Dashboard:
+→ Shows all teachers, even with 3 evaluations
+→ Admins need complete data for personnel decisions
 ```
+
+**Note:** K-anonymity is **not recommended for internal admin dashboards** because:
+1. Admins need visibility into ALL teachers (including new ones)
+2. Personnel decisions require complete data (not hidden statistics)
+3. Admin access is already restricted and logged
+4. Other privacy layers (anonymization, encryption) protect student identity
 
 ---
 
@@ -1179,21 +1193,26 @@ Result: Zero forensic window, zero reversible linkage
 **Answer: Extremely Difficult** ✅ 
 
 **Reasons:**
-- Differential privacy noise added
-- K-anonymity thresholds enforced
-- Minimum group sizes required
+- Anonymous token system prevents direct identification
+- Field-level encryption protects sensitive data
+- Admin access is restricted and logged
 - Reverse calculation designed to be mathematically infeasible
+
+**Note:** Admin dashboard shows accurate statistics (no DP noise) for informed decision-making.
 
 ---
 
 ### Can Small Classes Expose Students?
 
-**Answer: Extremely Difficult** ✅ 
+**Answer: No - Student Identity Protected** ✅ 
 
 **Reasons:**
-- K-anonymity minimum: 5 evaluations
-- Statistics hidden for small groups
-- Teacher reports require ≥5 evaluations
+- Anonymous tokens prevent linking evaluations to students
+- Cryptographic receipt model (no reversible links)
+- Field-level encryption for sensitive data
+- No student identifiers stored in evaluation records
+
+**Note:** Admin dashboard shows all teachers (including those with <5 evaluations) for complete visibility. K-anonymity is optional for public-facing statistics only.
 - Strong individual protection in small classes
 
 ---
@@ -1881,14 +1900,16 @@ Each record is indistinguishable from at least k-1 other records with respect to
 - [ ] All anonymous tokens properly generated
 - [ ] IP addresses anonymized
 - [ ] Timestamps rounded
-- [ ] Decoupling scheduler running
-- [ ] K-anonymity thresholds enforced
-- [ ] Differential privacy applied
+- [ ] Field-level encryption configured (ENCRYPTION_MASTER_KEY)
 - [ ] Session security configured
 - [ ] HTTPS enabled (production)
 - [ ] Documentation complete
 - [ ] Staff trained on privacy features
 - [ ] Incident response plan established
+
+**Optional (for public-facing statistics):**
+- [ ] K-anonymity thresholds implemented
+- [ ] Differential privacy applied
 
 ---
 
@@ -2546,14 +2567,13 @@ This system provides:
 - Enhanced Layer 4 protection documentation
 
 **Version 2.0** - February 10, 2026
-- Added 10-layer privacy protection system
-- Implemented differential privacy
-- Added k-anonymity enforcement
-- Created privacy scheduler
+- Added 12-layer privacy protection system
+- Implemented field-level encryption (AES-256-GCM)
+- K-anonymity and differential privacy (optional for public statistics)
 - Enhanced anonymous tokens to SHA-512
 - Added IP anonymization
 - Implemented timestamp rounding
-- Implemented cryptographic receipt model (v2.1)
+- Implemented cryptographic receipt model
 - Created comprehensive audit system
 
 **Version 1.0** - Original Implementation

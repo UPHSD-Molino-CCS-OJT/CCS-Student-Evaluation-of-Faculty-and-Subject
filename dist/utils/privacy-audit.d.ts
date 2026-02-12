@@ -98,8 +98,9 @@ declare class PrivacyAuditor {
      */
     private checkLayer7_DifferentialPrivacy;
     /**
-     * LAYER 8: K-Anonymity Thresholds
-     * Check if minimum group sizes are enforced (k=5 for teachers, k=10 for reports)
+     * LAYER 8: K-Anonymity (Optional - Public Statistics Only)
+     * Check if minimum group sizes are enforced for public-facing statistics
+     * Note: Not enforced for admin dashboard (admins need complete data)
      */
     private checkLayer8_KAnonymity;
     /**
