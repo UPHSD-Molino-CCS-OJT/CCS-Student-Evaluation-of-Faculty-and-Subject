@@ -49,13 +49,8 @@ const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 // Import Privacy Protection Utilities
 const privacy_protection_1 = __importDefault(require("../utils/privacy-protection"));
 const encryption_1 = require("../utils/encryption");
-const dp_budget_1 = __importDefault(require("../utils/dp-budget"));
 // Import middleware
 const auth_1 = require("../middleware/auth");
-// K-ANONYMITY THRESHOLD
-// Minimum number of evaluations required before displaying aggregate statistics
-// This ensures individual responses cannot be identified or inferred
-const K_ANONYMITY_THRESHOLD = 5;
 /**
  * Helper: Decrypt comments field
  * Returns plaintext string from AES-256-GCM encrypted data
@@ -481,96 +476,50 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
         const totalEvaluations = await Evaluation_1.default.countDocuments();
         const totalTeachers = await Teacher_1.default.countDocuments({ status: 'active' });
         const totalPrograms = await Program_1.default.countDocuments();
-        // K-ANONYMITY CHECK: Ensure minimum group size for privacy protection
-        if (!privacy_protection_1.default.checkKAnonymity(totalEvaluations, K_ANONYMITY_THRESHOLD)) {
-            res.json({
-                totalEvaluations,
-                totalTeachers,
-                totalPrograms,
-                averageRatings: { teacher: 0, learning: 0, classroom: 0, overall: 0 },
-                topTeachers: [],
-                recentEvaluations: [],
-                privacyNotice: `Insufficient data for privacy protection. At least ${K_ANONYMITY_THRESHOLD} evaluations required to display statistics.`
-            });
-            return;
-        }
-        // DIFFERENTIAL PRIVACY WITH BUDGET TRACKING
-        const dpBudget = dp_budget_1.default.getInstance();
-        // Calculate proper sensitivity for averaging
-        // For averaging n ratings in range [1,5], sensitivity = 4/n (max change when one rating changes from 1 to 5)
-        const sensitivity = Math.max(4 / totalEvaluations, 0.01); // Minimum 0.01 to avoid division issues
-        // Query 1: Average ratings (with DP budget tracking & caching)
-        const avgRatingsQuery = await dpBudget.executeQuery({
-            queryType: 'dashboard_average_ratings',
-            parameters: { totalEvaluations },
-            epsilon: 0.1 // Use default epsilon but with proper sensitivity
-        }, async (epsilon) => {
-            const avgRatings = await Evaluation_1.default.aggregate([
-                {
-                    $addFields: {
-                        teacher_avg: {
-                            $avg: [
-                                '$teacher_diction', '$teacher_grammar', '$teacher_personality',
-                                '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
-                            ]
-                        },
-                        learning_avg: {
-                            $avg: [
-                                '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
-                                '$learning_interest', '$learning_explanation', '$learning_clarity',
-                                '$learning_integration', '$learning_mastery', '$learning_methodology',
-                                '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
-                            ]
-                        },
-                        classroom_avg: {
-                            $avg: [
-                                '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
-                                '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
-                            ]
-                        }
-                    }
-                },
-                {
-                    $addFields: {
-                        overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        teacher: { $avg: '$teacher_avg' },
-                        learning: { $avg: '$learning_avg' },
-                        classroom: { $avg: '$classroom_avg' },
-                        overall: { $avg: '$overall_avg' }
+        // Calculate average ratings
+        const avgRatings = await Evaluation_1.default.aggregate([
+            {
+                $addFields: {
+                    teacher_avg: {
+                        $avg: [
+                            '$teacher_diction', '$teacher_grammar', '$teacher_personality',
+                            '$teacher_disposition', '$teacher_dynamic', '$teacher_fairness'
+                        ]
+                    },
+                    learning_avg: {
+                        $avg: [
+                            '$learning_motivation', '$learning_critical_thinking', '$learning_organization',
+                            '$learning_interest', '$learning_explanation', '$learning_clarity',
+                            '$learning_integration', '$learning_mastery', '$learning_methodology',
+                            '$learning_values', '$learning_grading', '$learning_synthesis', '$learning_reasonableness'
+                        ]
+                    },
+                    classroom_avg: {
+                        $avg: [
+                            '$classroom_attendance', '$classroom_policies', '$classroom_discipline',
+                            '$classroom_authority', '$classroom_prayers', '$classroom_punctuality'
+                        ]
                     }
                 }
-            ]);
-            // Apply differential privacy noise with proper sensitivity
-            const rawRatings = avgRatings.length > 0 ? avgRatings[0] :
-                { teacher: 0, learning: 0, classroom: 0, overall: 0 };
-            // Clamp results to [0, 5] range after adding noise
-            return {
-                teacher: Math.max(0, Math.min(5, privacy_protection_1.default.addDifferentialPrivacyNoise(rawRatings.teacher || 0, epsilon, sensitivity))),
-                learning: Math.max(0, Math.min(5, privacy_protection_1.default.addDifferentialPrivacyNoise(rawRatings.learning || 0, epsilon, sensitivity))),
-                classroom: Math.max(0, Math.min(5, privacy_protection_1.default.addDifferentialPrivacyNoise(rawRatings.classroom || 0, epsilon, sensitivity))),
-                overall: Math.max(0, Math.min(5, privacy_protection_1.default.addDifferentialPrivacyNoise(rawRatings.overall || 0, epsilon, sensitivity)))
-            };
-        });
-        // Check if DP budget is exhausted
-        if (!avgRatingsQuery.success) {
-            res.json({
-                totalEvaluations,
-                totalTeachers,
-                totalPrograms,
-                averageRatings: { teacher: 0, learning: 0, classroom: 0, overall: 0 },
-                topTeachers: [],
-                recentEvaluations: [],
-                privacyNotice: `Privacy budget exhausted: ${avgRatingsQuery.error}`,
-                dpBudgetStatus: avgRatingsQuery.budgetStatus
-            });
-            return;
-        }
-        const averageRatings = avgRatingsQuery.result;
+            },
+            {
+                $addFields: {
+                    overall_avg: { $avg: ['$teacher_avg', '$learning_avg', '$classroom_avg'] }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    teacher: { $avg: '$teacher_avg' },
+                    learning: { $avg: '$learning_avg' },
+                    classroom: { $avg: '$classroom_avg' },
+                    overall: { $avg: '$overall_avg' }
+                }
+            }
+        ]);
+        // Use actual ratings without any privacy noise
+        const averageRatings = avgRatings.length > 0 ? avgRatings[0] :
+            { teacher: 0, learning: 0, classroom: 0, overall: 0 };
         // Top teachers
         const topTeachers = await Evaluation_1.default.aggregate([
             {
@@ -609,8 +558,8 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
                     evaluation_count: { $sum: 1 }
                 }
             },
-            // K-ANONYMITY: Filter out teachers with less than 5 evaluations
-            { $match: { evaluation_count: { $gte: 5 } } },
+            // Admin view: Show all teachers with at least 1 evaluation
+            { $match: { evaluation_count: { $gte: 1 } } },
             { $sort: { average_rating: -1 } },
             { $limit: 5 },
             {
@@ -631,17 +580,14 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
                 }
             }
         ]);
-        // K-ANONYMITY: Only show recent evaluations if there are enough total evaluations
-        let recentEvaluationsRaw = [];
-        if (totalEvaluations >= K_ANONYMITY_THRESHOLD) {
-            recentEvaluationsRaw = await Evaluation_1.default.find()
-                .populate('teacher_id', 'full_name')
-                .populate('course_id', 'name code')
-                .sort({ createdAt: -1 })
-                .limit(10)
-                .select('-anonymous_token -ip_address')
-                .lean();
-        }
+        // Recent evaluations
+        const recentEvaluationsRaw = await Evaluation_1.default.find()
+            .populate('teacher_id', 'full_name')
+            .populate('course_id', 'name code')
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .select('-anonymous_token -ip_address')
+            .lean();
         // Transform to match frontend expectation (teacher, course instead of teacher_id, course_id)
         const recentEvaluations = recentEvaluationsRaw.map((evaluation) => {
             // Calculate averages (virtuals not available with .lean())
@@ -684,20 +630,14 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
                 overall_average
             };
         });
-        // Add privacy notice if query was cached
-        const privacyNotice = avgRatingsQuery.cached
-            ? 'Statistics are cached with differential privacy noise. Budget: ' +
-                `${avgRatingsQuery.budgetStatus?.queriesUsed}/${avgRatingsQuery.budgetStatus?.maxQueries} queries used.`
-            : undefined;
+        // Admin response
         res.json({
             totalEvaluations,
             totalTeachers,
             totalPrograms,
             averageRatings,
             topTeachers,
-            recentEvaluations,
-            dpBudgetStatus: avgRatingsQuery.budgetStatus,
-            privacyNotice
+            recentEvaluations
         });
     }
     catch (error) {
