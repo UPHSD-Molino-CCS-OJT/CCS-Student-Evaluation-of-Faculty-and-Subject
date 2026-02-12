@@ -64,27 +64,29 @@
 
 ## Overview
 
-### What is Zero-Knowledge Privacy?
+### What is Privacy-Preserving Architecture?
 
-This system implements a **multi-layered privacy model** for student evaluations, providing strong anonymity protections through architectural design choices. The term "zero-knowledge" in this context refers to the system's design goal: student evaluations are stored in a way designed to make it **very difficult to trace back to the student's identity** under normal operational circumstances.
+This system implements a **privacy-preserving architecture with structural unlinkability** for student evaluations, providing strong anonymity protections through multi-layered architectural design choices. Student evaluations are stored in a way designed to make it **very difficult to trace back to the student's identity** under normal operational circumstances.
 
-⚠️ **Important Clarification:**
-This system does NOT implement true "zero-knowledge proofs" in the cryptographic sense (which would require ZK-SNARKs, secure multi-party computation, or similar). Instead, it employs:
+⚠️ **Important Technical Clarification:**
+This system does NOT implement true "zero-knowledge proofs" in the cryptographic sense (which would require ZK-SNARKs, ZK-STARKs, secure multi-party computation, or similar advanced cryptographic protocols). Instead, it employs **strong anonymization techniques**:
 - **Pseudonymization** via cryptographic hashing
 - **Structural unlinkability** via database design
 - **Temporal obfuscation** via timestamp rounding
 - **Defense-in-depth** via multiple independent layers
 
-**What "Zero-Knowledge" Means Here:**
+**What This Privacy Architecture Provides:**
 - System administrators should not be able to determine which specific student submitted which evaluation through simple database queries
-- Direct student-to-evaluation links are prevented by design
-- Multiple layers reduce risk even if individual layers are compromised
+- Direct student-to-evaluation links are prevented by design (structural unlinkability)
+- Multiple independent privacy layers reduce risk even if individual layers are compromised
+- Strong anonymization via cryptographic hashing and architectural separation
 
-**What "Zero-Knowledge" Does NOT Mean:**
-- NOT mathematically impossible to correlate (metadata + auxiliary info may enable correlation)
-- NOT resistant to all insider threats (admin with master key + DB access can decrypt)
-- NOT immune to sophisticated attacks (stylometry, timing analysis, small-cohort inference)
-- NOT true cryptographic zero-knowledge (no ZK proofs involved)
+**What This System Does NOT Provide:**
+- NOT cryptographic zero-knowledge proofs (no ZK-SNARKs, ZK-STARKs, or similar)
+- NOT mathematically provable unlinkability (metadata + auxiliary info may enable correlation)
+- NOT complete resistance to insider threats (admin with master key + DB access can decrypt)
+- NOT immunity to sophisticated attacks (stylometry, timing analysis, small-cohort inference)
+- NOT formal privacy guarantees (would require ZK protocols or secure multi-party computation)
 
 ### Why This Matters
 
@@ -2758,7 +2760,7 @@ Example Policy:
 ### Documentation Files
 
 - **This file:** Complete privacy documentation
-- **ZERO-KNOWLEDGE-PRIVACY.md:** Original privacy design (legacy)
+- **ZERO-KNOWLEDGE-PRIVACY.md:** Original privacy design (legacy - terminology now updated to "Privacy-Preserving Architecture")
 - **PRIVACY-AUDIT-IMPLEMENTATION.md:** Audit system details (legacy)
 - **Installation:** See main README.md
 
@@ -2856,7 +2858,7 @@ This system provides:
   - Added differential privacy limitation warnings (no budget tracking)
   - Enhanced stylometric attack section with ML threat modeling
   - Added GDPR data subject rights compliance gap documentation
-  - Updated "zero-knowledge" definition to clarify not true ZK proofs
+  - Replaced "zero-knowledge" terminology with accurate "privacy-preserving architecture" (not true ZK proofs)
   - Replaced "structurally impossible" claims with "designed to prevent"
   - Added comprehensive vulnerability table to attack vector summary
   - Documented realistic attacker success probabilities
@@ -2886,7 +2888,7 @@ This system provides:
 
 **Version 1.0** - Original Implementation
 - Basic anonymous token system (SHA-256)
-- Zero-knowledge privacy foundation
+- Privacy-preserving architecture foundation (strong anonymization)
 - Session-based authentication
 - Enrollment tracking
 

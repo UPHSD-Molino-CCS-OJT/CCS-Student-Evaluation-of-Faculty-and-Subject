@@ -373,7 +373,7 @@
 This system implements a **12-layer systematic privacy protection system** to provide strong student anonymity using cutting-edge privacy preservation techniques.
 
 **Quick Overview:**
-- ✅ **Zero-Knowledge Privacy:** Designed to prevent tracing evaluations to students
+- ✅ **Privacy-Preserving Architecture:** Strong anonymization with structural unlinkability designed to prevent tracing evaluations to students
 - ✅ **Cryptographic Security:** SHA-512 anonymous tokens
 - ✅ **Timing Protection:** Random delays prevent correlation
 - ✅ **Network Privacy:** IP addresses anonymized
