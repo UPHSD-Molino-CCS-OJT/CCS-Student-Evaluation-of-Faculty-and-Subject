@@ -416,13 +416,19 @@ const StudentEvaluate: React.FC = () => {
               <div className="flex items-start">
                 <i className="fas fa-shield-alt text-amber-600 mt-1 mr-3"></i>
                 <div className="text-sm text-amber-800">
-                  <p className="font-semibold mb-1">Anonymity Protection Reminder</p>
+                  <p className="font-semibold mb-1">⚠️ Anonymity Protection & Risk Warning</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Do NOT include your name, student number, email, or other identifying details</li>
+                    <li><strong>Do NOT</strong> include your name, student number, email, or identifying details</li>
+                    <li><strong>IMPORTANT:</strong> Your writing style itself may be identifiable using advanced analysis techniques</li>
                     <li>Avoid unique or distinctive phrasing that could identify you</li>
+                    <li><strong>For maximum anonymity:</strong> Leave comments blank or use generic professional language</li>
                     <li>Keep comments professional and focused on course/teaching feedback</li>
-                    <li>Comments must be 20-500 characters or left blank</li>
+                    <li>Comments must be 20-500 characters if provided</li>
                   </ul>
+                  <p className="mt-2 text-xs italic">
+                    While the system strongly protects your identity through cryptographic anonymization, 
+                    we cannot guarantee absolute anonymity against all possible identification methods.
+                  </p>
                 </div>
               </div>
             </div>
