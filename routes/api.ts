@@ -311,11 +311,19 @@ router.get('/student/subjects', async (req: IRequest, res: Response): Promise<vo
             return nameA.localeCompare(nameB);
         });
         
+        // Decrypt populated program for student
+        const studentObj = student.toObject();
+        const decryptedProgram = studentObj.program_id ? {
+            ...studentObj.program_id,
+            name: safeDecrypt((studentObj.program_id as any).name),
+            code: safeDecrypt((studentObj.program_id as any).code)
+        } : studentObj.program_id;
+        
         res.json({ 
             authenticated: true,
             student: {
                 full_name: safeDecrypt(student.full_name),
-                program: student.program_id,
+                program: decryptedProgram,
                 year_level: safeDecrypt(student.year_level)
             },
             enrollments: decryptedEnrollments.map(e => ({
