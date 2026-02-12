@@ -17,7 +17,7 @@ import { Types } from 'mongoose';
 // Import Privacy Protection Utilities
 import PrivacyProtection from '../utils/privacy-protection';
 import { encryptField, decryptField, isEncryptionConfigured, EncryptedData } from '../utils/encryption';
-import { safeDecrypt } from '../utils/encryption-helpers';
+import { safeDecrypt, safeEncrypt, findByEncryptedField } from '../utils/encryption-helpers';
 
 // Import middleware
 import { isAuthenticated } from '../middleware/auth';
@@ -65,17 +65,30 @@ router.get('/test/students', async (req: IRequest, res: Response): Promise<void>
     try {
         const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
         
-        let query = Student.find().select('student_number full_name').sort({ student_number: 1 });
+        // Fetch all students (cannot sort by encrypted field in database)
+        const students = await Student.find().select('student_number full_name');
         
-        if (limit && limit > 0) {
-            query = query.limit(limit);
-        }
-        
-        const students = await query;
-        
-        res.json(students.map(s => ({
+        // Decrypt and prepare students for response
+        const decryptedStudents = students.map(s => ({
             student_number: safeDecrypt(s.student_number),
-            full_name: safeDecrypt(s.full_name)
+            full_name: safeDecrypt(s.full_name),
+            _id: s._id
+        }));
+        
+        // Sort by student_number in memory (after decryption)
+        decryptedStudents.sort((a, b) => {
+            return a.student_number.localeCompare(b.student_number, undefined, { numeric: true });
+        });
+        
+        // Apply limit if specified
+        const result = limit && limit > 0 
+            ? decryptedStudents.slice(0, limit) 
+            : decryptedStudents;
+        
+        // Return only student_number and full_name (exclude _id)
+        res.json(result.map(({ student_number, full_name }) => ({ 
+            student_number, 
+            full_name 
         })));
     } catch (error) {
         res.status(500).json({ error: 'Error fetching students for testing' });
@@ -87,7 +100,13 @@ router.post('/admin/login', async (req: IRequest, res: Response): Promise<void> 
     try {
         const { username, password } = req.body;
         
-        const admin = await Admin.findOne({ username });
+        // Find admin by encrypted username field
+        // Must fetch and decrypt because username is encrypted at rest
+        const admin = await findByEncryptedField<typeof Admin.prototype>(
+            Admin, 
+            'username', 
+            username
+        );
         
         if (!admin) {
             res.status(401).json({ 
@@ -177,7 +196,18 @@ router.post('/student/login', async (req: IRequest, res: Response): Promise<void
             return;
         }
         
-        const student = await Student.findOne({ student_number }).populate('program_id');
+        // Find student by encrypted student_number field
+        // Must fetch and decrypt because student_number is encrypted at rest
+        const student = await findByEncryptedField<typeof Student.prototype>(
+            Student, 
+            'student_number', 
+            student_number
+        );
+        
+        // Populate program_id after finding the student
+        if (student) {
+            await student.populate('program_id');
+        }
         
         if (!student) {
             res.status(404).json({ 
@@ -236,8 +266,50 @@ router.get('/student/subjects', async (req: IRequest, res: Response): Promise<vo
         
         const enrollments = await Enrollment.find({ student_id: student._id })
             .populate('course_id')
-            .populate('teacher_id')
-            .sort({ 'course_id.name': 1 });
+            .populate('teacher_id');
+        
+        // Decrypt enrollment and populated fields
+        const decryptedEnrollments = enrollments.map(e => {
+            const enrollment = e.toObject();
+            
+            // Decrypt enrollment fields
+            const decryptedEnrollment: any = {
+                ...enrollment,
+                section_code: safeDecrypt(enrollment.section_code),
+                school_year: safeDecrypt(enrollment.school_year),
+                semester: safeDecrypt(enrollment.semester)
+            };
+            
+            // Decrypt populated course fields
+            if (enrollment.course_id) {
+                decryptedEnrollment.course_id = {
+                    ...enrollment.course_id,
+                    name: safeDecrypt((enrollment.course_id as any).name),
+                    code: safeDecrypt((enrollment.course_id as any).code)
+                };
+            }
+            
+            // Decrypt populated teacher fields
+            if (enrollment.teacher_id) {
+                decryptedEnrollment.teacher_id = {
+                    ...enrollment.teacher_id,
+                    full_name: safeDecrypt((enrollment.teacher_id as any).full_name),
+                    employee_id: safeDecrypt((enrollment.teacher_id as any).employee_id),
+                    email: safeDecrypt((enrollment.teacher_id as any).email),
+                    department: safeDecrypt((enrollment.teacher_id as any).department),
+                    status: safeDecrypt((enrollment.teacher_id as any).status)
+                };
+            }
+            
+            return decryptedEnrollment;
+        });
+        
+        // Sort by course name in memory (after decryption)
+        decryptedEnrollments.sort((a, b) => {
+            const nameA = a.course_id?.name || '';
+            const nameB = b.course_id?.name || '';
+            return nameA.localeCompare(nameB);
+        });
         
         res.json({ 
             authenticated: true,
@@ -246,13 +318,14 @@ router.get('/student/subjects', async (req: IRequest, res: Response): Promise<vo
                 program: student.program_id,
                 year_level: safeDecrypt(student.year_level)
             },
-            enrollments: enrollments.map(e => ({
+            enrollments: decryptedEnrollments.map(e => ({
                 _id: e._id,
                 has_evaluated: e.has_evaluated,
                 course: e.course_id,
                 teacher: e.teacher_id,
                 school_year: e.school_year,
-                semester: e.semester
+                semester: e.semester,
+                section_code: e.section_code
             }))
         });
     } catch (error) {
@@ -296,13 +369,41 @@ router.get('/student/enrollment/:enrollmentId', async (req: IRequest, res: Respo
             return;
         }
         
+        // Decrypt enrollment and populated fields for student viewing
+        const enrollmentObj = enrollment.toObject();
+        
+        // Decrypt course fields (including nested program)
+        const course = enrollmentObj.course_id ? {
+            ...enrollmentObj.course_id,
+            name: safeDecrypt((enrollmentObj.course_id as any).name),
+            code: safeDecrypt((enrollmentObj.course_id as any).code),
+            program_id: (enrollmentObj.course_id as any).program_id ? {
+                ...(enrollmentObj.course_id as any).program_id,
+                name: safeDecrypt(((enrollmentObj.course_id as any).program_id as any).name),
+                code: safeDecrypt(((enrollmentObj.course_id as any).program_id as any).code)
+            } : (enrollmentObj.course_id as any).program_id
+        } : enrollmentObj.course_id;
+        
+        // Decrypt teacher fields
+        const teacher = enrollmentObj.teacher_id ? {
+            ...enrollmentObj.teacher_id,
+            full_name: safeDecrypt((enrollmentObj.teacher_id as any).full_name),
+            employee_id: safeDecrypt((enrollmentObj.teacher_id as any).employee_id),
+            email: safeDecrypt((enrollmentObj.teacher_id as any).email),
+            department: safeDecrypt((enrollmentObj.teacher_id as any).department),
+            status: safeDecrypt((enrollmentObj.teacher_id as any).status)
+        } : enrollmentObj.teacher_id;
+        
         res.json({ 
             success: true,
             enrollment: {
                 _id: enrollment._id,
-                course: enrollment.course_id,
-                teacher: enrollment.teacher_id,
-                has_evaluated: enrollment.has_evaluated
+                course,
+                teacher,
+                has_evaluated: enrollment.has_evaluated,
+                section_code: safeDecrypt(enrollmentObj.section_code),
+                school_year: safeDecrypt(enrollmentObj.school_year),
+                semester: safeDecrypt(enrollmentObj.semester)
             }
         });
     } catch (error) {
@@ -843,7 +944,25 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
 // Teachers
 router.get('/admin/teachers', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
-        const teachers = await Teacher.find().sort({ full_name: 1 });
+        // Fetch all teachers (cannot sort by encrypted field in database)
+        const teachersRaw = await Teacher.find();
+        
+        // Decrypt fields and prepare for admin viewing
+        const teachers = teachersRaw.map(t => {
+            const teacher = t.toObject();
+            return {
+                ...teacher,
+                full_name: safeDecrypt(teacher.full_name),
+                employee_id: safeDecrypt(teacher.employee_id),
+                email: safeDecrypt(teacher.email),
+                department: safeDecrypt(teacher.department),
+                status: safeDecrypt(teacher.status)
+            };
+        });
+        
+        // Sort by full_name in memory (after decryption)
+        teachers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        
         res.json({ teachers });
     } catch (error) {
         res.status(500).json({ error: 'Error fetching teachers' });
@@ -852,8 +971,28 @@ router.get('/admin/teachers', isAuthenticated, async (_req: IRequest, res: Respo
 
 router.post('/admin/teachers', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const teacher = await Teacher.create(req.body);
-        res.json({ success: true, teacher });
+        // Encrypt fields before saving
+        const teacherData = {
+            ...req.body,
+            full_name: safeEncrypt(req.body.full_name),
+            employee_id: safeEncrypt(req.body.employee_id),
+            email: safeEncrypt(req.body.email),
+            department: safeEncrypt(req.body.department),
+            status: safeEncrypt(req.body.status)
+        };
+        const teacher = await Teacher.create(teacherData);
+        
+        // Decrypt for response to admin
+        const response = {
+            ...teacher.toObject(),
+            full_name: safeDecrypt(teacher.full_name),
+            employee_id: safeDecrypt(teacher.employee_id),
+            email: safeDecrypt(teacher.email),
+            department: safeDecrypt(teacher.department),
+            status: safeDecrypt(teacher.status)
+        };
+        
+        res.json({ success: true, teacher: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -862,8 +1001,33 @@ router.post('/admin/teachers', isAuthenticated, async (req: IRequest, res: Respo
 
 router.put('/admin/teachers/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const teacher = await Teacher.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ success: true, teacher });
+        // Encrypt fields before updating
+        const teacherData = {
+            ...req.body,
+            full_name: safeEncrypt(req.body.full_name),
+            employee_id: safeEncrypt(req.body.employee_id),
+            email: safeEncrypt(req.body.email),
+            department: safeEncrypt(req.body.department),
+            status: safeEncrypt(req.body.status)
+        };
+        const teacher = await Teacher.findByIdAndUpdate(req.params.id, teacherData, { new: true });
+        
+        if (!teacher) {
+            res.status(404).json({ message: 'Teacher not found' });
+            return;
+        }
+        
+        // Decrypt for response to admin
+        const response = {
+            ...teacher.toObject(),
+            full_name: safeDecrypt(teacher.full_name),
+            employee_id: safeDecrypt(teacher.employee_id),
+            email: safeDecrypt(teacher.email),
+            department: safeDecrypt(teacher.department),
+            status: safeDecrypt(teacher.status)
+        };
+        
+        res.json({ success: true, teacher: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -883,7 +1047,22 @@ router.delete('/admin/teachers/:id', isAuthenticated, async (req: IRequest, res:
 // Programs
 router.get('/admin/programs', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
-        const programs = await Program.find().sort({ name: 1 });
+        // Fetch all programs (cannot sort by encrypted field in database)
+        const programsRaw = await Program.find();
+        
+        // Decrypt fields and prepare for admin viewing
+        const programs = programsRaw.map(p => {
+            const program = p.toObject();
+            return {
+                ...program,
+                name: safeDecrypt(program.name),
+                code: safeDecrypt(program.code)
+            };
+        });
+        
+        // Sort by name in memory (after decryption)
+        programs.sort((a, b) => a.name.localeCompare(b.name));
+        
         res.json({ programs });
     } catch (error) {
         res.status(500).json({ error: 'Error fetching programs' });
@@ -892,8 +1071,22 @@ router.get('/admin/programs', isAuthenticated, async (_req: IRequest, res: Respo
 
 router.post('/admin/programs', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const program = await Program.create(req.body);
-        res.json({ success: true, program });
+        // Encrypt fields before saving
+        const programData = {
+            ...req.body,
+            name: safeEncrypt(req.body.name),
+            code: safeEncrypt(req.body.code)
+        };
+        const program = await Program.create(programData);
+        
+        // Decrypt for response to admin
+        const response = {
+            ...program.toObject(),
+            name: safeDecrypt(program.name),
+            code: safeDecrypt(program.code)
+        };
+        
+        res.json({ success: true, program: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -902,8 +1095,27 @@ router.post('/admin/programs', isAuthenticated, async (req: IRequest, res: Respo
 
 router.put('/admin/programs/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const program = await Program.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ success: true, program });
+        // Encrypt fields before updating
+        const programData = {
+            ...req.body,
+            name: safeEncrypt(req.body.name),
+            code: safeEncrypt(req.body.code)
+        };
+        const program = await Program.findByIdAndUpdate(req.params.id, programData, { new: true });
+        
+        if (!program) {
+            res.status(404).json({ message: 'Program not found' });
+            return;
+        }
+        
+        // Decrypt for response to admin
+        const response = {
+            ...program.toObject(),
+            name: safeDecrypt(program.name),
+            code: safeDecrypt(program.code)
+        };
+        
+        res.json({ success: true, program: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -923,7 +1135,30 @@ router.delete('/admin/programs/:id', isAuthenticated, async (req: IRequest, res:
 // Courses
 router.get('/admin/courses', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
-        const courses = await Course.find().populate('program_id').sort({ name: 1 });
+        // Fetch all courses (cannot sort by encrypted field in database)
+        const coursesRaw = await Course.find().populate('program_id');
+        
+        // Decrypt fields and prepare for admin viewing
+        const courses = coursesRaw.map(c => {
+            const course = c.toObject();
+            // Also decrypt populated program fields
+            const program = course.program_id ? {
+                ...course.program_id,
+                name: safeDecrypt((course.program_id as any).name),
+                code: safeDecrypt((course.program_id as any).code)
+            } : course.program_id;
+            
+            return {
+                ...course,
+                name: safeDecrypt(course.name),
+                code: safeDecrypt(course.code),
+                program_id: program
+            };
+        });
+        
+        // Sort by name in memory (after decryption)
+        courses.sort((a, b) => a.name.localeCompare(b.name));
+        
         res.json({ courses });
     } catch (error) {
         res.status(500).json({ error: 'Error fetching courses' });
@@ -932,8 +1167,22 @@ router.get('/admin/courses', isAuthenticated, async (_req: IRequest, res: Respon
 
 router.post('/admin/courses', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const course = await Course.create(req.body);
-        res.json({ success: true, course });
+        // Encrypt fields before saving
+        const courseData = {
+            ...req.body,
+            name: safeEncrypt(req.body.name),
+            code: safeEncrypt(req.body.code)
+        };
+        const course = await Course.create(courseData);
+        
+        // Decrypt for response to admin
+        const response = {
+            ...course.toObject(),
+            name: safeDecrypt(course.name),
+            code: safeDecrypt(course.code)
+        };
+        
+        res.json({ success: true, course: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -942,8 +1191,27 @@ router.post('/admin/courses', isAuthenticated, async (req: IRequest, res: Respon
 
 router.put('/admin/courses/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ success: true, course });
+        // Encrypt fields before updating
+        const courseData = {
+            ...req.body,
+            name: safeEncrypt(req.body.name),
+            code: safeEncrypt(req.body.code)
+        };
+        const course = await Course.findByIdAndUpdate(req.params.id, courseData, { new: true });
+        
+        if (!course) {
+            res.status(404).json({ message: 'Course not found' });
+            return;
+        }
+        
+        // Decrypt for response to admin
+        const response = {
+            ...course.toObject(),
+            name: safeDecrypt(course.name),
+            code: safeDecrypt(course.code)
+        };
+        
+        res.json({ success: true, course: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -963,7 +1231,34 @@ router.delete('/admin/courses/:id', isAuthenticated, async (req: IRequest, res: 
 // Students
 router.get('/admin/students', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
-        const students = await Student.find().populate('program_id').sort({ full_name: 1 });
+        // Fetch all students (cannot sort by encrypted field in database)
+        const studentsRaw = await Student.find().populate('program_id');
+        
+        // Decrypt fields and prepare for admin viewing
+        const students = studentsRaw.map(s => {
+            const student = s.toObject();
+            // Also decrypt populated program fields
+            const program = student.program_id ? {
+                ...student.program_id,
+                name: safeDecrypt((student.program_id as any).name),
+                code: safeDecrypt((student.program_id as any).code)
+            } : student.program_id;
+            
+            return {
+                ...student,
+                student_number: safeDecrypt(student.student_number),
+                full_name: safeDecrypt(student.full_name),
+                email: safeDecrypt(student.email),
+                year_level: safeDecrypt(student.year_level),
+                section: safeDecrypt(student.section),
+                status: safeDecrypt(student.status),
+                program_id: program
+            };
+        });
+        
+        // Sort by full_name in memory (after decryption)
+        students.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        
         res.json({ students });
     } catch (error) {
         res.status(500).json({ error: 'Error fetching students' });
@@ -972,8 +1267,30 @@ router.get('/admin/students', isAuthenticated, async (_req: IRequest, res: Respo
 
 router.post('/admin/students', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const student = await Student.create(req.body);
-        res.json({ success: true, student });
+        // Encrypt fields before saving
+        const studentData = {
+            ...req.body,
+            student_number: safeEncrypt(req.body.student_number),
+            full_name: safeEncrypt(req.body.full_name),
+            email: safeEncrypt(req.body.email),
+            year_level: safeEncrypt(req.body.year_level),
+            section: safeEncrypt(req.body.section),
+            status: safeEncrypt(req.body.status)
+        };
+        const student = await Student.create(studentData);
+        
+        // Decrypt for response to admin
+        const response = {
+            ...student.toObject(),
+            student_number: safeDecrypt(student.student_number),
+            full_name: safeDecrypt(student.full_name),
+            email: safeDecrypt(student.email),
+            year_level: safeDecrypt(student.year_level),
+            section: safeDecrypt(student.section),
+            status: safeDecrypt(student.status)
+        };
+        
+        res.json({ success: true, student: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
@@ -982,8 +1299,35 @@ router.post('/admin/students', isAuthenticated, async (req: IRequest, res: Respo
 
 router.put('/admin/students/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
-        const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ success: true, student });
+        // Encrypt fields before updating
+        const studentData = {
+            ...req.body,
+            student_number: safeEncrypt(req.body.student_number),
+            full_name: safeEncrypt(req.body.full_name),
+            email: safeEncrypt(req.body.email),
+            year_level: safeEncrypt(req.body.year_level),
+            section: safeEncrypt(req.body.section),
+            status: safeEncrypt(req.body.status)
+        };
+        const student = await Student.findByIdAndUpdate(req.params.id, studentData, { new: true });
+        
+        if (!student) {
+            res.status(404).json({ message: 'Student not found' });
+            return;
+        }
+        
+        // Decrypt for response to admin
+        const response = {
+            ...student.toObject(),
+            student_number: safeDecrypt(student.student_number),
+            full_name: safeDecrypt(student.full_name),
+            email: safeDecrypt(student.email),
+            year_level: safeDecrypt(student.year_level),
+            section: safeDecrypt(student.section),
+            status: safeDecrypt(student.status)
+        };
+        
+        res.json({ success: true, student: response });
     } catch (error) {
         const err = error as Error;
         res.status(400).json({ message: err.message });
