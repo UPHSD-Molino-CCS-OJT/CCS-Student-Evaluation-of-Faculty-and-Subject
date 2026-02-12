@@ -137,21 +137,6 @@ const AdminLogin: React.FC = () => {
                 )}
               </button>
             </form>
-
-            {/* Default Credentials Info */}
-            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h3 className="font-semibold text-yellow-800 mb-2 flex items-center">
-                <i className="fas fa-info-circle mr-2"></i>
-                Default Credentials
-              </h3>
-              <p className="text-sm text-yellow-700">
-                <strong>Username:</strong> admin<br />
-                <strong>Password:</strong> admin123
-              </p>
-              <p className="text-xs text-yellow-600 mt-2">
-                ⚠️ Change these credentials after first login
-              </p>
-            </div>
           </div>
         </div>
       </div>
