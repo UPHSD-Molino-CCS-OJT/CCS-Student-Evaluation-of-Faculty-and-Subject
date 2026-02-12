@@ -791,6 +791,9 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
             
             return {
                 ...evaluation,
+                school_year: safeDecrypt(evaluation.school_year), // Decrypt Evaluation's own encrypted field
+                year_level: safeDecrypt(evaluation.year_level),   // Decrypt Evaluation's own encrypted field
+                status: safeDecrypt(evaluation.status),           // Decrypt Evaluation's own encrypted field
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher,
                 course,
@@ -889,6 +892,9 @@ router.get('/admin/evaluations', isAuthenticated, async (_req: IRequest, res: Re
             
             return {
                 ...evaluation,
+                school_year: safeDecrypt(evaluation.school_year), // Decrypt Evaluation's own encrypted field
+                year_level: safeDecrypt(evaluation.year_level),   // Decrypt Evaluation's own encrypted field
+                status: safeDecrypt(evaluation.status),           // Decrypt Evaluation's own encrypted field
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher,
                 course,
@@ -982,6 +988,9 @@ router.get('/admin/evaluations/:id', isAuthenticated, async (req: IRequest, res:
         
         const evaluation = {
             ...evaluationRaw,
+            school_year: safeDecrypt((evaluationRaw as any).school_year), // Decrypt Evaluation's own encrypted field
+            year_level: safeDecrypt((evaluationRaw as any).year_level),   // Decrypt Evaluation's own encrypted field
+            status: safeDecrypt((evaluationRaw as any).status),           // Decrypt Evaluation's own encrypted field
             comments: decryptCommentsField((evaluationRaw as any).comments), // Decrypt for admin viewing
             teacher, // Use decrypted teacher
             course,  // Use decrypted course
