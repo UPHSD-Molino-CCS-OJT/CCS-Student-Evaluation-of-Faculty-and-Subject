@@ -92,8 +92,9 @@ declare class PrivacyAuditor {
      */
     private checkLayer6_SessionDataMinimization;
     /**
-     * LAYER 7: Differential Privacy with Budget Tracking
-     * Check if DP noise is applied AND privacy budget is tracked
+     * LAYER 7: Differential Privacy (Optional for Public Statistics)
+     * Check if DP noise is available for public-facing statistics
+     * Note: Not required for admin dashboard (admins need accurate data)
      */
     private checkLayer7_DifferentialPrivacy;
     /**

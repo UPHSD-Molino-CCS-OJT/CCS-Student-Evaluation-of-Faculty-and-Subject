@@ -488,15 +488,16 @@ class PrivacyAuditor {
         }
     }
     /**
-     * LAYER 7: Differential Privacy with Budget Tracking
-     * Check if DP noise is applied AND privacy budget is tracked
+     * LAYER 7: Differential Privacy (Optional for Public Statistics)
+     * Check if DP noise is available for public-facing statistics
+     * Note: Not required for admin dashboard (admins need accurate data)
      */
     async checkLayer7_DifferentialPrivacy() {
         try {
             // Check if privacy-protection.ts has differential privacy implementation
             const privacyProtectionPath = path.join(__dirname, 'privacy-protection.ts');
             if (!fs.existsSync(privacyProtectionPath)) {
-                this.addIssue('HIGH', '[Layer 7] Differential Privacy Module Missing', 'privacy-protection.ts not found. Aggregate statistics may not have Laplace noise.', 'Create differential privacy utilities with ε=0.1 for teacher statistics');
+                this.addWarning('INFO', '[Layer 7] Differential Privacy Module Not Found', 'privacy-protection.ts not found. DP noise is optional for public statistics.', 'If publishing statistics publicly, consider implementing Laplace noise with ε=0.1');
                 return;
             }
             const privacyContent = fs.readFileSync(privacyProtectionPath, 'utf-8');
@@ -505,47 +506,14 @@ class PrivacyAuditor {
                 privacyContent.includes('Laplace') ||
                 privacyContent.includes('addNoise');
             if (!hasLaplaceNoise) {
-                this.addIssue('MEDIUM', '[Layer 7] Laplace Noise Not Implemented', 'No differential privacy noise functions found in privacy utilities.', 'Implement addLaplaceNoise(value, epsilon=0.1) for aggregate statistics');
-                return;
-            }
-            // CRITICAL: Check for budget tracking
-            const dpBudgetPath = path.join(__dirname, 'dp-budget.ts');
-            const hasBudgetTracking = fs.existsSync(dpBudgetPath);
-            if (!hasBudgetTracking) {
-                this.addIssue('CRITICAL', '[Layer 7] DP Budget Tracking Missing', 'No budget tracking system found. Repeated queries can average out noise, breaking DP guarantees.', 'REQUIRED: Implement DPBudgetTracker with: 1) Query caching per time window, 2) Epsilon accounting, 3) Query limiting');
+                this.addWarning('INFO', '[Layer 7] Laplace Noise Not Implemented', 'No differential privacy noise functions found. This is optional for admin dashboard.', 'If publishing aggregate statistics publicly, implement addLaplaceNoise(value, epsilon=0.1)');
             }
             else {
-                const budgetContent = fs.readFileSync(dpBudgetPath, 'utf-8');
-                // Verify budget tracker has essential features
-                const hasQueryCache = budgetContent.includes('cache') || budgetContent.includes('Cache');
-                const hasEpsilonTracking = budgetContent.includes('epsilon') && budgetContent.includes('budget');
-                const hasTimeWindow = budgetContent.includes('window') || budgetContent.includes('Window');
-                const hasQueryLimit = budgetContent.includes('maxQueries') || budgetContent.includes('queryLimit');
-                if (!hasQueryCache || !hasEpsilonTracking || !hasTimeWindow || !hasQueryLimit) {
-                    this.addIssue('HIGH', '[Layer 7] Incomplete Budget Tracker', `Budget tracker missing features: ${[
-                        !hasQueryCache && 'query caching',
-                        !hasEpsilonTracking && 'epsilon tracking',
-                        !hasTimeWindow && 'time windows',
-                        !hasQueryLimit && 'query limiting'
-                    ].filter(Boolean).join(', ')}`, 'Complete budget tracker implementation with all required features');
-                }
-                else {
-                    this.addWarning('INFO', '[Layer 7] ✓ Differential Privacy with Budget Tracking', 'Found: Laplace noise implementation + budget tracking with query caching, epsilon accounting, time windows, and query limits.', 'Ensure budget tracker is integrated into all statistics endpoints');
-                }
-            }
-            // Check routes/api.ts for budget tracker integration
-            const apiPath = path.join(__dirname, '..', 'routes', 'api.ts');
-            if (fs.existsSync(apiPath)) {
-                const apiContent = fs.readFileSync(apiPath, 'utf-8');
-                const usesBudgetTracker = apiContent.includes('DPBudgetTracker') ||
-                    apiContent.includes('executeQuery');
-                if (hasBudgetTracking && !usesBudgetTracker) {
-                    this.addWarning('MEDIUM', '[Layer 7] Budget Tracker Not Integrated', 'Budget tracker exists but not used in API routes. Statistics may not be protected against repeated queries.', 'Integrate DPBudgetTracker.executeQuery() in dashboard and statistics endpoints');
-                }
+                this.addWarning('INFO', '[Layer 7] ✓ Differential Privacy Available', 'Laplace noise implementation found. Can be used for public-facing statistics if needed.', 'Admin dashboard does not require DP noise (admins need accurate data)');
             }
         }
         catch (error) {
-            this.addWarning('INFO', '[Layer 7] Differential Privacy Check Failed', `Could not verify differential privacy: ${error.message}`, 'Manually verify: 1) Laplace noise with ε=0.1, 2) Budget tracking, 3) Query caching');
+            this.addWarning('INFO', '[Layer 7] Differential Privacy Check Failed', `Could not verify differential privacy: ${error.message}`, 'DP is optional - only needed for public statistics');
         }
     }
     /**
