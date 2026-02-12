@@ -370,7 +370,7 @@
 
 **🔒 PRIVACY PROTECTION IMPLEMENTED**
 
-This system implements a **10-layer systematic privacy protection system** to provide strong student anonymity using cutting-edge privacy preservation techniques.
+This system implements a **12-layer systematic privacy protection system** to provide strong student anonymity using cutting-edge privacy preservation techniques.
 
 **Quick Overview:**
 - ✅ **Zero-Knowledge Privacy:** Designed to prevent tracing evaluations to students
@@ -378,15 +378,16 @@ This system implements a **10-layer systematic privacy protection system** to pr
 - ✅ **Timing Protection:** Random delays prevent correlation
 - ✅ **Network Privacy:** IP addresses anonymized
 - ✅ **Cryptographic Receipt Model:** No reversible links ever created
-- ✅ **Differential Privacy:** Mathematical protection for statistics
 - ✅ **K-Anonymity:** Minimum thresholds protect small groups
+- ✅ **Field Encryption:** AES-256-GCM for sensitive data at rest
 - ✅ **Session Security:** Data minimization and cleanup
+- ⚙️ **Differential Privacy:** Optional for public-facing statistics
 - ✅ **Compliance:** FERPA and GDPR principles
 
 **🔒 [Complete Privacy Documentation](PRIVACY-AND-DATA-PROTECTION.md)**
 
 **Comprehensive Guide Including:**
-- 10 layers of protection explained in detail
+- 12 layers of protection explained in detail
 - How each protection works
 - Attack vectors mitigated
 - Installation and verification guides
@@ -400,8 +401,9 @@ This system implements a **10-layer systematic privacy protection system** to pr
 - **Time Fuzzing:** Random 2-8 second delays prevent timing attacks
 - **IP Anonymization:** Last octet/segments removed from stored IPs
 - **Cryptographic Receipts:** One-way verification hashes (no reversible enrollment links)
-- **Differential Privacy:** Noise added to statistics (ε = 0.1)
+- **Field Encryption:** AES-256-GCM encryption for sensitive data
 - **K-Anonymity:** Stats hidden until ≥5 evaluations (k=5)
+- **Differential Privacy:** Optional (for public statistics only, not admin dashboard)
 
 **Privacy Guarantees:**
 ✅ Designed to prevent tracing evaluations back to students
