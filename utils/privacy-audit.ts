@@ -2,6 +2,7 @@ import Evaluation from '../models/Evaluation';
 import Enrollment from '../models/Enrollment';
 import * as fs from 'fs';
 import * as path from 'path';
+import { safeDecrypt } from './encryption-helpers';
 
 /**
  * Privacy Audit Utility
@@ -1285,7 +1286,10 @@ class PrivacyAuditor {
             let invalidCount = 0;
             
             for (const evaluation of recentEvaluations) {
-                if (typeof evaluation.comments === 'object' && (evaluation.comments as any).encrypted) {
+                // Check for EncryptedData format: { encrypted, iv, authTag, encryptedDek, dekIv, version }
+                if (typeof evaluation.comments === 'object' && 
+                    (evaluation.comments as any).encrypted && 
+                    (evaluation.comments as any).iv) {
                     encryptedCount++;
                 } else {
                     invalidCount++;
@@ -1359,17 +1363,12 @@ class PrivacyAuditor {
             const MAX_LENGTH = 500;
             
             for (const evaluation of recentEvaluations) {
-                // Decrypt if encrypted, otherwise get plaintext
+                // Decrypt comments using safeDecrypt (handles both encrypted and plaintext)
                 let commentText = '';
-                if (typeof evaluation.comments === 'object' && (evaluation.comments as any).encrypted) {
-                    const { decryptField } = await import('./encryption');
-                    try {
-                        commentText = decryptField(evaluation.comments as any);
-                    } catch {
-                        continue; // Skip if decryption fails
-                    }
-                } else if (typeof evaluation.comments === 'string') {
-                    commentText = evaluation.comments;
+                try {
+                    commentText = safeDecrypt(evaluation.comments);
+                } catch {
+                    continue; // Skip if decryption fails
                 }
                 
                 if (commentText.length < MIN_LENGTH) {
