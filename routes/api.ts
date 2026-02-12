@@ -527,11 +527,16 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
         // DIFFERENTIAL PRIVACY WITH BUDGET TRACKING
         const dpBudget = DPBudgetTracker.getInstance();
         
+        // Calculate proper sensitivity for averaging
+        // For averaging n ratings in range [1,5], sensitivity = 4/n (max change when one rating changes from 1 to 5)
+        const sensitivity = Math.max(4 / totalEvaluations, 0.01); // Minimum 0.01 to avoid division issues
+        
         // Query 1: Average ratings (with DP budget tracking & caching)
         const avgRatingsQuery = await dpBudget.executeQuery(
             {
                 queryType: 'dashboard_average_ratings',
-                parameters: { totalEvaluations }
+                parameters: { totalEvaluations },
+                epsilon: 0.1  // Use default epsilon but with proper sensitivity
             },
             async (epsilon: number) => {
                 const avgRatings = await Evaluation.aggregate([
@@ -575,15 +580,16 @@ router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Resp
                     }
                 ]);
                 
-                // Apply differential privacy noise
+                // Apply differential privacy noise with proper sensitivity
                 const rawRatings = avgRatings.length > 0 ? avgRatings[0] : 
                     { teacher: 0, learning: 0, classroom: 0, overall: 0 };
                 
+                // Clamp results to [0, 5] range after adding noise
                 return {
-                    teacher: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.teacher || 0, epsilon, 1),
-                    learning: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.learning || 0, epsilon, 1),
-                    classroom: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.classroom || 0, epsilon, 1),
-                    overall: PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.overall || 0, epsilon, 1)
+                    teacher: Math.max(0, Math.min(5, PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.teacher || 0, epsilon, sensitivity))),
+                    learning: Math.max(0, Math.min(5, PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.learning || 0, epsilon, sensitivity))),
+                    classroom: Math.max(0, Math.min(5, PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.classroom || 0, epsilon, sensitivity))),
+                    overall: Math.max(0, Math.min(5, PrivacyProtection.addDifferentialPrivacyNoise(rawRatings.overall || 0, epsilon, sensitivity)))
                 };
             }
         );
