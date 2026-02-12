@@ -297,11 +297,18 @@ router.get('/student/subjects', async (req, res) => {
             const nameB = b.course_id?.name || '';
             return nameA.localeCompare(nameB);
         });
+        // Decrypt populated program for student
+        const studentObj = student.toObject();
+        const decryptedProgram = studentObj.program_id ? {
+            ...studentObj.program_id,
+            name: (0, encryption_helpers_1.safeDecrypt)(studentObj.program_id.name),
+            code: (0, encryption_helpers_1.safeDecrypt)(studentObj.program_id.code)
+        } : studentObj.program_id;
         res.json({
             authenticated: true,
             student: {
                 full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
-                program: student.program_id,
+                program: decryptedProgram,
                 year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level)
             },
             enrollments: decryptedEnrollments.map(e => ({
