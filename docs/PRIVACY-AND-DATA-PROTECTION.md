@@ -372,19 +372,61 @@ PrivacyProtection.clearSensitiveSessionData(session);
 
 ### Layer 7: Differential Privacy for Statistics
 
-**Technology:** Laplace mechanism (ε-differential privacy)
+**Technology:** Laplace mechanism (ε-differential privacy) with **budget tracking**
 
 **How It Works:**
 ```javascript
-// Actual average from database
-actualAverage = 4.35
+// Step 1: Admin requests statistics
+GET /admin/dashboard
 
-// Add calibrated noise
-epsilon = 0.1  // Privacy parameter (lower = more private)
-noise = Laplace(sensitivity / epsilon)
+// Step 2: Check DP budget
+budgetTracker.getBudgetStatus()
+→ currentBudget: 0.7ε remaining
+→ queriesUsed: 3/10
+→ windowEnd: 2024-01-15 14:00:00
 
-// Displayed to admin
-displayedAverage = 4.42  // actualAverage + noise
+// Step 3: Check query cache
+queryId = SHA256("dashboard_stats_count_150")
+cached = budgetTracker.getCachedQuery(queryId)
+
+if (cached):
+  → Return cached noised result ✅
+  → No budget consumed
+  → PREVENTS noise averaging attacks
+
+else:
+  // Step 4: Calculate actual average
+  actualAverage = 4.35
+  
+  // Step 5: Add calibrated noise
+  epsilon = 0.1  // Privacy parameter
+  noise = Laplace(sensitivity / epsilon)
+  noisedAverage = 4.42  // actualAverage + noise
+  
+  // Step 6: Cache result
+  budgetTracker.cacheQuery(queryId, noisedAverage, epsilon)
+  
+  // Step 7: Deduct budget
+  currentBudget -= 0.1ε
+  queriesUsed += 1
+  
+  → Return noised result ✅
+```
+
+**Budget Accounting:**
+```
+Total Budget: 1.0ε per hour
+Per-Query Cost: 0.1ε
+Max Queries: 10 per hour
+
+Time Window: 13:00-14:00
+├─ Query 1 (13:05): Dashboard stats → Consume 0.1ε → Budget: 0.9ε
+├─ Query 2 (13:12): Dashboard stats → CACHED → Budget: 0.9ε (no cost!)
+├─ Query 3 (13:25): Teacher avg → Consume 0.1ε → Budget: 0.8ε
+├─ Query 4 (13:30): Dashboard stats → CACHED → Budget: 0.8ε
+...
+└─ Query exhausted at 10 queries or 1.0ε consumed
+    → Budget resets at 14:00 ✅
 ```
 
 **Mathematical Guarantee:**
@@ -398,6 +440,26 @@ P(output | dataset with student A) ≈ P(output | dataset without student A)
 - ✅ Reverse calculation
 - ✅ Minority identification
 - ✅ Individual response extraction
+- ✅ **NEW: Noise averaging attacks** (repeated queries)
+- ✅ **NEW: Budget exhaustion without tracking**
+
+**Attack Vector Mitigated:**
+```
+WITHOUT budget tracking:
+Admin repeatedly queries dashboard:
+  Query 1: 4.35 + noise = 4.42
+  Query 2: 4.35 + noise = 4.31
+  Query 3: 4.35 + noise = 4.38
+  ...
+  Average of 100 queries ≈ 4.35 (noise cancels out!)
+→ Privacy broken ❌
+
+WITH budget tracking:
+  Query 1: 4.35 + noise = 4.42 (consume 0.1ε, cache result)
+  Query 2: RETURN CACHED 4.42 (no new noise, no budget cost)
+  Query 3: RETURN CACHED 4.42 (same result every time)
+→ Privacy preserved ✅
+```
 
 **Example Scenario:**
 ```
@@ -408,8 +470,13 @@ Class of 10 students
 Without differential privacy:
 Average = 4.6 → Easy to identify the 1 student who rated poorly
 
-With differential privacy:
-Displayed = 4.7 or 4.5 (with noise) → Cannot identify individual
+With differential privacy (NO budget tracking):
+Query 100 times, average noise out → 4.6 (broken!)
+
+With differential privacy + budget tracking:
+First query: 4.7 (with noise, cached)
+Subsequent queries: 4.7 (same cached result)
+→ Cannot identify individual ✅
 ```
 
 ---
