@@ -118,7 +118,7 @@ class PrivacyAuditor {
         const schemaFields = Object.keys(Evaluation_1.default.schema.paths);
         // Critical: student_number should NOT exist in schema
         if (schemaFields.includes('student_number')) {
-            this.addIssue('CRITICAL', 'Evaluation Schema Contains student_number Field', 'The Evaluation model schema contains a student_number field. This violates zero-knowledge privacy.', 'Remove student_number from the Evaluation schema in models/Evaluation.js');
+            this.addIssue('CRITICAL', 'Evaluation Schema Contains student_number Field', 'The Evaluation model schema contains a student_number field. This violates the privacy-preserving architecture and structural unlinkability design.', 'Remove student_number from the Evaluation schema in models/Evaluation.js');
         }
         // Verify anonymous_token exists
         if (!schemaFields.includes('anonymous_token')) {
@@ -457,7 +457,7 @@ class PrivacyAuditor {
             if (combinedContent.includes('req.session.studentNumber') ||
                 combinedContent.includes('session.student_number') ||
                 combinedContent.includes('req.session.student_number')) {
-                this.addIssue('CRITICAL', '[Layer 6] Session Contains student_number', 'The server code stores student_number in session data. This violates zero-knowledge privacy.', 'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).');
+                this.addIssue('CRITICAL', '[Layer 6] Session Contains student_number', 'The server code stores student_number in session data. This violates the privacy-preserving architecture and data minimization principles.', 'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).');
             }
             // Verify studentId is stored properly
             const sessionStudentIdPattern = /req\.session\.studentId\s*=/;

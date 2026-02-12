@@ -140,7 +140,7 @@ class PrivacyAuditor {
             this.addIssue(
                 'CRITICAL',
                 'Evaluation Schema Contains student_number Field',
-                'The Evaluation model schema contains a student_number field. This violates zero-knowledge privacy.',
+                'The Evaluation model schema contains a student_number field. This violates the privacy-preserving architecture and structural unlinkability design.',
                 'Remove student_number from the Evaluation schema in models/Evaluation.js'
             );
         }
@@ -731,7 +731,7 @@ class PrivacyAuditor {
                 this.addIssue(
                     'CRITICAL',
                     '[Layer 6] Session Contains student_number',
-                    'The server code stores student_number in session data. This violates zero-knowledge privacy.',
+                    'The server code stores student_number in session data. This violates the privacy-preserving architecture and data minimization principles.',
                     'Remove all instances of storing student_number in req.session. Only store studentId (ObjectId).'
                 );
             }
