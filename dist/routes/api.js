@@ -725,6 +725,9 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
             } : evaluation.course_id;
             return {
                 ...evaluation,
+                school_year: (0, encryption_helpers_1.safeDecrypt)(evaluation.school_year), // Decrypt Evaluation's own encrypted field
+                year_level: (0, encryption_helpers_1.safeDecrypt)(evaluation.year_level), // Decrypt Evaluation's own encrypted field
+                status: (0, encryption_helpers_1.safeDecrypt)(evaluation.status), // Decrypt Evaluation's own encrypted field
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher,
                 course,
@@ -807,6 +810,9 @@ router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
             } : evaluation.program_id;
             return {
                 ...evaluation,
+                school_year: (0, encryption_helpers_1.safeDecrypt)(evaluation.school_year), // Decrypt Evaluation's own encrypted field
+                year_level: (0, encryption_helpers_1.safeDecrypt)(evaluation.year_level), // Decrypt Evaluation's own encrypted field
+                status: (0, encryption_helpers_1.safeDecrypt)(evaluation.status), // Decrypt Evaluation's own encrypted field
                 comments: decryptCommentsField(evaluation.comments), // Decrypt for admin viewing
                 teacher,
                 course,
@@ -884,6 +890,9 @@ router.get('/admin/evaluations/:id', auth_1.isAuthenticated, async (req, res) =>
         const overall_average = (teacher_average + learning_average + classroom_average) / 3;
         const evaluation = {
             ...evaluationRaw,
+            school_year: (0, encryption_helpers_1.safeDecrypt)(evaluationRaw.school_year), // Decrypt Evaluation's own encrypted field
+            year_level: (0, encryption_helpers_1.safeDecrypt)(evaluationRaw.year_level), // Decrypt Evaluation's own encrypted field
+            status: (0, encryption_helpers_1.safeDecrypt)(evaluationRaw.status), // Decrypt Evaluation's own encrypted field
             comments: decryptCommentsField(evaluationRaw.comments), // Decrypt for admin viewing
             teacher, // Use decrypted teacher
             course, // Use decrypted course
