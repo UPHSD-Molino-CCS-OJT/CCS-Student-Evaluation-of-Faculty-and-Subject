@@ -77,7 +77,7 @@ class PrivacyAuditor {
         // Reset audit results
         this.resetAudit();
 
-        // Run all audit checks for 10-layer privacy protection
+        // Run all audit checks for 12-layer privacy protection
         await this.checkLayer1_AnonymousTokens();
         await this.checkLayer2_SubmissionTimeFuzzing();
         await this.checkLayer3_IpAddressAnonymization();
@@ -89,6 +89,7 @@ class PrivacyAuditor {
         await this.checkLayer9_PrivacySafeAuditLogging();
         await this.checkLayer10_SubmissionDataValidation();
         await this.checkLayer11_FieldLevelEncryption();
+        await this.checkLayer12_StylometricProtection();
         
         // Legacy checks for schema and records
         await this.checkEvaluationSchema();
@@ -1274,6 +1275,95 @@ class PrivacyAuditor {
                 '[Layer 11] Encryption Check Failed',
                 `Could not verify field-level encryption: ${(error as Error).message}`,
                 'Manually verify ENCRYPTION_MASTER_KEY is configured and comments are encrypted'
+            );
+        }
+    }
+
+    /**
+     * LAYER 12: Stylometric Attack Protection
+     * 
+     * Verifies protections against writing style de-anonymization.
+     * 
+     * Threat Model Protection:
+     * - Teacher knows student writing patterns
+     * - Distinctive phrasing or punctuation reveals identity
+     * - Social engineering through writing style analysis
+     * 
+     * Note: This is the weakest privacy layer — human writing style is inherently
+     * difficult to fully anonymize. Primary defense is user education.
+     */
+    private async checkLayer12_StylometricProtection(): Promise<void> {
+        try {
+            // Check recent comments for validation patterns
+            const recentEvaluations = await Evaluation.find({ 
+                comments: { $exists: true, $ne: '' } 
+            })
+                .limit(20)
+                .select('comments')
+                .lean();
+            
+            if (recentEvaluations.length === 0) {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 12] No Comments to Analyze',
+                    'No evaluation comments found in database.',
+                    'Stylometric protections will be applied when comments are submitted'
+                );
+                return;
+            }
+            
+            // Check for excessively long/short comments (may have bypassed validation)
+            let validLengthCount = 0;
+            let tooShortCount = 0;
+            let tooLongCount = 0;
+            const MIN_LENGTH = 20;
+            const MAX_LENGTH = 500;
+            
+            for (const evaluation of recentEvaluations) {
+                // Decrypt if encrypted, otherwise get plaintext
+                let commentText = '';
+                if (typeof evaluation.comments === 'object' && (evaluation.comments as any).encrypted) {
+                    const { decryptField } = await import('./encryption');
+                    try {
+                        commentText = decryptField(evaluation.comments as any);
+                    } catch {
+                        continue; // Skip if decryption fails
+                    }
+                } else if (typeof evaluation.comments === 'string') {
+                    commentText = evaluation.comments;
+                }
+                
+                if (commentText.length < MIN_LENGTH) {
+                    tooShortCount++;
+                } else if (commentText.length > MAX_LENGTH) {
+                    tooLongCount++;
+                } else {
+                    validLengthCount++;
+                }
+            }
+            
+            if (tooShortCount > 0 || tooLongCount > 0) {
+                this.addWarning(
+                    'MEDIUM',
+                    '[Layer 12] Comment Length Validation Bypass Detected',
+                    `Found ${tooShortCount} short comments (<${MIN_LENGTH} chars) and ${tooLongCount} long comments (>${MAX_LENGTH} chars). Total sampled: ${recentEvaluations.length}.`,
+                    'Verify server-side validation enforces comment length constraints (20-500 characters)'
+                );
+            } else {
+                this.addWarning(
+                    'INFO',
+                    '[Layer 12] ✓ Stylometric Protections Active',
+                    `All ${validLengthCount} sampled comments meet length requirements (${MIN_LENGTH}-${MAX_LENGTH} chars). Sanitization and user warnings reduce stylometric risk.`,
+                    'Continue educating users to avoid distinctive phrasing, proper nouns, or identifying language patterns.'
+                );
+            }
+            
+        } catch (error) {
+            this.addWarning(
+                'INFO',
+                '[Layer 12] Stylometric Check Failed',
+                `Could not verify stylometric protections: ${(error as Error).message}`,
+                'Manually verify comment sanitization and length validation are enforced'
             );
         }
     }

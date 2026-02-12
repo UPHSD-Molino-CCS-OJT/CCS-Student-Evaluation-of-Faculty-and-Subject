@@ -281,7 +281,7 @@ class PrivacyProtection {
     }
 
     /**
-     * Validate that evaluation data contains no identifying information
+     * Validate that evaluation data contains no identifying information (Layer 10 + Layer 12)
      * 
      * @param evaluationData - Evaluation data to validate
      * @returns Validation result
@@ -304,6 +304,18 @@ class PrivacyProtection {
         // Check comments for identifying patterns
         if (evaluationData.comments && typeof evaluationData.comments === 'string') {
             const comments = evaluationData.comments;
+            
+            // LAYER 12: Stylometric protection — validate comment length
+            const MIN_LENGTH = 20;
+            const MAX_LENGTH = 500;
+            
+            if (comments.trim().length > 0 && comments.trim().length < MIN_LENGTH) {
+                errors.push(`Comments must be at least ${MIN_LENGTH} characters or left blank (reduces stylometric fingerprinting)`);
+            }
+            
+            if (comments.trim().length > MAX_LENGTH) {
+                errors.push(`Comments must not exceed ${MAX_LENGTH} characters`);
+            }
             
             // Pattern: Student ID format (XX-XXXX-XXX or similar)
             if (/\b\d{2,4}[-\s]\d{4,5}[-\s]\d{3,5}\b/.test(comments)) {
@@ -432,6 +444,80 @@ class PrivacyProtection {
                 ? 'Safe to display statistics'
                 : `Insufficient data (${totalEvaluations}/${minRequired}). Statistics hidden for privacy.`
         };
+    }
+
+    /**
+     * LAYER 12: Stylometric Attack Protection
+     * 
+     * Sanitize comment text to reduce stylometric fingerprinting risk.
+     * Threat Model: Teacher/admin knows student writing patterns
+     * 
+     * Protections Applied:
+     * - Normalize excessive punctuation (!!!, ???, ..., etc.)
+     * - Strip excessive whitespace/newlines
+     * - Enforce length constraints (20-500 chars)
+     * - Preserve semantic content while reducing style markers
+     * 
+     * Note: This is NOT perfect — human writing style is hard to fully anonymize.
+     * Primary defense: User warning to avoid identifying language.
+     * 
+     * @param comment - Raw comment text
+     * @returns Sanitized comment or validation error
+     */
+    static sanitizeCommentForAnonymity(comment: string): { sanitized: string; valid: boolean; error?: string } {
+        if (!comment || comment.trim() === '') {
+            return { sanitized: '', valid: true };
+        }
+
+        let sanitized = comment.trim();
+
+        // Length constraints (soft anti-stylometric measure)
+        const MIN_LENGTH = 20;
+        const MAX_LENGTH = 500;
+
+        if (sanitized.length > 0 && sanitized.length < MIN_LENGTH) {
+            return {
+                sanitized: '',
+                valid: false,
+                error: `Comments must be at least ${MIN_LENGTH} characters or left blank`
+            };
+        }
+
+        if (sanitized.length > MAX_LENGTH) {
+            return {
+                sanitized: '',
+                valid: false,
+                error: `Comments must not exceed ${MAX_LENGTH} characters`
+            };
+        }
+
+        // Normalize excessive punctuation patterns (stylometric markers)
+        // Multiple exclamation marks (!!!+) → !!
+        sanitized = sanitized.replace(/!{3,}/g, '!!');
+        
+        // Multiple question marks (???+) → ??
+        sanitized = sanitized.replace(/\?{3,}/g, '??');
+        
+        // Multiple periods/ellipsis (...+) → ...
+        sanitized = sanitized.replace(/\.{4,}/g, '...');
+        
+        // Multiple dashes (---+) → --
+        sanitized = sanitized.replace(/-{4,}/g, '--');
+        
+        // Excessive repeated characters (e.g., "soooo" → "soo", "noooo" → "noo")
+        sanitized = sanitized.replace(/(.)\1{3,}/g, '$1$1$1');
+
+        // Normalize whitespace
+        // Multiple spaces → single space
+        sanitized = sanitized.replace(/ {2,}/g, ' ');
+        
+        // Multiple newlines → double newline max
+        sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+        
+        // Trim leading/trailing whitespace
+        sanitized = sanitized.trim();
+
+        return { sanitized, valid: true };
     }
 }
 

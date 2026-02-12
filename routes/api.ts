@@ -398,15 +398,29 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
                 });
                 return;
             }
-            try {
-                encryptedComments = encryptField(data.comments.trim());
-            } catch (error) {
-                console.error('Comment encryption failed:', error);
-                res.status(500).json({
+            
+            // LAYER 12: Stylometric protection — sanitize before encryption
+            const sanitizationResult = PrivacyProtection.sanitizeCommentForAnonymity(data.comments);
+            if (!sanitizationResult.valid) {
+                res.status(400).json({
                     success: false,
-                    message: 'Evaluation processing error. Please try again.'
+                    message: sanitizationResult.error || 'Comment validation failed'
                 });
                 return;
+            }
+            
+            // Only encrypt if sanitized comment is not empty
+            if (sanitizationResult.sanitized) {
+                try {
+                    encryptedComments = encryptField(sanitizationResult.sanitized);
+                } catch (error) {
+                    console.error('Comment encryption failed:', error);
+                    res.status(500).json({
+                        success: false,
+                        message: 'Evaluation processing error. Please try again.'
+                    });
+                    return;
+                }
             }
         }
         
