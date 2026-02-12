@@ -21,6 +21,8 @@ exports.decryptStudent = decryptStudent;
 exports.decryptTeacher = decryptTeacher;
 exports.prepareForResponse = prepareForResponse;
 exports.prepareArrayForResponse = prepareArrayForResponse;
+exports.findByEncryptedField = findByEncryptedField;
+exports.findAllByEncryptedField = findAllByEncryptedField;
 const encryption_1 = require("./encryption");
 /**
  * Safely decrypt a field that may be encrypted or plaintext
@@ -181,5 +183,52 @@ function prepareForResponse(doc, encryptedFields) {
  */
 function prepareArrayForResponse(docs, encryptedFields) {
     return docs.map(doc => prepareForResponse(doc, encryptedFields));
+}
+/**
+ * Find a document by matching an encrypted field against plaintext value
+ * This is necessary because you cannot query encrypted fields directly
+ *
+ * @param Model - Mongoose model to query
+ * @param fieldName - The encrypted field to search (e.g., 'username', 'student_number')
+ * @param plaintextValue - The plaintext value to match
+ * @param additionalQuery - Optional additional query filters (e.g., { status: 'active' })
+ * @returns The first matching document or null
+ */
+async function findByEncryptedField(Model, fieldName, plaintextValue, additionalQuery = {}) {
+    // Fetch all documents matching the additional query
+    const documents = await Model.find(additionalQuery);
+    // Search through documents, decrypting the field to find match
+    for (const doc of documents) {
+        const fieldValue = doc[fieldName];
+        const decryptedValue = safeDecrypt(fieldValue);
+        // Case-insensitive comparison for flexibility
+        if (decryptedValue.toLowerCase() === plaintextValue.toLowerCase()) {
+            return doc;
+        }
+    }
+    return null;
+}
+/**
+ * Find all documents where an encrypted field matches a plaintext value
+ *
+ * @param Model - Mongoose model to query
+ * @param fieldName - The encrypted field to search
+ * @param plaintextValue - The plaintext value to match
+ * @param additionalQuery - Optional additional query filters
+ * @returns Array of matching documents
+ */
+async function findAllByEncryptedField(Model, fieldName, plaintextValue, additionalQuery = {}) {
+    // Fetch all documents matching the additional query
+    const documents = await Model.find(additionalQuery);
+    // Filter documents where decrypted field matches
+    const matches = [];
+    for (const doc of documents) {
+        const fieldValue = doc[fieldName];
+        const decryptedValue = safeDecrypt(fieldValue);
+        if (decryptedValue.toLowerCase() === plaintextValue.toLowerCase()) {
+            matches.push(doc);
+        }
+    }
+    return matches;
 }
 //# sourceMappingURL=encryption-helpers.js.map
