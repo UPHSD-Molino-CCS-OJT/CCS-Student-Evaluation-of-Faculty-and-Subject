@@ -92,8 +92,8 @@ declare class PrivacyAuditor {
      */
     private checkLayer6_SessionDataMinimization;
     /**
-     * LAYER 7: Differential Privacy for Statistics
-     * Check if Laplace noise is applied to aggregate statistics
+     * LAYER 7: Differential Privacy with Budget Tracking
+     * Check if DP noise is applied AND privacy budget is tracked
      */
     private checkLayer7_DifferentialPrivacy;
     /**
