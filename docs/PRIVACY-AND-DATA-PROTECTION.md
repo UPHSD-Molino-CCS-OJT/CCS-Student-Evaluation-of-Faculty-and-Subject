@@ -8,7 +8,7 @@
 
 1. [Overview](#overview)
 2. [Privacy Protection System](#privacy-protection-system)
-3. [11 Layers of Protection](#11-layers-of-protection)
+3. [12 Layers of Protection](#12-layers-of-protection)
 4. [Quick Installation Guide](#quick-installation-guide)
 5. [How It Works](#how-it-works)
 6. [Attack Vectors Mitigated](#attack-vectors-mitigated)
@@ -46,7 +46,7 @@ This system implements a **zero-knowledge security model** for student evaluatio
 
 ### Enhanced Multi-Layered Protection
 
-This system goes far beyond basic anonymization, implementing **11 layers of systematic privacy protection** using cutting-edge techniques:
+This system goes far beyond basic anonymization, implementing **12 layers of systematic privacy protection** using cutting-edge techniques:
 
 - **Cryptographic Security**: SHA-512 anonymous tokens
 - **Timing Protection**: Random delays to prevent correlation
@@ -118,7 +118,7 @@ This system goes far beyond basic anonymization, implementing **11 layers of sys
 
 ---
 
-## 11 Layers of Protection
+## 12 Layers of Protection
 
 ### Layer 1: Enhanced Anonymous Token Generation
 
@@ -524,6 +524,107 @@ if (!validation.valid) {
 - ✅ Implementation errors
 - ✅ Schema violations
 - ✅ Developer mistakes
+
+---
+
+### Layer 11: Field-Level Encryption
+
+**Technology:** AES-256-GCM with envelope encryption
+
+**How It Works:**
+```javascript
+// Unique DEK (Data Encryption Key) per record
+dek = generateRandomKey(256bits)
+
+// Encrypt comment with DEK
+encryptedComment = AES-GCM(comment, dek)
+
+// Encrypt DEK with master KEK
+encryptedDEK = AES-GCM(dek, masterKey)
+
+// Store all encrypted (DB admin cannot read plaintext)
+{
+  encrypted: "base64...",
+  encryptedDek: "base64...",
+  iv: "base64...",
+  authTag: "base64..."
+}
+```
+
+**Threat Model Protection:**
+- ✅ MongoDB database breach
+- ✅ Database administrator access
+- ✅ Backup/snapshot theft
+- ✅ Insider threat (requires both DB + server access)
+
+**Cryptographic Properties:**
+- **Authentication:** GCM mode provides authenticated encryption
+- **Confidentiality:** AES-256 encryption standard
+- **Per-Record Keys:** No key reuse across evaluations
+- **Forward Secrecy:** Compromised DEK doesn't affect other records
+
+**Protection Against:**
+- ✅ Data at rest breaches
+- ✅ Privileged database access
+- ✅ Backup file theft
+- ✅ Cloud storage compromise
+
+See `docs/ENCRYPTION-GUIDE.md` for full implementation details.
+
+---
+
+### Layer 12: Stylometric Attack Protection
+
+**Technology:** Writing style sanitization and user education
+
+**Threat Model:**
+- Teacher knows student writing patterns
+- Distinctive phrasing reveals identity
+- Social engineering through writing style
+
+**Limitations:**
+⚠️ **This is the weakest privacy layer** — human writing style is inherently difficult to fully anonymize. Primary defense is user education.
+
+**Protections Applied:**
+
+1. **User Warning (Primary Defense)**
+```
+⚠️ Anonymity Protection Reminder:
+• Do NOT include your name, student number, email, or identifying details
+• Avoid unique or distinctive phrasing that could identify you
+• Keep comments professional and focused on course/teaching feedback
+• Comments must be 20-500 characters or left blank
+```
+
+2. **Comment Length Constraints**
+```javascript
+MIN_LENGTH = 20  // Reduce short, highly distinctive comments
+MAX_LENGTH = 500 // Prevent excessive stylometric data
+```
+
+3. **Automatic Sanitization**
+```javascript
+// Normalize excessive punctuation
+"Great!!!" → "Great!!"
+"Really???" → "Really??"
+"Sooooo good" → "Sooo good"
+
+// Normalize whitespace
+"Text    with    spaces" → "Text with spaces"
+"Line\n\n\n\nbreaks" → "Line\n\nbreaks"
+```
+
+**What This Does NOT Prevent:**
+- ❌ Sophisticated linguistic analysis
+- ❌ Vocabulary-based fingerprinting
+- ❌ Grammar pattern recognition
+- ❌ Senior thesis writing style correlation
+
+**Why We Acknowledge This:**
+Perfect stylometric anonymity is practically impossible without destroying semantic content. This layer reduces **casual** de-anonymization risk while preserving comment utility.
+
+**Recommendation:**
+Students with concerns about writing style identification should leave comments blank.
 
 ---
 
@@ -2382,7 +2483,7 @@ Example Policy:
 
 ### Privacy Protection Status
 
-✅ **11 Layers of Protection Implemented**
+✅ **12 Layers of Protection Implemented**
 ✅ **All Major Attack Vectors Blocked**
 ✅ **FERPA and GDPR Compliant**
 ✅ **Academic Best Practices Followed**
@@ -2391,7 +2492,7 @@ Example Policy:
 ### Key Takeaways
 
 1. **Strong Anonymity:** Student evaluations designed to prevent tracing back to individuals
-2. **Multiple Protections:** Defense-in-depth approach with 11 layers
+2. **Multiple Protections:** Defense-in-depth approach with 12 layers
 3. **Automatic Protection:** Most features work automatically without configuration
 4. **Proven Techniques:** Uses academic research and industry standards
 5. **Easy to Verify:** Built-in privacy audit system
