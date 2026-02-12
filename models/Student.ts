@@ -3,18 +3,16 @@ import { IStudent } from '../types';
 
 const studentSchema = new Schema<IStudent>({
   student_number: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true,
-    unique: true,
-    trim: true
+    unique: true
   },
   full_name: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   email: {
-    type: String,
-    trim: true
+    type: Schema.Types.Mixed // Encrypted field
   },
   program_id: {
     type: Schema.Types.ObjectId,
@@ -22,16 +20,14 @@ const studentSchema = new Schema<IStudent>({
     required: true
   },
   year_level: {
-    type: String,
-    enum: ['1st', '2nd', '3rd', '4th'],
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   section: {
-    type: String
+    type: Schema.Types.Mixed // Encrypted field
   },
   status: {
-    type: String,
-    enum: ['Regular', 'Irregular', 'Transferee'],
+    type: Schema.Types.Mixed, // Encrypted field
     default: 'Regular'
   }
 }, {

@@ -3,11 +3,11 @@ import { IEvaluation } from '../types';
 
 const evaluationSchema = new Schema<IEvaluation>({
   school_year: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   anonymous_token: {
-    type: String,
+    type: String, // Not encrypted - used for anonymity logic
     required: true,
     unique: true,
     index: true
@@ -18,13 +18,11 @@ const evaluationSchema = new Schema<IEvaluation>({
     required: true
   },
   year_level: {
-    type: String,
-    enum: ['1st', '2nd', '3rd', '4th'],
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   status: {
-    type: String,
-    enum: ['Regular', 'Irregular', 'Transferee'],
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   course_id: {

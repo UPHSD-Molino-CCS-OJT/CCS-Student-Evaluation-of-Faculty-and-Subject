@@ -17,6 +17,7 @@ import { Types } from 'mongoose';
 // Import Privacy Protection Utilities
 import PrivacyProtection from '../utils/privacy-protection';
 import { encryptField, decryptField, isEncryptionConfigured, EncryptedData } from '../utils/encryption';
+import { safeDecrypt } from '../utils/encryption-helpers';
 
 // Import middleware
 import { isAuthenticated } from '../middleware/auth';
@@ -73,8 +74,8 @@ router.get('/test/students', async (req: IRequest, res: Response): Promise<void>
         const students = await query;
         
         res.json(students.map(s => ({
-            student_number: s.student_number,
-            full_name: s.full_name
+            student_number: safeDecrypt(s.student_number),
+            full_name: safeDecrypt(s.full_name)
         })));
     } catch (error) {
         res.status(500).json({ error: 'Error fetching students for testing' });
@@ -112,8 +113,8 @@ router.post('/admin/login', async (req: IRequest, res: Response): Promise<void> 
         
         // Set session
         req.session.adminId = admin._id.toString();
-        req.session.username = admin.username;
-        req.session.fullName = admin.full_name;
+        req.session.username = safeDecrypt(admin.username);
+        req.session.fullName = safeDecrypt(admin.full_name);
         
         // Save session with retry mechanism (helps during parallel testing)
         const saveSession = (retries = 3): void => {
@@ -135,8 +136,8 @@ router.post('/admin/login', async (req: IRequest, res: Response): Promise<void> 
                     success: true, 
                     admin: { 
                         id: admin._id, 
-                        username: admin.username,
-                        fullName: admin.full_name 
+                        username: safeDecrypt(admin.username),
+                        fullName: safeDecrypt(admin.full_name)
                     } 
                 });
             });
@@ -241,9 +242,9 @@ router.get('/student/subjects', async (req: IRequest, res: Response): Promise<vo
         res.json({ 
             authenticated: true,
             student: {
-                full_name: student.full_name,
+                full_name: safeDecrypt(student.full_name),
                 program: student.program_id,
-                year_level: student.year_level
+                year_level: safeDecrypt(student.year_level)
             },
             enrollments: enrollments.map(e => ({
                 _id: e._id,

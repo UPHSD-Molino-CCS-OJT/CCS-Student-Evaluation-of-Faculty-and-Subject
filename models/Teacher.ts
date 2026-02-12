@@ -3,24 +3,22 @@ import { ITeacher } from '../types';
 
 const teacherSchema = new Schema<ITeacher>({
   full_name: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   employee_id: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     unique: true,
     sparse: true
   },
   email: {
-    type: String,
-    trim: true
+    type: Schema.Types.Mixed // Encrypted field
   },
   department: {
-    type: String
+    type: Schema.Types.Mixed // Encrypted field
   },
   status: {
-    type: String,
-    enum: ['active', 'inactive'],
+    type: Schema.Types.Mixed, // Encrypted field
     default: 'active'
   }
 }, {

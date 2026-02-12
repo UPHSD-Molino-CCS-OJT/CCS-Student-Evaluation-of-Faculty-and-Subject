@@ -3,13 +3,12 @@ import { ICourse } from '../types';
 
 const courseSchema = new Schema<ICourse>({
   name: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   code: {
-    type: String,
-    required: true,
-    uppercase: true
+    type: Schema.Types.Mixed, // Encrypted field
+    required: true
   },
   program_id: {
     type: Schema.Types.ObjectId,

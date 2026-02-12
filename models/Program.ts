@@ -3,15 +3,14 @@ import { IProgram } from '../types';
 
 const programSchema = new Schema<IProgram>({
   name: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true,
     unique: true
   },
   code: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true,
-    unique: true,
-    uppercase: true
+    unique: true
   }
 }, {
   timestamps: true,

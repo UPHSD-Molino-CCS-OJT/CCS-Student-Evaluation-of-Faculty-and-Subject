@@ -18,16 +18,15 @@ const enrollmentSchema = new Schema<IEnrollment>({
     required: true
   },
   section_code: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   school_year: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   semester: {
-    type: String,
-    enum: ['1st Semester', '2nd Semester', 'Summer'],
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   has_evaluated: {

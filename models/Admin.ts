@@ -3,22 +3,20 @@ import { IAdmin } from '../types';
 
 const adminSchema = new Schema<IAdmin>({
   username: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true,
-    unique: true,
-    trim: true
+    unique: true
   },
   password: {
-    type: String,
+    type: String, // Hashed, not encrypted
     required: true
   },
   full_name: {
-    type: String,
+    type: Schema.Types.Mixed, // Encrypted field
     required: true
   },
   email: {
-    type: String,
-    trim: true
+    type: Schema.Types.Mixed // Encrypted field
   },
   last_login: {
     type: Date,
