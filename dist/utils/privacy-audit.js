@@ -42,6 +42,7 @@ const Evaluation_1 = __importDefault(require("../models/Evaluation"));
 const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const encryption_helpers_1 = require("./encryption-helpers");
 class PrivacyAuditor {
     constructor() {
         this.auditResults = {
@@ -797,7 +798,10 @@ class PrivacyAuditor {
             let encryptedCount = 0;
             let invalidCount = 0;
             for (const evaluation of recentEvaluations) {
-                if (typeof evaluation.comments === 'object' && evaluation.comments.encrypted) {
+                // Check for EncryptedData format: { encrypted, iv, authTag, encryptedDek, dekIv, version }
+                if (typeof evaluation.comments === 'object' &&
+                    evaluation.comments.encrypted &&
+                    evaluation.comments.iv) {
                     encryptedCount++;
                 }
                 else {
@@ -848,19 +852,13 @@ class PrivacyAuditor {
             const MIN_LENGTH = 20;
             const MAX_LENGTH = 500;
             for (const evaluation of recentEvaluations) {
-                // Decrypt if encrypted, otherwise get plaintext
+                // Decrypt comments using safeDecrypt (handles both encrypted and plaintext)
                 let commentText = '';
-                if (typeof evaluation.comments === 'object' && evaluation.comments.encrypted) {
-                    const { decryptField } = await Promise.resolve().then(() => __importStar(require('./encryption')));
-                    try {
-                        commentText = decryptField(evaluation.comments);
-                    }
-                    catch {
-                        continue; // Skip if decryption fails
-                    }
+                try {
+                    commentText = (0, encryption_helpers_1.safeDecrypt)(evaluation.comments);
                 }
-                else if (typeof evaluation.comments === 'string') {
-                    commentText = evaluation.comments;
+                catch {
+                    continue; // Skip if decryption fails
                 }
                 if (commentText.length < MIN_LENGTH) {
                     tooShortCount++;
