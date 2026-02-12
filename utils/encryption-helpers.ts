@@ -202,3 +202,68 @@ export function prepareArrayForResponse<T extends Record<string, any>>(
 ): any[] {
     return docs.map(doc => prepareForResponse(doc, encryptedFields));
 }
+
+/**
+ * Find a document by matching an encrypted field against plaintext value
+ * This is necessary because you cannot query encrypted fields directly
+ * 
+ * @param Model - Mongoose model to query
+ * @param fieldName - The encrypted field to search (e.g., 'username', 'student_number')
+ * @param plaintextValue - The plaintext value to match
+ * @param additionalQuery - Optional additional query filters (e.g., { status: 'active' })
+ * @returns The first matching document or null
+ */
+export async function findByEncryptedField<T>(
+    Model: any,
+    fieldName: string,
+    plaintextValue: string,
+    additionalQuery: any = {}
+): Promise<T | null> {
+    // Fetch all documents matching the additional query
+    const documents = await Model.find(additionalQuery);
+    
+    // Search through documents, decrypting the field to find match
+    for (const doc of documents) {
+        const fieldValue = doc[fieldName];
+        const decryptedValue = safeDecrypt(fieldValue);
+        
+        // Case-insensitive comparison for flexibility
+        if (decryptedValue.toLowerCase() === plaintextValue.toLowerCase()) {
+            return doc;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Find all documents where an encrypted field matches a plaintext value
+ * 
+ * @param Model - Mongoose model to query
+ * @param fieldName - The encrypted field to search
+ * @param plaintextValue - The plaintext value to match
+ * @param additionalQuery - Optional additional query filters
+ * @returns Array of matching documents
+ */
+export async function findAllByEncryptedField<T>(
+    Model: any,
+    fieldName: string,
+    plaintextValue: string,
+    additionalQuery: any = {}
+): Promise<T[]> {
+    // Fetch all documents matching the additional query
+    const documents = await Model.find(additionalQuery);
+    
+    // Filter documents where decrypted field matches
+    const matches: T[] = [];
+    for (const doc of documents) {
+        const fieldValue = doc[fieldName];
+        const decryptedValue = safeDecrypt(fieldValue);
+        
+        if (decryptedValue.toLowerCase() === plaintextValue.toLowerCase()) {
+            matches.push(doc);
+        }
+    }
+    
+    return matches;
+}
