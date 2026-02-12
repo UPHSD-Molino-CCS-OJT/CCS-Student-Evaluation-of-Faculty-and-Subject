@@ -49,6 +49,7 @@ const Enrollment_1 = __importDefault(require("../models/Enrollment"));
 // Import Privacy Protection Utilities
 const privacy_protection_1 = __importDefault(require("../utils/privacy-protection"));
 const encryption_1 = require("../utils/encryption");
+const encryption_helpers_1 = require("../utils/encryption-helpers");
 // Import middleware
 const auth_1 = require("../middleware/auth");
 /**
@@ -93,8 +94,8 @@ router.get('/test/students', async (req, res) => {
         }
         const students = await query;
         res.json(students.map(s => ({
-            student_number: s.student_number,
-            full_name: s.full_name
+            student_number: (0, encryption_helpers_1.safeDecrypt)(s.student_number),
+            full_name: (0, encryption_helpers_1.safeDecrypt)(s.full_name)
         })));
     }
     catch (error) {
@@ -126,8 +127,8 @@ router.post('/admin/login', async (req, res) => {
         await admin.save();
         // Set session
         req.session.adminId = admin._id.toString();
-        req.session.username = admin.username;
-        req.session.fullName = admin.full_name;
+        req.session.username = (0, encryption_helpers_1.safeDecrypt)(admin.username);
+        req.session.fullName = (0, encryption_helpers_1.safeDecrypt)(admin.full_name);
         // Save session with retry mechanism (helps during parallel testing)
         const saveSession = (retries = 3) => {
             req.session.save((err) => {
@@ -148,8 +149,8 @@ router.post('/admin/login', async (req, res) => {
                     success: true,
                     admin: {
                         id: admin._id,
-                        username: admin.username,
-                        fullName: admin.full_name
+                        username: (0, encryption_helpers_1.safeDecrypt)(admin.username),
+                        fullName: (0, encryption_helpers_1.safeDecrypt)(admin.full_name)
                     }
                 });
             });
@@ -243,9 +244,9 @@ router.get('/student/subjects', async (req, res) => {
         res.json({
             authenticated: true,
             student: {
-                full_name: student.full_name,
+                full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
                 program: student.program_id,
-                year_level: student.year_level
+                year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level)
             },
             enrollments: enrollments.map(e => ({
                 _id: e._id,

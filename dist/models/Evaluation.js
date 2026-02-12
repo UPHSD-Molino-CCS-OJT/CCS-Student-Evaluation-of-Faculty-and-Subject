@@ -36,11 +36,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const evaluationSchema = new mongoose_1.Schema({
     school_year: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     anonymous_token: {
-        type: String,
+        type: String, // Not encrypted - used for anonymity logic
         required: true,
         unique: true,
         index: true
@@ -51,13 +51,11 @@ const evaluationSchema = new mongoose_1.Schema({
         required: true
     },
     year_level: {
-        type: String,
-        enum: ['1st', '2nd', '3rd', '4th'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     status: {
-        type: String,
-        enum: ['Regular', 'Irregular', 'Transferee'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     course_id: {

@@ -36,22 +36,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const adminSchema = new mongoose_1.Schema({
     username: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true,
-        unique: true,
-        trim: true
+        unique: true
     },
     password: {
-        type: String,
+        type: String, // Hashed, not encrypted
         required: true
     },
     full_name: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     email: {
-        type: String,
-        trim: true
+        type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
     last_login: {
         type: Date,

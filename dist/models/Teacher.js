@@ -36,24 +36,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const teacherSchema = new mongoose_1.Schema({
     full_name: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     employee_id: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         unique: true,
         sparse: true
     },
     email: {
-        type: String,
-        trim: true
+        type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
     department: {
-        type: String
+        type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
     status: {
-        type: String,
-        enum: ['active', 'inactive'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         default: 'active'
     }
 }, {

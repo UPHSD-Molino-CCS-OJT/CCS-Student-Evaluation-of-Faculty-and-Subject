@@ -51,16 +51,15 @@ const enrollmentSchema = new mongoose_1.Schema({
         required: true
     },
     section_code: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     school_year: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     semester: {
-        type: String,
-        enum: ['1st Semester', '2nd Semester', 'Summer'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     has_evaluated: {

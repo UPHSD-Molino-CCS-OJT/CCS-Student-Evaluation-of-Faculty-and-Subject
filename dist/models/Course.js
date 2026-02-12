@@ -36,13 +36,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const courseSchema = new mongoose_1.Schema({
     name: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     code: {
-        type: String,
-        required: true,
-        uppercase: true
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
+        required: true
     },
     program_id: {
         type: mongoose_1.Schema.Types.ObjectId,

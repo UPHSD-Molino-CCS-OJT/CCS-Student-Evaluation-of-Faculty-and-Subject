@@ -4,48 +4,48 @@ import session from 'express-session';
 import { EncryptedData } from '../utils/encryption';
 export interface IAdmin extends Document {
     _id: Types.ObjectId;
-    username: string;
+    username: EncryptedData | string;
     password: string;
-    full_name: string;
-    email?: string;
+    full_name: EncryptedData | string;
+    email?: EncryptedData | string;
     last_login?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface IProgram extends Document {
     _id: Types.ObjectId;
-    name: string;
-    code: string;
+    name: EncryptedData | string;
+    code: EncryptedData | string;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface ITeacher extends Document {
     _id: Types.ObjectId;
-    full_name: string;
-    employee_id: string;
-    email?: string;
-    department?: string;
-    status: 'active' | 'inactive';
+    full_name: EncryptedData | string;
+    employee_id: EncryptedData | string;
+    email?: EncryptedData | string;
+    department?: EncryptedData | string;
+    status: EncryptedData | string;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface ICourse extends Document {
     _id: Types.ObjectId;
-    name: string;
-    code: string;
+    name: EncryptedData | string;
+    code: EncryptedData | string;
     program_id: Types.ObjectId | IProgram;
     createdAt: Date;
     updatedAt: Date;
 }
 export interface IStudent extends Document {
     _id: Types.ObjectId;
-    student_number: string;
-    full_name: string;
-    email?: string;
+    student_number: EncryptedData | string;
+    full_name: EncryptedData | string;
+    email?: EncryptedData | string;
     program_id: Types.ObjectId | IProgram;
-    year_level: '1st' | '2nd' | '3rd' | '4th';
-    section?: string;
-    status: 'Regular' | 'Irregular' | 'Transferee';
+    year_level: EncryptedData | string;
+    section?: EncryptedData | string;
+    status: EncryptedData | string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -54,9 +54,9 @@ export interface IEnrollment extends Document {
     student_id: Types.ObjectId | IStudent;
     course_id: Types.ObjectId | ICourse;
     teacher_id: Types.ObjectId | ITeacher;
-    section_code: string;
-    school_year: string;
-    semester: '1st Semester' | '2nd Semester' | 'Summer';
+    section_code: EncryptedData | string;
+    school_year: EncryptedData | string;
+    semester: EncryptedData | string;
     has_evaluated: boolean;
     submission_token?: string;
     submission_token_used?: boolean;
@@ -66,11 +66,11 @@ export interface IEnrollment extends Document {
 }
 export interface IEvaluation extends Document {
     _id: Types.ObjectId;
-    school_year: string;
+    school_year: EncryptedData | string;
     anonymous_token: string;
     program_id: Types.ObjectId | IProgram;
-    year_level: '1st' | '2nd' | '3rd' | '4th';
-    status: 'Regular' | 'Irregular' | 'Transferee';
+    year_level: EncryptedData | string;
+    status: EncryptedData | string;
     course_id: Types.ObjectId | ICourse;
     teacher_id: Types.ObjectId | ITeacher | null;
     teacher_diction: number;

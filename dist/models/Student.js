@@ -36,18 +36,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const studentSchema = new mongoose_1.Schema({
     student_number: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true,
-        unique: true,
-        trim: true
+        unique: true
     },
     full_name: {
-        type: String,
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     email: {
-        type: String,
-        trim: true
+        type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
     program_id: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -55,16 +53,14 @@ const studentSchema = new mongoose_1.Schema({
         required: true
     },
     year_level: {
-        type: String,
-        enum: ['1st', '2nd', '3rd', '4th'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         required: true
     },
     section: {
-        type: String
+        type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
     status: {
-        type: String,
-        enum: ['Regular', 'Irregular', 'Transferee'],
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         default: 'Regular'
     }
 }, {
