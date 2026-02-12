@@ -170,7 +170,6 @@ You should see:
 ✓ Mongoose connected to MongoDB
 ✓ Server is running on http://localhost:3000
 ✓ Admin login: http://localhost:3000/admin/login
-  Default credentials: admin / admin123
 ```
 
 ### Step 7: Test the Application

@@ -156,7 +156,6 @@
 - Passwords never stored in plain text
 - Middleware protects all admin routes
 - Logout clears session completely
-- Default credentials: admin / admin123
 
 ### 2. 📱 Responsive Admin Navigation
 
