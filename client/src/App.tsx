@@ -12,6 +12,7 @@ import AdminPrograms from './pages/admin/AdminPrograms'
 import AdminCourses from './pages/admin/AdminCourses'
 import AdminStudents from './pages/admin/AdminStudents'
 import AdminPrivacyAudit from './pages/admin/AdminPrivacyAudit'
+import AdminEvaluationPeriods from './pages/admin/AdminEvaluationPeriods'
 import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProtectedRoute from './components/StudentProtectedRoute'
@@ -108,6 +109,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <AdminPrivacyAudit />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/evaluation-periods" 
+          element={
+            <ProtectedRoute>
+              <AdminEvaluationPeriods />
             </ProtectedRoute>
           } 
         />

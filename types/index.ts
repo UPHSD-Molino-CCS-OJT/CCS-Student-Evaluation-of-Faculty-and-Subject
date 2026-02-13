@@ -125,6 +125,19 @@ export interface IEvaluation extends Document {
   updatedAt: Date;
 }
 
+// Evaluation Period Interface
+export interface IEvaluationPeriod extends Document {
+  _id: Types.ObjectId;
+  academic_year: string;
+  semester: '1st Semester' | '2nd Semester' | 'Summer';
+  is_active: boolean;
+  start_date: Date;
+  end_date: Date;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Session Data Interface
 export interface ISessionData {
   adminId?: string;

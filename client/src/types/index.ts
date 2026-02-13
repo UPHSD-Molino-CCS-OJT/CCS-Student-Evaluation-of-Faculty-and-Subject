@@ -160,6 +160,19 @@ export interface Evaluation {
   createdAt?: Date;
 }
 
+// Evaluation Period Types
+export interface EvaluationPeriod {
+  _id: string;
+  academic_year: string;
+  semester: '1st Semester' | '2nd Semester' | 'Summer';
+  is_active: boolean;
+  start_date: Date | string;
+  end_date: Date | string;
+  description?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Dashboard Types
 export interface DPBudgetStatus {
   currentBudget: number;

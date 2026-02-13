@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, Menu, X, LogOut, TrendingUp, FileText, Book, Presentation, Shield, BookOpen } from 'lucide-react'
+import { GraduationCap, Menu, X, LogOut, TrendingUp, FileText, Book, Presentation, Shield, BookOpen, Calendar } from 'lucide-react'
 
 interface NavLinkProps {
   to: string;
@@ -53,6 +53,7 @@ const AdminNavbar: React.FC = () => {
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center space-x-1">
             <NavLink to="/admin/dashboard" icon="fa-chart-line" text="Dashboard" />
+            <NavLink to="/admin/evaluation-periods" icon="fa-calendar" text="Periods" />
             <NavLink to="/admin/evaluations" icon="fa-file-alt" text="Evaluations" />
             <NavLink to="/admin/programs" icon="fa-book" text="Programs" />
             <NavLink to="/admin/teachers" icon="fa-chalkboard-teacher" text="Teachers" />
@@ -73,6 +74,7 @@ const AdminNavbar: React.FC = () => {
         {isOpen && (
           <div className="lg:hidden pb-4 space-y-2">
             <MobileNavLink to="/admin/dashboard" icon="fa-chart-line" text="Dashboard" />
+            <MobileNavLink to="/admin/evaluation-periods" icon="fa-calendar" text="Periods" />
             <MobileNavLink to="/admin/evaluations" icon="fa-file-alt" text="Evaluations" />
             <MobileNavLink to="/admin/programs" icon="fa-book" text="Programs" />
             <MobileNavLink to="/admin/teachers" icon="fa-chalkboard-teacher" text="Teachers" />
@@ -96,6 +98,7 @@ const AdminNavbar: React.FC = () => {
 const NavLink: React.FC<NavLinkProps> = ({ to, icon, text }) => {
   const iconMap: { [key: string]: React.ReactNode } = {
     'fa-chart-line': <TrendingUp size={20} />,
+    'fa-calendar': <Calendar size={20} />,
     'fa-file-alt': <FileText size={20} />,
     'fa-book': <Book size={20} />,
     'fa-chalkboard-teacher': <Presentation size={20} />,
@@ -118,6 +121,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon, text }) => {
 const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, icon, text }) => {
   const iconMap: { [key: string]: React.ReactNode } = {
     'fa-chart-line': <TrendingUp size={20} />,
+    'fa-calendar': <Calendar size={20} />,
     'fa-file-alt': <FileText size={20} />,
     'fa-book': <Book size={20} />,
     'fa-chalkboard-teacher': <Presentation size={20} />,

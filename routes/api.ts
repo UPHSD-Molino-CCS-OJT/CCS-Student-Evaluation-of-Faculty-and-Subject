@@ -9,6 +9,7 @@ import Course from '../models/Course';
 import Evaluation from '../models/Evaluation';
 import Student from '../models/Student';
 import Enrollment from '../models/Enrollment';
+import EvaluationPeriod from '../models/EvaluationPeriod';
 
 // Import types
 import { IRequest, IEnrollment } from '../types';
@@ -427,6 +428,35 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
             res.status(401).json({ 
                 success: false, 
                 message: 'Please login first' 
+            });
+            return;
+        }
+
+        // Check if there's an active evaluation period
+        const activePeriod = await EvaluationPeriod.findOne({ is_active: true });
+        
+        if (!activePeriod) {
+            res.status(403).json({ 
+                success: false, 
+                message: 'Student evaluation is currently closed. Please check back later or contact your administrator.' 
+            });
+            return;
+        }
+
+        // Check if the active period is within date range
+        const now = new Date();
+        if (now < activePeriod.start_date) {
+            res.status(403).json({ 
+                success: false, 
+                message: `Student evaluation will open on ${activePeriod.start_date.toLocaleDateString()}.` 
+            });
+            return;
+        }
+
+        if (now > activePeriod.end_date) {
+            res.status(403).json({ 
+                success: false, 
+                message: `Student evaluation period ended on ${activePeriod.end_date.toLocaleDateString()}.` 
             });
             return;
         }
@@ -1558,4 +1588,286 @@ router.post('/admin/privacy-audit/run', isAuthenticated, async (_req: IRequest, 
     }
 });
 
+// ==================== EVALUATION PERIOD ROUTES ====================
+
+// Get all evaluation periods (with pagination support)
+router.get('/admin/evaluation-periods', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalCount = await EvaluationPeriod.countDocuments();
+        const periods = await EvaluationPeriod.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasMore = page < totalPages;
+
+        res.json({
+            success: true,
+            periods,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching evaluation periods:', error);
+        res.status(500).json({ success: false, message: 'Error fetching evaluation periods' });
+    }
+});
+
+// Get active evaluation period
+router.get('/evaluation-period/active', async (_req: IRequest, res: Response): Promise<void> => {
+    try {
+        const activePeriod = await EvaluationPeriod.findOne({ is_active: true }).lean();
+        
+        if (!activePeriod) {
+            res.json({ 
+                success: false, 
+                message: 'No active evaluation period',
+                period: null 
+            });
+            return;
+        }
+
+        // Check if period is within date range
+        const now = new Date();
+        if (now < activePeriod.start_date || now > activePeriod.end_date) {
+            res.json({ 
+                success: false, 
+                message: 'Evaluation period is not within the valid date range',
+                period: activePeriod 
+            });
+            return;
+        }
+
+        res.json({ 
+            success: true, 
+            period: activePeriod 
+        });
+    } catch (error) {
+        console.error('Error fetching active period:', error);
+        res.status(500).json({ success: false, message: 'Error checking evaluation period' });
+    }
+});
+
+// Create evaluation period
+router.post('/admin/evaluation-periods', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const { academic_year, semester, is_active, start_date, end_date, description } = req.body;
+
+        // Validate required fields
+        if (!academic_year || !semester || !start_date || !end_date) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Academic year, semester, start date, and end date are required' 
+            });
+            return;
+        }
+
+        // Validate semester
+        if (!['1st Semester', '2nd Semester', 'Summer'].includes(semester)) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Invalid semester. Must be "1st Semester", "2nd Semester", or "Summer"' 
+            });
+            return;
+        }
+
+        // Validate dates
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Invalid date format' 
+            });
+            return;
+        }
+
+        if (startDate >= endDate) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'End date must be after start date' 
+            });
+            return;
+        }
+
+        // Check for duplicate period
+        const existingPeriod = await EvaluationPeriod.findOne({ 
+            academic_year, 
+            semester 
+        });
+
+        if (existingPeriod) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'An evaluation period for this academic year and semester already exists' 
+            });
+            return;
+        }
+
+        const period = new EvaluationPeriod({
+            academic_year,
+            semester,
+            is_active: is_active || false,
+            start_date: startDate,
+            end_date: endDate,
+            description
+        });
+
+        await period.save();
+
+        res.status(201).json({ 
+            success: true, 
+            message: 'Evaluation period created successfully',
+            period 
+        });
+    } catch (error) {
+        console.error('Error creating evaluation period:', error);
+        res.status(500).json({ success: false, message: 'Error creating evaluation period' });
+    }
+});
+
+// Update evaluation period
+router.put('/admin/evaluation-periods/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { academic_year, semester, is_active, start_date, end_date, description } = req.body;
+
+        const period = await EvaluationPeriod.findById(id);
+        
+        if (!period) {
+            res.status(404).json({ success: false, message: 'Evaluation period not found' });
+            return;
+        }
+
+        // Validate semester if provided
+        if (semester && !['1st Semester', '2nd Semester', 'Summer'].includes(semester)) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Invalid semester. Must be "1st Semester", "2nd Semester", or "Summer"' 
+            });
+            return;
+        }
+
+        // Validate dates if both are provided
+        if (start_date && end_date) {
+            const startDate = new Date(start_date);
+            const endDate = new Date(end_date);
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                res.status(400).json({ 
+                    success: false, 
+                    message: 'Invalid date format' 
+                });
+                return;
+            }
+
+            if (startDate >= endDate) {
+                res.status(400).json({ 
+                    success: false, 
+                    message: 'End date must be after start date' 
+                });
+                return;
+            }
+        }
+
+        // Check for duplicate if academic_year or semester is being changed
+        if ((academic_year && academic_year !== period.academic_year) || 
+            (semester && semester !== period.semester)) {
+            const existingPeriod = await EvaluationPeriod.findOne({ 
+                academic_year: academic_year || period.academic_year, 
+                semester: semester || period.semester,
+                _id: { $ne: id }
+            });
+
+            if (existingPeriod) {
+                res.status(400).json({ 
+                    success: false, 
+                    message: 'An evaluation period for this academic year and semester already exists' 
+                });
+                return;
+            }
+        }
+
+        // Update fields
+        if (academic_year) period.academic_year = academic_year;
+        if (semester) period.semester = semester;
+        if (typeof is_active === 'boolean') period.is_active = is_active;
+        if (start_date) period.start_date = new Date(start_date);
+        if (end_date) period.end_date = new Date(end_date);
+        if (description !== undefined) period.description = description;
+
+        await period.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Evaluation period updated successfully',
+            period 
+        });
+    } catch (error) {
+        console.error('Error updating evaluation period:', error);
+        res.status(500).json({ success: false, message: 'Error updating evaluation period' });
+    }
+});
+
+// Delete evaluation period
+router.delete('/admin/evaluation-periods/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        const period = await EvaluationPeriod.findByIdAndDelete(id);
+        
+        if (!period) {
+            res.status(404).json({ success: false, message: 'Evaluation period not found' });
+            return;
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Evaluation period deleted successfully' 
+        });
+    } catch (error) {
+        console.error('Error deleting evaluation period:', error);
+        res.status(500).json({ success: false, message: 'Error deleting evaluation period' });
+    }
+});
+
+// Toggle evaluation period status (activate/deactivate)
+router.patch('/admin/evaluation-periods/:id/toggle', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        const period = await EvaluationPeriod.findById(id);
+        
+        if (!period) {
+            res.status(404).json({ success: false, message: 'Evaluation period not found' });
+            return;
+        }
+
+        period.is_active = !period.is_active;
+        await period.save();
+
+        res.json({ 
+            success: true, 
+            message: `Evaluation period ${period.is_active ? 'activated' : 'deactivated'} successfully`,
+            period 
+        });
+    } catch (error) {
+        console.error('Error toggling evaluation period:', error);
+        res.status(500).json({ success: false, message: 'Error toggling evaluation period' });
+    }
+});
+
 export default router;
+
