@@ -51,14 +51,6 @@ const evaluationPeriodSchema = new mongoose_1.Schema({
         default: false,
         index: true
     },
-    start_date: {
-        type: Date,
-        required: true
-    },
-    end_date: {
-        type: Date,
-        required: true
-    },
     description: {
         type: String,
         trim: true

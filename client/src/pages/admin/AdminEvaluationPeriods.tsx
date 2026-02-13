@@ -33,8 +33,6 @@ const AdminEvaluationPeriods: React.FC = () => {
     academic_year: '',
     semester: '1st Semester' as '1st Semester' | '2nd Semester' | 'Summer',
     is_active: false,
-    start_date: '',
-    end_date: '',
     description: ''
   })
 
@@ -76,8 +74,6 @@ const AdminEvaluationPeriods: React.FC = () => {
         academic_year: period.academic_year,
         semester: period.semester,
         is_active: period.is_active,
-        start_date: new Date(period.start_date).toISOString().split('T')[0],
-        end_date: new Date(period.end_date).toISOString().split('T')[0],
         description: period.description || ''
       })
     } else {
@@ -86,8 +82,6 @@ const AdminEvaluationPeriods: React.FC = () => {
         academic_year: '',
         semester: '1st Semester',
         is_active: false,
-        start_date: '',
-        end_date: '',
         description: ''
       })
     }
@@ -114,15 +108,6 @@ const AdminEvaluationPeriods: React.FC = () => {
     e.preventDefault()
     setError('')
     setSuccess('')
-
-    // Validate dates
-    const startDate = new Date(formData.start_date)
-    const endDate = new Date(formData.end_date)
-
-    if (startDate >= endDate) {
-      setError('End date must be after start date')
-      return
-    }
 
     try {
       if (editingPeriod) {
@@ -203,21 +188,6 @@ const AdminEvaluationPeriods: React.FC = () => {
     }
   }
 
-  const formatDate = (date: Date | string): string => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const isPeriodActive = (period: EvaluationPeriod): boolean => {
-    const now = new Date()
-    const start = new Date(period.start_date)
-    const end = new Date(period.end_date)
-    return period.is_active && now >= start && now <= end
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNavbar />
@@ -271,9 +241,6 @@ const AdminEvaluationPeriods: React.FC = () => {
                         Semester
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Period
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -284,7 +251,7 @@ const AdminEvaluationPeriods: React.FC = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {periods.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
                           <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
                           <p className="text-lg font-semibold mb-2">No evaluation periods found</p>
                           <p className="text-sm">Create your first evaluation period to get started</p>
@@ -303,20 +270,11 @@ const AdminEvaluationPeriods: React.FC = () => {
                             <span className="text-sm text-gray-900">{period.semester}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{formatDate(period.start_date)}</div>
-                            <div className="text-xs text-gray-500">to {formatDate(period.end_date)}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
-                              {isPeriodActive(period) ? (
+                              {period.is_active ? (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                   <CheckCircle size={14} className="mr-1" />
                                   Active
-                                </span>
-                              ) : period.is_active ? (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  <AlertCircle size={14} className="mr-1" />
-                                  Scheduled
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -438,36 +396,6 @@ const AdminEvaluationPeriods: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Date Range */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
-                        Start Date <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        name="start_date"
-                        value={formData.start_date}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">
-                        End Date <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        name="end_date"
-                        value={formData.end_date}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-                  </div>
-
                   {/* Description */}
                   <div>
                     <label className="block text-gray-700 font-semibold mb-2">Description</label>
@@ -482,21 +410,25 @@ const AdminEvaluationPeriods: React.FC = () => {
                   </div>
 
                   {/* Active Status */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="is_active"
-                      checked={formData.is_active}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label className="ml-2 text-gray-700 font-semibold">
-                      Activate this period immediately
-                    </label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        name="is_active"
+                        checked={formData.is_active}
+                        onChange={handleInputChange}
+                        className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <label className="text-gray-700 font-semibold cursor-pointer">
+                          Activate this period
+                        </label>
+                        <p className="text-sm text-gray-600 mt-1">
+                          When active, students can submit evaluations for this period. Only one period can be active at a time.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 ml-6">
-                    Note: Only one period can be active at a time. Activating this period will deactivate others.
-                  </p>
                 </div>
 
                 {/* Buttons */}

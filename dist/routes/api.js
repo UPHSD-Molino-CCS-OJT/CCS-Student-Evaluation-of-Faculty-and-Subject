@@ -417,22 +417,6 @@ router.post('/student/submit-evaluation', async (req, res) => {
             });
             return;
         }
-        // Check if the active period is within date range
-        const now = new Date();
-        if (now < activePeriod.start_date) {
-            res.status(403).json({
-                success: false,
-                message: `Student evaluation will open on ${activePeriod.start_date.toLocaleDateString()}.`
-            });
-            return;
-        }
-        if (now > activePeriod.end_date) {
-            res.status(403).json({
-                success: false,
-                message: `Student evaluation period ended on ${activePeriod.end_date.toLocaleDateString()}.`
-            });
-            return;
-        }
         // PRIVACY PROTECTION: Add random delay
         const submissionDelay = privacy_protection_1.default.calculateSubmissionDelay(2, 8);
         await new Promise(resolve => setTimeout(resolve, submissionDelay));
@@ -1477,16 +1461,6 @@ router.get('/evaluation-period/active', async (_req, res) => {
             });
             return;
         }
-        // Check if period is within date range
-        const now = new Date();
-        if (now < activePeriod.start_date || now > activePeriod.end_date) {
-            res.json({
-                success: false,
-                message: 'Evaluation period is not within the valid date range',
-                period: activePeriod
-            });
-            return;
-        }
         res.json({
             success: true,
             period: activePeriod
@@ -1500,12 +1474,12 @@ router.get('/evaluation-period/active', async (_req, res) => {
 // Create evaluation period
 router.post('/admin/evaluation-periods', auth_1.isAuthenticated, async (req, res) => {
     try {
-        const { academic_year, semester, is_active, start_date, end_date, description } = req.body;
+        const { academic_year, semester, is_active, description } = req.body;
         // Validate required fields
-        if (!academic_year || !semester || !start_date || !end_date) {
+        if (!academic_year || !semester) {
             res.status(400).json({
                 success: false,
-                message: 'Academic year, semester, start date, and end date are required'
+                message: 'Academic year and semester are required'
             });
             return;
         }
@@ -1514,23 +1488,6 @@ router.post('/admin/evaluation-periods', auth_1.isAuthenticated, async (req, res
             res.status(400).json({
                 success: false,
                 message: 'Invalid semester. Must be "1st Semester", "2nd Semester", or "Summer"'
-            });
-            return;
-        }
-        // Validate dates
-        const startDate = new Date(start_date);
-        const endDate = new Date(end_date);
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            res.status(400).json({
-                success: false,
-                message: 'Invalid date format'
-            });
-            return;
-        }
-        if (startDate >= endDate) {
-            res.status(400).json({
-                success: false,
-                message: 'End date must be after start date'
             });
             return;
         }
@@ -1550,8 +1507,6 @@ router.post('/admin/evaluation-periods', auth_1.isAuthenticated, async (req, res
             academic_year,
             semester,
             is_active: is_active || false,
-            start_date: startDate,
-            end_date: endDate,
             description
         });
         await period.save();
@@ -1570,7 +1525,7 @@ router.post('/admin/evaluation-periods', auth_1.isAuthenticated, async (req, res
 router.put('/admin/evaluation-periods/:id', auth_1.isAuthenticated, async (req, res) => {
     try {
         const { id } = req.params;
-        const { academic_year, semester, is_active, start_date, end_date, description } = req.body;
+        const { academic_year, semester, is_active, description } = req.body;
         const period = await EvaluationPeriod_1.default.findById(id);
         if (!period) {
             res.status(404).json({ success: false, message: 'Evaluation period not found' });
@@ -1583,25 +1538,6 @@ router.put('/admin/evaluation-periods/:id', auth_1.isAuthenticated, async (req, 
                 message: 'Invalid semester. Must be "1st Semester", "2nd Semester", or "Summer"'
             });
             return;
-        }
-        // Validate dates if both are provided
-        if (start_date && end_date) {
-            const startDate = new Date(start_date);
-            const endDate = new Date(end_date);
-            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Invalid date format'
-                });
-                return;
-            }
-            if (startDate >= endDate) {
-                res.status(400).json({
-                    success: false,
-                    message: 'End date must be after start date'
-                });
-                return;
-            }
         }
         // Check for duplicate if academic_year or semester is being changed
         if ((academic_year && academic_year !== period.academic_year) ||
@@ -1626,10 +1562,6 @@ router.put('/admin/evaluation-periods/:id', auth_1.isAuthenticated, async (req, 
             period.semester = semester;
         if (typeof is_active === 'boolean')
             period.is_active = is_active;
-        if (start_date)
-            period.start_date = new Date(start_date);
-        if (end_date)
-            period.end_date = new Date(end_date);
         if (description !== undefined)
             period.description = description;
         await period.save();

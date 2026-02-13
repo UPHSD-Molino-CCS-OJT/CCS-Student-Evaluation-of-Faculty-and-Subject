@@ -18,14 +18,6 @@ const evaluationPeriodSchema = new Schema<IEvaluationPeriod>({
     default: false,
     index: true
   },
-  start_date: {
-    type: Date,
-    required: true
-  },
-  end_date: {
-    type: Date,
-    required: true
-  },
   description: {
     type: String,
     trim: true

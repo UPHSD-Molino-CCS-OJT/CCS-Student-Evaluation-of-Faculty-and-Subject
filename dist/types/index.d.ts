@@ -107,8 +107,6 @@ export interface IEvaluationPeriod extends Document {
     academic_year: string;
     semester: '1st Semester' | '2nd Semester' | 'Summer';
     is_active: boolean;
-    start_date: Date;
-    end_date: Date;
     description?: string;
     createdAt: Date;
     updatedAt: Date;
