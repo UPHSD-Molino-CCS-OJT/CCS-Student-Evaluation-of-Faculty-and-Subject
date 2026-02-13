@@ -94,7 +94,7 @@ Access at `http://localhost:3000`
 - **React Router v6** - Client-side routing
 - **Tailwind CSS** - Utility-first styling
 - **Axios** - HTTP client
-- **Font Awesome** - Icons
+- **Lucide React** - Modern icon library
 
 ### Backend
 - **Node.js** - Runtime environment
