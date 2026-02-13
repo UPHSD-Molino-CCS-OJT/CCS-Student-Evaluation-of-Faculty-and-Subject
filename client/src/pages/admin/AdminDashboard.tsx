@@ -4,6 +4,7 @@ import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { DashboardSkeleton } from '../../components/Skeleton'
 import { TopTeacher, PopulatedEvaluation } from '../../types'
+import { FileText, Presentation, Book, User, BookOpen, DoorOpen, Star, Trophy, Clock } from 'lucide-react'
 
 interface DashboardStats {
   totalEvaluations: number;
@@ -70,40 +71,57 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
-  const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color }) => (
-    <div className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${color}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-800">{value}</p>
-        </div>
-        <div className={`text-4xl ${color.replace('border-', 'text-')}`}>
-          <i className={icon}></i>
+  const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color }) => {
+    const iconMap: { [key: string]: React.ReactNode } = {
+      'fas fa-file-alt': <FileText size={48} />,
+      'fas fa-chalkboard-teacher': <Presentation size={48} />,
+      'fas fa-book': <Book size={48} />
+    }
+    
+    return (
+      <div className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${color}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
+            <p className="text-3xl font-bold text-gray-800">{value}</p>
+          </div>
+          <div className={color.replace('border-', 'text-')}>
+            {iconMap[icon]}
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
-  const RatingCard: React.FC<RatingCardProps> = ({ title, value, icon }) => (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-gray-700 font-semibold">{title}</h3>
-        <i className={`${icon} text-blue-600`}></i>
+  const RatingCard: React.FC<RatingCardProps> = ({ title, value, icon }) => {
+    const iconMap: { [key: string]: React.ReactNode } = {
+      'fas fa-user-tie': <User size={20} />,
+      'fas fa-book-reader': <BookOpen size={20} />,
+      'fas fa-door-open': <DoorOpen size={20} />,
+      'fas fa-star': <Star size={20} />
+    }
+    
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-gray-700 font-semibold">{title}</h3>
+          <div className="text-blue-600">{iconMap[icon]}</div>
+        </div>
+        <div className="flex items-end">
+          <span className="text-3xl font-bold text-gray-800">{(value || 0).toFixed(2)}</span>
+          <span className="text-gray-500 ml-2 mb-1">/5.0</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+          <div
+            className={`h-2 rounded-full ${
+              value >= 4 ? 'bg-green-500' : value >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}
+            style={{ width: `${(value / 5) * 100}%` }}
+          ></div>
+        </div>
       </div>
-      <div className="flex items-end">
-        <span className="text-3xl font-bold text-gray-800">{(value || 0).toFixed(2)}</span>
-        <span className="text-gray-500 ml-2 mb-1">/5.0</span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-        <div
-          className={`h-2 rounded-full ${
-            value >= 4 ? 'bg-green-500' : value >= 3 ? 'bg-yellow-500' : 'bg-red-500'
-          }`}
-          style={{ width: `${(value / 5) * 100}%` }}
-        ></div>
-      </div>
-    </div>
-  )
+    )
+  }
 
   if (loading) {
     return (
@@ -185,7 +203,7 @@ const AdminDashboard: React.FC = () => {
           {/* Top Teachers */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-              <i className="fas fa-trophy text-yellow-500 mr-2"></i>
+              <Trophy size={24} className="text-yellow-500 mr-2" />
               Top Performing Teachers
             </h2>
             {topTeachers.length === 0 ? (
@@ -221,7 +239,7 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-800 flex items-center">
-                <i className="fas fa-clock text-blue-600 mr-2"></i>
+                <Clock size={24} className="text-blue-600 mr-2" />
                 Recent Evaluations
               </h2>
               <Link

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { GraduationCap, Menu, X, LogOut, TrendingUp, FileText, Book, Presentation, Shield, BookOpen } from 'lucide-react'
 
 interface NavLinkProps {
   to: string;
@@ -34,7 +35,7 @@ const AdminNavbar: React.FC = () => {
         <div className="flex justify-between items-center py-4">
           {/* Brand */}
           <Link to="/admin/dashboard" className="flex items-center space-x-3">
-            <i className="fas fa-graduation-cap text-3xl"></i>
+            <GraduationCap size={32} />
             <div>
               <h1 className="text-xl font-bold">UPHSD Admin Portal</h1>
               <p className="text-xs text-blue-200">Evaluation Management System</p>
@@ -46,7 +47,7 @@ const AdminNavbar: React.FC = () => {
             onClick={() => setIsOpen(!isOpen)}
             className="lg:hidden text-white focus:outline-none"
           >
-            <i className={`fas ${isOpen ? 'fa-times' : 'fa-bars'} text-2xl`}></i>
+            {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
 
           {/* Desktop Menu */}
@@ -62,7 +63,7 @@ const AdminNavbar: React.FC = () => {
               onClick={handleLogout}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200 flex items-center space-x-2"
             >
-              <i className="fas fa-sign-out-alt"></i>
+              <LogOut size={20} />
               <span>Logout</span>
             </button>
           </div>
@@ -82,7 +83,7 @@ const AdminNavbar: React.FC = () => {
               onClick={handleLogout}
               className="w-full text-left px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200 flex items-center space-x-2"
             >
-              <i className="fas fa-sign-out-alt"></i>
+              <LogOut size={20} />
               <span>Logout</span>
             </button>
           </div>
@@ -92,24 +93,48 @@ const AdminNavbar: React.FC = () => {
   )
 }
 
-const NavLink: React.FC<NavLinkProps> = ({ to, icon, text }) => (
-  <Link
-    to={to}
-    className="px-4 py-2 hover:bg-blue-800 rounded-lg transition-colors duration-200 flex items-center space-x-2"
-  >
-    <i className={`fas ${icon}`}></i>
-    <span>{text}</span>
-  </Link>
-)
+const NavLink: React.FC<NavLinkProps> = ({ to, icon, text }) => {
+  const iconMap: { [key: string]: React.ReactNode } = {
+    'fa-chart-line': <TrendingUp size={20} />,
+    'fa-file-alt': <FileText size={20} />,
+    'fa-book': <Book size={20} />,
+    'fa-chalkboard-teacher': <Presentation size={20} />,
+    'fa-graduation-cap': <BookOpen size={20} />,
+    'fa-user-graduate': <GraduationCap size={20} />,
+    'fa-shield-alt': <Shield size={20} />
+  }
+  
+  return (
+    <Link
+      to={to}
+      className="px-4 py-2 hover:bg-blue-800 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+    >
+      {iconMap[icon]}
+      <span>{text}</span>
+    </Link>
+  )
+}
 
-const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, icon, text }) => (
-  <Link
-    to={to}
-    className="block px-4 py-2 hover:bg-blue-800 rounded-lg transition-colors duration-200"
-  >
-    <i className={`fas ${icon} mr-3`}></i>
-    {text}
-  </Link>
-)
+const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, icon, text }) => {
+  const iconMap: { [key: string]: React.ReactNode } = {
+    'fa-chart-line': <TrendingUp size={20} />,
+    'fa-file-alt': <FileText size={20} />,
+    'fa-book': <Book size={20} />,
+    'fa-chalkboard-teacher': <Presentation size={20} />,
+    'fa-graduation-cap': <BookOpen size={20} />,
+    'fa-user-graduate': <GraduationCap size={20} />,
+    'fa-shield-alt': <Shield size={20} />
+  }
+  
+  return (
+    <Link
+      to={to}
+      className="block px-4 py-2 hover:bg-blue-800 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+    >
+      {iconMap[icon]}
+      <span>{text}</span>
+    </Link>
+  )
+}
 
 export default AdminNavbar

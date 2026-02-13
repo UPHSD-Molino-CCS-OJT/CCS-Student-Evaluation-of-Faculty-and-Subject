@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
+import { ShieldCheck, AlertCircle, User, Lock, Loader, LogIn } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 
 interface Credentials {
@@ -61,7 +62,7 @@ const AdminLogin: React.FC = () => {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="inline-block bg-blue-100 rounded-full p-4 mb-4">
-                <i className="fas fa-user-shield text-4xl text-blue-600"></i>
+                <ShieldCheck className="text-blue-600" size={48} />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Admin Login</h2>
               <p className="text-gray-600">Access the evaluation management system</p>
@@ -70,7 +71,7 @@ const AdminLogin: React.FC = () => {
             {/* Error Message */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-                <i className="fas fa-exclamation-circle mr-2"></i>
+                <AlertCircle className="mr-2" size={20} />
                 <span>{error}</span>
               </div>
             )}
@@ -83,7 +84,7 @@ const AdminLogin: React.FC = () => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i className="fas fa-user text-gray-400"></i>
+                    <User className="text-gray-400" size={20} />
                   </div>
                   <input
                     type="text"
@@ -104,7 +105,7 @@ const AdminLogin: React.FC = () => {
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i className="fas fa-lock text-gray-400"></i>
+                    <Lock className="text-gray-400" size={20} />
                   </div>
                   <input
                     type="password"
@@ -126,12 +127,12 @@ const AdminLogin: React.FC = () => {
               >
                 {loading ? (
                   <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    <Loader className="mr-2 animate-spin" size={20} />
                     Logging in...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-sign-in-alt mr-2"></i>
+                    <LogIn className="mr-2" size={20} />
                     Login
                   </>
                 )}

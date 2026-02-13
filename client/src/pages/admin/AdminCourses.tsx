@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
 import Pagination from '../../components/Pagination'
@@ -148,7 +149,7 @@ const AdminCourses: React.FC = () => {
             onClick={() => { resetForm(); setShowModal(true) }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center"
           >
-            <i className="fas fa-plus mr-2"></i>Add Course
+            <Plus className="mr-2" size={20} />Add Course
           </button>
         </div>
 
@@ -170,10 +171,10 @@ const AdminCourses: React.FC = () => {
                   <td className="px-6 py-4 text-sm text-gray-900">{course.program_id?.name}</td>
                   <td className="px-6 py-4 text-sm space-x-2">
                     <button onClick={() => handleEdit(course)} className="text-blue-600 hover:text-blue-900">
-                      <i className="fas fa-edit"></i>
+                      <Pencil size={18} />
                     </button>
                     <button onClick={() => handleDelete(course._id)} className="text-red-600 hover:text-red-900">
-                      <i className="fas fa-trash"></i>
+                      <Trash2 size={18} />
                     </button>
                   </td>
                 </tr>

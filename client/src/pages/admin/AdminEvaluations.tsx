@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
+import { Inbox, Eye } from 'lucide-react'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
 import Pagination from '../../components/Pagination'
@@ -107,7 +108,7 @@ const AdminEvaluations: React.FC = () => {
                 {evaluations.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      <i className="fas fa-inbox text-5xl text-gray-300 mb-4 block"></i>
+                      <Inbox className="mx-auto text-gray-300 mb-4" size={64} />
                       No evaluations submitted yet
                     </td>
                   </tr>
@@ -139,9 +140,9 @@ const AdminEvaluations: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <Link
                             to={`/admin/evaluations/${evaluation._id}`}
-                            className="text-blue-600 hover:text-blue-900 font-semibold"
+                            className="text-blue-600 hover:text-blue-900 font-semibold flex items-center"
                           >
-                            <i className="fas fa-eye mr-1"></i>
+                            <Eye className="mr-1" size={18} />
                             View Details
                           </Link>
                         </td>

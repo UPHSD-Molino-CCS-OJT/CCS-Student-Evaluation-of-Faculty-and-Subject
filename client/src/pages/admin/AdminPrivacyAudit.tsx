@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { DetailedAuditResults } from '../../types'
+import { CheckCircle, AlertTriangle, Shield, Loader, PlayCircle, Lightbulb, ArrowRight, ClipboardCheck } from 'lucide-react'
 
 const AdminPrivacyAudit: React.FC = () => {
   const [auditResults, setAuditResults] = useState<DetailedAuditResults | null>(null)
@@ -22,9 +23,9 @@ const AdminPrivacyAudit: React.FC = () => {
 
   const getStatusIcon = (passed: boolean): JSX.Element => {
     return passed ? (
-      <i className="fas fa-check-circle text-green-600 text-2xl"></i>
+      <CheckCircle size={24} className="text-green-600" />
     ) : (
-      <i className="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+      <AlertTriangle size={24} className="text-red-600" />
     )
   }
 
@@ -41,7 +42,7 @@ const AdminPrivacyAudit: React.FC = () => {
         {/* Info Card */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <h2 className="font-bold text-lg text-blue-800 mb-3 flex items-center">
-            <i className="fas fa-shield-alt mr-2"></i>
+            <Shield size={20} className="mr-2" />
             12-Layer Privacy Protection System
           </h2>
           <p className="text-blue-700 mb-4">
@@ -72,12 +73,12 @@ const AdminPrivacyAudit: React.FC = () => {
           >
             {loading ? (
               <>
-                <i className="fas fa-spinner fa-spin mr-3"></i>
+                <Loader size={24} className="mr-3 animate-spin" />
                 Running Audit...
               </>
             ) : (
               <>
-                <i className="fas fa-play-circle mr-3"></i>
+                <PlayCircle size={24} className="mr-3" />
                 Run Privacy Audit
               </>
             )}
@@ -94,9 +95,9 @@ const AdminPrivacyAudit: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Audit Summary</h2>
                 {auditResults.overall_compliance ? (
-                  <i className="fas fa-shield-alt text-green-600 text-4xl"></i>
+                  <Shield size={48} className="text-green-600" />
                 ) : (
-                  <i className="fas fa-exclamation-triangle text-red-600 text-4xl"></i>
+                  <AlertTriangle size={48} className="text-red-600" />
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -154,13 +155,13 @@ const AdminPrivacyAudit: React.FC = () => {
             {auditResults.recommendations && auditResults.recommendations.length > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                  <i className="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                  <Lightbulb size={24} className="text-yellow-600 mr-2" />
                   Recommendations
                 </h3>
                 <ul className="space-y-2">
                   {auditResults.recommendations.map((rec, index) => (
                     <li key={index} className="flex items-start text-gray-700">
-                      <i className="fas fa-arrow-right text-yellow-600 mt-1 mr-2"></i>
+                      <ArrowRight size={16} className="text-yellow-600 mt-1 mr-2 flex-shrink-0" />
                       <span>{rec.title}</span>
                     </li>
                   ))}
@@ -178,7 +179,7 @@ const AdminPrivacyAudit: React.FC = () => {
         {/* Placeholder when no results */}
         {!auditResults && !loading && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <i className="fas fa-clipboard-check text-6xl text-gray-300 mb-4"></i>
+            <ClipboardCheck size={72} className="text-gray-300 mb-4 mx-auto" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No Audit Results</h3>
             <p className="text-gray-500">Click "Run Privacy Audit" to start a comprehensive privacy check</p>
           </div>

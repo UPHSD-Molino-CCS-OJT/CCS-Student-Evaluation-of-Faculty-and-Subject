@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
+import { GraduationCap, AlertCircle, Info, Loader, LogIn, Shield } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 
 const StudentLogin: React.FC = () => {
@@ -47,7 +48,7 @@ const StudentLogin: React.FC = () => {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="inline-block bg-blue-100 rounded-full p-4 mb-4">
-                <i className="fas fa-user-graduate text-4xl text-blue-600"></i>
+                <GraduationCap className="text-blue-600" size={48} />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Student Login</h2>
               <p className="text-gray-600">Enter your School ID to evaluate faculty</p>
@@ -56,7 +57,7 @@ const StudentLogin: React.FC = () => {
             {/* Error Message */}
             {error && (
               <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-                <i className="fas fa-exclamation-circle mr-2"></i>
+                <AlertCircle className="mr-2" size={20} />
                 <span>{error}</span>
               </div>
             )}
@@ -77,8 +78,8 @@ const StudentLogin: React.FC = () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
-                <p className="mt-2 text-sm text-gray-500">
-                  <i className="fas fa-info-circle mr-1"></i>
+                <p className="mt-2 text-sm text-gray-500 flex items-center">
+                  <Info className="mr-1" size={16} />
                   Format: 00-0000-000
                 </p>
               </div>
@@ -90,12 +91,12 @@ const StudentLogin: React.FC = () => {
               >
                 {loading ? (
                   <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Logging in...
+                    <Loader className="mr-2 animate-spin" size={20} />
+                    Verifying...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-sign-in-alt mr-2"></i>
+                    <LogIn className="mr-2" size={20} />
                     Login
                   </>
                 )}
@@ -105,7 +106,7 @@ const StudentLogin: React.FC = () => {
             {/* Info Box */}
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-800 mb-2 flex items-center">
-                <i className="fas fa-shield-alt mr-2"></i>
+                <Shield className="mr-2" size={20} />
                 Privacy Protected
               </h3>
               <p className="text-sm text-blue-700">

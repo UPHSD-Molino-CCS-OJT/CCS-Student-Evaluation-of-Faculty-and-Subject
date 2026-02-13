@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
+import { GraduationCap, AlertCircle, Inbox, Presentation, CheckCircle, Clock, Check, Pencil } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
@@ -73,7 +74,7 @@ const StudentSubjects: React.FC = () => {
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg shadow-lg p-6 mb-8 fade-in">
             <div className="flex items-center space-x-4">
               <div className="bg-white/20 rounded-full p-4">
-                <i className="fas fa-user-graduate text-3xl"></i>
+                <GraduationCap size={28} />
               </div>
               <div>
                 <h2 className="text-2xl font-bold">Student Dashboard</h2>
@@ -94,7 +95,7 @@ const StudentSubjects: React.FC = () => {
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            <i className="fas fa-exclamation-circle mr-2"></i>
+            <AlertCircle className="mr-2 inline" size={20} />
             {error}
           </div>
         )}
@@ -102,7 +103,7 @@ const StudentSubjects: React.FC = () => {
         {/* Subjects Grid */}
         {enrollments.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <i className="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+            <Inbox className="mx-auto text-gray-300 mb-4" size={80} />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No Subjects Found</h3>
             <p className="text-gray-500">You have no enrolled subjects at this time.</p>
           </div>
@@ -124,7 +125,7 @@ const StudentSubjects: React.FC = () => {
                   <div className="mb-4">
                     <p className="text-sm text-gray-500 mb-1">Instructor</p>
                     <p className="font-semibold text-gray-800 flex items-center">
-                      <i className="fas fa-chalkboard-teacher mr-2 text-blue-600"></i>
+                      <Presentation className="mr-2 text-blue-600" size={20} />
                       {enrollment.teacher?.full_name}
                     </p>
                   </div>
@@ -132,12 +133,12 @@ const StudentSubjects: React.FC = () => {
                   {/* Status Badge */}
                   {enrollment.has_evaluated ? (
                     <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-center mb-4">
-                      <i className="fas fa-check-circle mr-2"></i>
+                      <CheckCircle className="mr-2 inline" size={20} />
                       <span className="font-semibold">Completed</span>
                     </div>
                   ) : (
                     <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-center mb-4">
-                      <i className="fas fa-clock mr-2"></i>
+                      <Clock className="mr-2 inline" size={20} />
                       <span className="font-semibold">Pending</span>
                     </div>
                   )}
@@ -154,12 +155,12 @@ const StudentSubjects: React.FC = () => {
                   >
                     {enrollment.has_evaluated ? (
                       <>
-                        <i className="fas fa-check mr-2"></i>
+                        <Check className="mr-2 inline" size={20} />
                         Already Evaluated
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-edit mr-2"></i>
+                        <Pencil className="mr-2 inline" size={20} />
                         Evaluate Now
                       </>
                     )}

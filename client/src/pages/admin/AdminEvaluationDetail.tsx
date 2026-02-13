@@ -4,6 +4,7 @@ import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { EvaluationDetailSkeleton } from '../../components/Skeleton'
 import { PopulatedEvaluation, RatingItemProps } from '../../types'
+import { AlertTriangle, ArrowLeft, GraduationCap, Shield, Presentation, BookOpen, DoorOpen, MessageSquare } from 'lucide-react'
 
 const AdminEvaluationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -71,7 +72,7 @@ const AdminEvaluationDetail: React.FC = () => {
         <AdminNavbar />
         <div className="container mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-            <i className="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+            <AlertTriangle size={64} className="text-red-500 mb-4 mx-auto" />
             <h2 className="text-2xl font-bold text-red-800 mb-2">Evaluation Not Found</h2>
           </div>
         </div>
@@ -89,7 +90,7 @@ const AdminEvaluationDetail: React.FC = () => {
           to="/admin/evaluations"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold mb-6"
         >
-          <i className="fas fa-arrow-left mr-2"></i>
+          <ArrowLeft size={20} className="mr-2" />
           Back to Evaluations
         </Link>
 
@@ -118,7 +119,7 @@ const AdminEvaluationDetail: React.FC = () => {
         {/* Student Info (Privacy Protected) */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="font-bold text-lg mb-4 text-gray-800 flex items-center">
-            <i className="fas fa-user-graduate text-blue-600 mr-2"></i>
+            <GraduationCap size={20} className="text-blue-600 mr-2" />
             Student Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
@@ -141,7 +142,7 @@ const AdminEvaluationDetail: React.FC = () => {
           </div>
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 flex items-center">
-              <i className="fas fa-shield-alt mr-2"></i>
+              <Shield size={16} className="mr-2" />
               Student ID is hidden for privacy protection
             </p>
           </div>
@@ -180,7 +181,7 @@ const AdminEvaluationDetail: React.FC = () => {
           {/* Teacher Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="font-bold text-xl mb-4 text-gray-800 flex items-center">
-              <i className="fas fa-chalkboard-teacher text-blue-600 mr-2"></i>
+              <Presentation size={24} className="text-blue-600 mr-2" />
               The Teacher
             </h2>
             <RatingItem label="1. Diction (clear and understandable speech)" rating={evaluation.teacher_diction} />
@@ -194,7 +195,7 @@ const AdminEvaluationDetail: React.FC = () => {
           {/* Learning Process Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="font-bold text-xl mb-4 text-gray-800 flex items-center">
-              <i className="fas fa-book-reader text-blue-600 mr-2"></i>
+              <BookOpen size={24} className="text-blue-600 mr-2" />
               The Learning Process
             </h2>
             <RatingItem label="7. Motivation (inspires and encourages learning)" rating={evaluation.learning_motivation} />
@@ -215,7 +216,7 @@ const AdminEvaluationDetail: React.FC = () => {
           {/* Classroom Management Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="font-bold text-xl mb-4 text-gray-800 flex items-center">
-              <i className="fas fa-door-open text-blue-600 mr-2"></i>
+              <DoorOpen size={24} className="text-blue-600 mr-2" />
               Classroom Management
             </h2>
             <RatingItem label="20. Attendance (monitors student attendance)" rating={evaluation.classroom_attendance} />
@@ -230,7 +231,7 @@ const AdminEvaluationDetail: React.FC = () => {
           {evaluation.comments && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="font-bold text-xl mb-4 text-gray-800 flex items-center">
-                <i className="fas fa-comments text-blue-600 mr-2"></i>
+                <MessageSquare size={24} className="text-blue-600 mr-2" />
                 Additional Comments
               </h2>
               <p className="text-gray-700 whitespace-pre-wrap">{evaluation.comments}</p>

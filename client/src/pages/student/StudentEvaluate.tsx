@@ -4,6 +4,7 @@ import axios from 'axios'
 import Navbar from '../../components/Navbar'
 import { EvaluationFormSkeleton } from '../../components/Skeleton'
 import { EvaluationFormData, RatingQuestionProps } from '../../types'
+import { CheckCircle, AlertTriangle, AlertCircle, Presentation, BookOpen, DoorOpen, MessageSquare, Shield, Trash2, Save, Loader, Send } from 'lucide-react'
 
 interface PopulatedEnrollment {
   _id: string;
@@ -287,7 +288,7 @@ const StudentEvaluate: React.FC = () => {
         <Navbar showAdminButton={false} />
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-            <i className="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+            <AlertTriangle size={64} className="text-red-500 mb-4 mx-auto" />
             <h2 className="text-2xl font-bold text-red-800 mb-2">Error</h2>
             <p className="text-red-700">{error || 'Enrollment not found'}</p>
           </div>
@@ -315,7 +316,7 @@ const StudentEvaluate: React.FC = () => {
           </div>
           {draftSaved && (
             <div className="mt-2 text-sm text-green-600 flex items-center">
-              <i className="fas fa-check-circle mr-2"></i>
+              <CheckCircle size={16} className="mr-2" />
               Draft saved ✓
             </div>
           )}
@@ -342,7 +343,7 @@ const StudentEvaluate: React.FC = () => {
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-            <i className="fas fa-exclamation-circle mr-2"></i>
+            <AlertCircle size={20} className="mr-2" />
             {error}
           </div>
         )}
@@ -352,7 +353,7 @@ const StudentEvaluate: React.FC = () => {
           {/* Section 1: The Teacher */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
-              <i className="fas fa-chalkboard-teacher mr-3"></i>
+              <Presentation size={24} className="mr-3" />
               Section 1: The Teacher
             </div>
             <div className="p-6 space-y-6">
@@ -368,7 +369,7 @@ const StudentEvaluate: React.FC = () => {
           {/* Section 2: The Learning Process */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
-              <i className="fas fa-book-reader mr-3"></i>
+              <BookOpen size={24} className="mr-3" />
               Section 2: The Learning Process
             </div>
             <div className="p-6 space-y-6">
@@ -391,7 +392,7 @@ const StudentEvaluate: React.FC = () => {
           {/* Section 3: Classroom Management */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="w-full px-6 py-4 text-left font-bold text-lg flex items-center bg-blue-600 text-white">
-              <i className="fas fa-door-open mr-3"></i>
+              <DoorOpen size={24} className="mr-3" />
               Section 3: Classroom Management
             </div>
             <div className="p-6 space-y-6">
@@ -407,14 +408,14 @@ const StudentEvaluate: React.FC = () => {
           {/* Comments Section */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="font-bold text-lg mb-4 text-gray-800">
-              <i className="fas fa-comments mr-2 text-blue-600"></i>
+              <MessageSquare size={20} className="mr-2 text-blue-600 inline" />
               Additional Comments (Optional)
             </h3>
             
             {/* Privacy Warning */}
             <div className="mb-4 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
               <div className="flex items-start">
-                <i className="fas fa-shield-alt text-amber-600 mt-1 mr-3"></i>
+                <Shield size={20} className="text-amber-600 mt-1 mr-3 flex-shrink-0" />
                 <div className="text-sm text-amber-800">
                   <p className="font-semibold mb-1">⚠️ Anonymity Protection & Risk Warning</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
@@ -461,7 +462,7 @@ const StudentEvaluate: React.FC = () => {
                 onClick={clearDraft}
                 className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
               >
-                <i className="fas fa-trash-alt mr-2"></i>
+                <Trash2 size={20} className="mr-2 inline" />
                 Clear Draft
               </button>
               <button
@@ -469,7 +470,7 @@ const StudentEvaluate: React.FC = () => {
                 onClick={() => saveDraft(true)}
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
               >
-                <i className="fas fa-save mr-2"></i>
+                <Save size={20} className="mr-2 inline" />
                 Save Draft (Ctrl+S)
               </button>
               <button
@@ -479,12 +480,12 @@ const StudentEvaluate: React.FC = () => {
               >
                 {submitting ? (
                   <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    <Loader size={20} className="mr-2 inline animate-spin" />
                     Submitting...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-paper-plane mr-2"></i>
+                    <Send size={20} className="mr-2 inline" />
                     Submit Evaluation
                   </>
                 )}
@@ -500,7 +501,7 @@ const StudentEvaluate: React.FC = () => {
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md mx-4 fade-in">
             <div className="text-center">
               <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
-                <i className="fas fa-check-circle text-5xl text-green-600"></i>
+                <CheckCircle size={64} className="text-green-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Evaluation Submitted!</h2>
               <p className="text-gray-600 mb-4">

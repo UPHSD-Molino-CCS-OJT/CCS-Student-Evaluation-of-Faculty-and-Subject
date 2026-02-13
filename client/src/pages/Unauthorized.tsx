@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Lock, Info, LogIn, Shield } from 'lucide-react'
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate()
@@ -35,7 +36,7 @@ const Unauthorized: React.FC = () => {
           {/* Icon */}
           <div className="mb-6">
             <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-              <i className="fas fa-lock text-4xl text-red-600"></i>
+              <Lock size={48} className="text-red-600" />
             </div>
           </div>
 
@@ -55,7 +56,7 @@ const Unauthorized: React.FC = () => {
           {/* Redirect info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center text-blue-700">
-              <i className="fas fa-info-circle mr-2"></i>
+              <Info size={20} className="mr-2" />
               <p className="text-sm">
                 Redirecting to {context === 'student' ? 'student' : 'admin'} login in 3 seconds...
               </p>
@@ -67,7 +68,7 @@ const Unauthorized: React.FC = () => {
             onClick={handleLoginNow}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
           >
-            <i className="fas fa-sign-in-alt mr-2"></i>
+            <LogIn size={20} className="mr-2" />
             Go to Login Now
           </button>
 
@@ -101,8 +102,8 @@ const Unauthorized: React.FC = () => {
 
         {/* Security note */}
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
-            <i className="fas fa-shield-alt mr-1"></i>
+          <p className="text-xs text-gray-500 flex items-center justify-center">
+            <Shield size={12} className="mr-1" />
             This page is protected to ensure data privacy and security
           </p>
         </div>

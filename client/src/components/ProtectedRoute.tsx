@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
+import { Loader } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -32,7 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+          <Loader className="mx-auto text-blue-600 mb-4 animate-spin" size={48} />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
