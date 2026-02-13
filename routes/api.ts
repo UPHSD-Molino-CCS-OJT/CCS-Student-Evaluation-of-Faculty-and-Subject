@@ -609,7 +609,14 @@ router.post('/student/submit-evaluation', async (req: IRequest, res: Response): 
 router.get('/admin/dashboard', isAuthenticated, async (_req: IRequest, res: Response): Promise<void> => {
     try {
         const totalEvaluations = await Evaluation.countDocuments();
-        const totalTeachers = await Teacher.countDocuments({ status: 'active' });
+        
+        // Since status is encrypted, we need to fetch and decrypt to count active teachers
+        const allTeachers = await Teacher.find();
+        const totalTeachers = allTeachers.filter(teacher => {
+            const status = safeDecrypt(teacher.status);
+            return status === 'active';
+        }).length;
+        
         const totalPrograms = await Program.countDocuments();
         
         // Calculate average ratings

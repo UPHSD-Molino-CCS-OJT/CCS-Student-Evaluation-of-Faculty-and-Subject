@@ -561,7 +561,12 @@ router.post('/student/submit-evaluation', async (req, res) => {
 router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
     try {
         const totalEvaluations = await Evaluation_1.default.countDocuments();
-        const totalTeachers = await Teacher_1.default.countDocuments({ status: 'active' });
+        // Since status is encrypted, we need to fetch and decrypt to count active teachers
+        const allTeachers = await Teacher_1.default.find();
+        const totalTeachers = allTeachers.filter(teacher => {
+            const status = (0, encryption_helpers_1.safeDecrypt)(teacher.status);
+            return status === 'active';
+        }).length;
         const totalPrograms = await Program_1.default.countDocuments();
         // Calculate average ratings
         const avgRatings = await Evaluation_1.default.aggregate([
