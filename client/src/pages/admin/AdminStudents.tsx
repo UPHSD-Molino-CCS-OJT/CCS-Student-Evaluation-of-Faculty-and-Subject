@@ -221,10 +221,10 @@ const AdminStudents: React.FC = () => {
                       required
                     >
                       <option value="">Select Year</option>
-                      <option value="1">1st Year</option>
-                      <option value="2">2nd Year</option>
-                      <option value="3">3rd Year</option>
-                      <option value="4">4th Year</option>
+                      <option value="1st">1st Year</option>
+                      <option value="2nd">2nd Year</option>
+                      <option value="3rd">3rd Year</option>
+                      <option value="4th">4th Year</option>
                     </select>
                   </div>
                   <div className="mb-4">
