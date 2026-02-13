@@ -6,8 +6,6 @@ import { Student, Program } from '../../types'
 
 interface StudentFormData {
   student_number: string;
-  full_name: string;
-  email: string;
   program_id: string;
   year_level: string;
   school_year: string;
@@ -17,7 +15,6 @@ interface StudentFormData {
 
 interface PopulatedStudent extends Omit<Student, 'program_id'> {
   program_id?: Program;
-  email?: string;
 }
 
 const AdminStudents: React.FC = () => {
@@ -28,8 +25,6 @@ const AdminStudents: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<PopulatedStudent | null>(null)
   const [formData, setFormData] = useState<StudentFormData>({
     student_number: '',
-    full_name: '',
-    email: '',
     program_id: '',
     year_level: '',
     school_year: '',
@@ -86,8 +81,6 @@ const AdminStudents: React.FC = () => {
     setEditingStudent(student)
     setFormData({
       student_number: student.student_number,
-      full_name: student.full_name,
-      email: student.email || '',
       program_id: student.program_id?._id || '',
       year_level: student.year_level,
       school_year: student.school_year,
@@ -115,8 +108,6 @@ const AdminStudents: React.FC = () => {
   const resetForm = () => {
     setFormData({
       student_number: '',
-      full_name: '',
-      email: '',
       program_id: '',
       year_level: '',
       school_year: '',
@@ -164,7 +155,6 @@ const AdminStudents: React.FC = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -175,7 +165,6 @@ const AdminStudents: React.FC = () => {
                 {students.map((student) => (
                   <tr key={student._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.student_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.full_name}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{student.program_id?.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.year_level}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.status}</td>
@@ -209,25 +198,6 @@ const AdminStudents: React.FC = () => {
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="00-0000-000"
                       required
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2">Full Name *</label>
-                    <input
-                      type="text"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="mb-4">

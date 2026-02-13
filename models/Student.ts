@@ -7,13 +7,6 @@ const studentSchema = new Schema<IStudent>({
     required: true,
     unique: true
   },
-  full_name: {
-    type: Schema.Types.Mixed, // Encrypted field
-    required: true
-  },
-  email: {
-    type: Schema.Types.Mixed // Encrypted field
-  },
   program_id: {
     type: Schema.Types.ObjectId,
     ref: 'Program',

@@ -184,8 +184,6 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     
     studentsData.push({
       student_number: studentNumber,
-      full_name: `Firstname${i} Lastname${i}`,
-      email: `email${i}@student.uphsd.edu.ph`,
       program_id: programs[programIndex]._id,
       year_level: yearLevel,
       section: section,
@@ -273,9 +271,9 @@ if (require.main === module) {
         console.log('\n📝 Sample Student Logins (first 5 students):');
         
         // Fetch and display first 5 students as examples
-        const sampleStudents = await Student.find({}).limit(5).select('student_number full_name');
+        const sampleStudents = await Student.find({}).limit(5).select('student_number');
         sampleStudents.forEach((student, index) => {
-          console.log(`  ${index + 1}. ${student.get('student_number')} (${student.get('full_name')})`);
+          console.log(`  ${index + 1}. ${student.get('student_number')}`);
         });
         console.log(`  ... and 45 more students\n`);
         console.log('💡 Use any student number above to test the system\n');

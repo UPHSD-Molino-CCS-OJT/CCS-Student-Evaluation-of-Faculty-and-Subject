@@ -86,7 +86,6 @@ export interface Course {
 
 export interface Student {
   _id: string;
-  full_name: string;
   student_number: string;
   program_id: string | Program;
   program?: Program;

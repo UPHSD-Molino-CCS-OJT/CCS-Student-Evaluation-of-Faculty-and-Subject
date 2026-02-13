@@ -507,7 +507,7 @@ function parseArgs(): Partial<EvaluationConfig> & { limit?: number } {
 /**
  * Fetch students from the database via API
  */
-async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Array<{ number: string; name: string }>> {
+async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Array<{ number: string }>> {
   try {
     const url = new URL('/api/test/students', baseUrl);
     if (limit) {
@@ -528,8 +528,7 @@ async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Ar
     
     if (data && Array.isArray(data)) {
       return data.map((student: any) => ({
-        number: student.student_number,
-        name: student.full_name
+        number: student.student_number
       }));
     }
     
@@ -546,7 +545,7 @@ async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Ar
  * Process students in parallel batches
  */
 async function processStudentBatch(
-  students: Array<{ number: string; name: string }>,
+  students: Array<{ number: string }>,
   config: Partial<EvaluationConfig>,
   batchNumber: number,
   totalBatches: number
@@ -574,10 +573,10 @@ async function processStudentBatch(
 
       try {
         await automation.run();
-        console.log(`✓ [Batch ${batchNumber}] ${student.name} completed successfully`);
+        console.log(`✓ [Batch ${batchNumber}] ${student.number} completed successfully`);
         return { success: true, student };
       } catch (error) {
-        console.error(`✗ [Batch ${batchNumber}] ${student.name} failed:`, (error as Error).message);
+        console.error(`✗ [Batch ${batchNumber}] ${student.number} failed:`, (error as Error).message);
         return { success: false, student };
       }
     })
@@ -632,7 +631,7 @@ async function main() {
     console.log(`✓ Found ${students.length} students to test\n`);
     console.log('Students to test:');
     students.slice(0, 10).forEach((student, index) => {
-      console.log(`  ${index + 1}. ${student.name} (${student.number})`);
+      console.log(`  ${index + 1}. ${student.number}`);
     });
     if (students.length > 10) {
       console.log(`  ... and ${students.length - 10} more`);

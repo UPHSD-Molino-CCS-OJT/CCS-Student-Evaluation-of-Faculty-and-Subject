@@ -157,8 +157,6 @@ export function decryptProgram(program: any) {
 export function decryptStudent(student: any) {
     return decryptDocument(student, [
         'student_number', 
-        'full_name', 
-        'email', 
         'year_level', 
         'section', 
         'status'

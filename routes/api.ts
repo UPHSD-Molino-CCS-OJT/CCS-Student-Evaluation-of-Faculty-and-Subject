@@ -66,12 +66,11 @@ router.get('/test/students', async (req: IRequest, res: Response): Promise<void>
         const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
         
         // Fetch all students (cannot sort by encrypted field in database)
-        const students = await Student.find().select('student_number full_name');
+        const students = await Student.find().select('student_number');
         
         // Decrypt and prepare students for response
         const decryptedStudents = students.map(s => ({
             student_number: safeDecrypt(s.student_number),
-            full_name: safeDecrypt(s.full_name),
             _id: s._id
         }));
         
@@ -85,10 +84,9 @@ router.get('/test/students', async (req: IRequest, res: Response): Promise<void>
             ? decryptedStudents.slice(0, limit) 
             : decryptedStudents;
         
-        // Return only student_number and full_name (exclude _id)
-        res.json(result.map(({ student_number, full_name }) => ({ 
-            student_number, 
-            full_name 
+        // Return only student_number (exclude _id)
+        res.json(result.map(({ student_number }) => ({ 
+            student_number
         })));
     } catch (error) {
         res.status(500).json({ error: 'Error fetching students for testing' });
@@ -322,7 +320,6 @@ router.get('/student/subjects', async (req: IRequest, res: Response): Promise<vo
         res.json({ 
             authenticated: true,
             student: {
-                full_name: safeDecrypt(student.full_name),
                 program: decryptedProgram,
                 year_level: safeDecrypt(student.year_level)
             },
@@ -1319,8 +1316,6 @@ router.get('/admin/students', isAuthenticated, async (_req: IRequest, res: Respo
             return {
                 ...student,
                 student_number: safeDecrypt(student.student_number),
-                full_name: safeDecrypt(student.full_name),
-                email: safeDecrypt(student.email),
                 year_level: safeDecrypt(student.year_level),
                 section: safeDecrypt(student.section),
                 status: safeDecrypt(student.status),
@@ -1328,8 +1323,8 @@ router.get('/admin/students', isAuthenticated, async (_req: IRequest, res: Respo
             };
         });
         
-        // Sort by full_name in memory (after decryption)
-        students.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        // Sort by student_number in memory (after decryption)
+        students.sort((a, b) => a.student_number.localeCompare(b.student_number, undefined, { numeric: true }));
         
         res.json({ students });
     } catch (error) {
@@ -1343,8 +1338,6 @@ router.post('/admin/students', isAuthenticated, async (req: IRequest, res: Respo
         const studentData = {
             ...req.body,
             student_number: safeEncrypt(req.body.student_number),
-            full_name: safeEncrypt(req.body.full_name),
-            email: safeEncrypt(req.body.email),
             year_level: safeEncrypt(req.body.year_level),
             section: safeEncrypt(req.body.section),
             status: safeEncrypt(req.body.status)
@@ -1355,8 +1348,6 @@ router.post('/admin/students', isAuthenticated, async (req: IRequest, res: Respo
         const response = {
             ...student.toObject(),
             student_number: safeDecrypt(student.student_number),
-            full_name: safeDecrypt(student.full_name),
-            email: safeDecrypt(student.email),
             year_level: safeDecrypt(student.year_level),
             section: safeDecrypt(student.section),
             status: safeDecrypt(student.status)
@@ -1375,8 +1366,6 @@ router.put('/admin/students/:id', isAuthenticated, async (req: IRequest, res: Re
         const studentData = {
             ...req.body,
             student_number: safeEncrypt(req.body.student_number),
-            full_name: safeEncrypt(req.body.full_name),
-            email: safeEncrypt(req.body.email),
             year_level: safeEncrypt(req.body.year_level),
             section: safeEncrypt(req.body.section),
             status: safeEncrypt(req.body.status)
@@ -1392,8 +1381,6 @@ router.put('/admin/students/:id', isAuthenticated, async (req: IRequest, res: Re
         const response = {
             ...student.toObject(),
             student_number: safeDecrypt(student.student_number),
-            full_name: safeDecrypt(student.full_name),
-            email: safeDecrypt(student.email),
             year_level: safeDecrypt(student.year_level),
             section: safeDecrypt(student.section),
             status: safeDecrypt(student.status)

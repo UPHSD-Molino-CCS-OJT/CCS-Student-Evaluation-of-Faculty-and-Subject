@@ -50,8 +50,6 @@ export interface ICourse extends Document {
 export interface IStudent extends Document {
   _id: Types.ObjectId;
   student_number: EncryptedData | string;
-  full_name: EncryptedData | string;
-  email?: EncryptedData | string;
   program_id: Types.ObjectId | IProgram;
   year_level: EncryptedData | string;
   section?: EncryptedData | string;
