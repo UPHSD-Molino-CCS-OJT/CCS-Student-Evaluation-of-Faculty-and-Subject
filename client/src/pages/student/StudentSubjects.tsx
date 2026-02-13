@@ -76,7 +76,7 @@ const StudentSubjects: React.FC = () => {
                 <i className="fas fa-user-graduate text-3xl"></i>
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{student.full_name}</h2>
+                <h2 className="text-2xl font-bold">Student Dashboard</h2>
                 <p className="text-blue-100">
                   {student.program?.name} - Year {student.year_level}
                 </p>
