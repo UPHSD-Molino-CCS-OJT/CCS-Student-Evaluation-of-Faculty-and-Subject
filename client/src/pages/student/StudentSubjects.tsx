@@ -80,9 +80,6 @@ const StudentSubjects: React.FC = () => {
                 <p className="text-blue-100">
                   {student.program?.name} - Year {student.year_level}
                 </p>
-                <p className="text-blue-200 text-sm">
-                  School Year: {student.school_year} | Semester: {student.semester}
-                </p>
               </div>
             </div>
           </div>

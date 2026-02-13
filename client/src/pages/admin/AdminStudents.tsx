@@ -8,8 +8,7 @@ interface StudentFormData {
   student_number: string;
   program_id: string;
   year_level: string;
-  school_year: string;
-  semester: string;
+  section?: string;
   status: string;
 }
 
@@ -27,8 +26,7 @@ const AdminStudents: React.FC = () => {
     student_number: '',
     program_id: '',
     year_level: '',
-    school_year: '',
-    semester: '',
+    section: '',
     status: 'Regular'
   })
 
@@ -83,8 +81,7 @@ const AdminStudents: React.FC = () => {
       student_number: student.student_number,
       program_id: student.program_id?._id || '',
       year_level: student.year_level,
-      school_year: student.school_year,
-      semester: student.semester,
+      section: student.section || '',
       status: student.status
     })
     setShowModal(true)
@@ -110,8 +107,7 @@ const AdminStudents: React.FC = () => {
       student_number: '',
       program_id: '',
       year_level: '',
-      school_year: '',
-      semester: '',
+      section: '',
       status: 'Regular'
     })
     setEditingStudent(null)
@@ -157,6 +153,7 @@ const AdminStudents: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student #</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
@@ -167,6 +164,7 @@ const AdminStudents: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.student_number}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{student.program_id?.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.year_level}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.section || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.status}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                       <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-900">
@@ -230,29 +228,14 @@ const AdminStudents: React.FC = () => {
                     </select>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2">School Year *</label>
+                    <label className="block text-gray-700 font-semibold mb-2">Section</label>
                     <input
                       type="text"
-                      value={formData.school_year}
-                      onChange={(e) => setFormData({...formData, school_year: e.target.value})}
+                      value={formData.section}
+                      onChange={(e) => setFormData({...formData, section: e.target.value})}
                       className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="2023-2024"
-                      required
+                      placeholder="e.g., CS-3A"
                     />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2">Semester *</label>
-                    <select
-                      value={formData.semester}
-                      onChange={(e) => setFormData({...formData, semester: e.target.value})}
-                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Select Semester</option>
-                      <option value="1st Semester">1st Semester</option>
-                      <option value="2nd Semester">2nd Semester</option>
-                      <option value="Summer">Summer</option>
-                    </select>
                   </div>
                   <div className="mb-4">
                     <label className="block text-gray-700 font-semibold mb-2">Status *</label>

@@ -90,9 +90,8 @@ export interface Student {
   program_id: string | Program;
   program?: Program;
   year_level: '1st' | '2nd' | '3rd' | '4th';
+  section?: string;
   status: 'Regular' | 'Irregular' | 'Transferee';
-  school_year: string;
-  semester: string;
 }
 
 export interface Enrollment {
