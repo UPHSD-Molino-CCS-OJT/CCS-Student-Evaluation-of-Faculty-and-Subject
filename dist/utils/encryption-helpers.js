@@ -149,8 +149,6 @@ function decryptProgram(program) {
 function decryptStudent(student) {
     return decryptDocument(student, [
         'student_number',
-        'full_name',
-        'email',
         'year_level',
         'section',
         'status'

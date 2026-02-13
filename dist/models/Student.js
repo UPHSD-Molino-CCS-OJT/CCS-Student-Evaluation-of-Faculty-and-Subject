@@ -40,13 +40,6 @@ const studentSchema = new mongoose_1.Schema({
         required: true,
         unique: true
     },
-    full_name: {
-        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
-        required: true
-    },
-    email: {
-        type: mongoose_1.Schema.Types.Mixed // Encrypted field
-    },
     program_id: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Program',

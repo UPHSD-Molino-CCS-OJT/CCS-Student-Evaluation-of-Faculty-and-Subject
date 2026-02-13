@@ -89,11 +89,10 @@ router.get('/test/students', async (req, res) => {
     try {
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
         // Fetch all students (cannot sort by encrypted field in database)
-        const students = await Student_1.default.find().select('student_number full_name');
+        const students = await Student_1.default.find().select('student_number');
         // Decrypt and prepare students for response
         const decryptedStudents = students.map(s => ({
             student_number: (0, encryption_helpers_1.safeDecrypt)(s.student_number),
-            full_name: (0, encryption_helpers_1.safeDecrypt)(s.full_name),
             _id: s._id
         }));
         // Sort by student_number in memory (after decryption)
@@ -104,10 +103,9 @@ router.get('/test/students', async (req, res) => {
         const result = limit && limit > 0
             ? decryptedStudents.slice(0, limit)
             : decryptedStudents;
-        // Return only student_number and full_name (exclude _id)
-        res.json(result.map(({ student_number, full_name }) => ({
-            student_number,
-            full_name
+        // Return only student_number (exclude _id)
+        res.json(result.map(({ student_number }) => ({
+            student_number
         })));
     }
     catch (error) {
@@ -307,7 +305,6 @@ router.get('/student/subjects', async (req, res) => {
         res.json({
             authenticated: true,
             student: {
-                full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
                 program: decryptedProgram,
                 year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level)
             },
@@ -1192,16 +1189,14 @@ router.get('/admin/students', auth_1.isAuthenticated, async (_req, res) => {
             return {
                 ...student,
                 student_number: (0, encryption_helpers_1.safeDecrypt)(student.student_number),
-                full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
-                email: (0, encryption_helpers_1.safeDecrypt)(student.email),
                 year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level),
                 section: (0, encryption_helpers_1.safeDecrypt)(student.section),
                 status: (0, encryption_helpers_1.safeDecrypt)(student.status),
                 program_id: program
             };
         });
-        // Sort by full_name in memory (after decryption)
-        students.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        // Sort by student_number in memory (after decryption)
+        students.sort((a, b) => a.student_number.localeCompare(b.student_number, undefined, { numeric: true }));
         res.json({ students });
     }
     catch (error) {
@@ -1214,8 +1209,6 @@ router.post('/admin/students', auth_1.isAuthenticated, async (req, res) => {
         const studentData = {
             ...req.body,
             student_number: (0, encryption_helpers_1.safeEncrypt)(req.body.student_number),
-            full_name: (0, encryption_helpers_1.safeEncrypt)(req.body.full_name),
-            email: (0, encryption_helpers_1.safeEncrypt)(req.body.email),
             year_level: (0, encryption_helpers_1.safeEncrypt)(req.body.year_level),
             section: (0, encryption_helpers_1.safeEncrypt)(req.body.section),
             status: (0, encryption_helpers_1.safeEncrypt)(req.body.status)
@@ -1225,8 +1218,6 @@ router.post('/admin/students', auth_1.isAuthenticated, async (req, res) => {
         const response = {
             ...student.toObject(),
             student_number: (0, encryption_helpers_1.safeDecrypt)(student.student_number),
-            full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
-            email: (0, encryption_helpers_1.safeDecrypt)(student.email),
             year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level),
             section: (0, encryption_helpers_1.safeDecrypt)(student.section),
             status: (0, encryption_helpers_1.safeDecrypt)(student.status)
@@ -1244,8 +1235,6 @@ router.put('/admin/students/:id', auth_1.isAuthenticated, async (req, res) => {
         const studentData = {
             ...req.body,
             student_number: (0, encryption_helpers_1.safeEncrypt)(req.body.student_number),
-            full_name: (0, encryption_helpers_1.safeEncrypt)(req.body.full_name),
-            email: (0, encryption_helpers_1.safeEncrypt)(req.body.email),
             year_level: (0, encryption_helpers_1.safeEncrypt)(req.body.year_level),
             section: (0, encryption_helpers_1.safeEncrypt)(req.body.section),
             status: (0, encryption_helpers_1.safeEncrypt)(req.body.status)
@@ -1259,8 +1248,6 @@ router.put('/admin/students/:id', auth_1.isAuthenticated, async (req, res) => {
         const response = {
             ...student.toObject(),
             student_number: (0, encryption_helpers_1.safeDecrypt)(student.student_number),
-            full_name: (0, encryption_helpers_1.safeDecrypt)(student.full_name),
-            email: (0, encryption_helpers_1.safeDecrypt)(student.email),
             year_level: (0, encryption_helpers_1.safeDecrypt)(student.year_level),
             section: (0, encryption_helpers_1.safeDecrypt)(student.section),
             status: (0, encryption_helpers_1.safeDecrypt)(student.status)
