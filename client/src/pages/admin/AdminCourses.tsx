@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
+import Pagination from '../../components/Pagination'
 import { Course, Program } from '../../types'
 
 interface CourseFormData {
@@ -14,6 +15,14 @@ interface PopulatedCourse extends Omit<Course, 'program_id'> {
   program_id?: Program;
 }
 
+interface PaginationData {
+  page: number
+  limit: number
+  totalPages: number
+  totalCount: number
+  hasMore: boolean
+}
+
 const AdminCourses: React.FC = () => {
   const [courses, setCourses] = useState<PopulatedCourse[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -21,16 +30,30 @@ const AdminCourses: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingCourse, setEditingCourse] = useState<PopulatedCourse | null>(null)
   const [formData, setFormData] = useState<CourseFormData>({ name: '', code: '', program_id: '' })
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  })
 
   useEffect(() => {
     fetchCourses()
     fetchPrograms()
-  }, [])
+  }, [pagination.page])
 
   const fetchCourses = async (): Promise<void> => {
     try {
-      const response = await axios.get('/api/admin/courses', { withCredentials: true })
+      setLoading(true)
+      const response = await axios.get('/api/admin/courses', { 
+        params: { page: pagination.page, limit: pagination.limit },
+        withCredentials: true 
+      })
       setCourses(response.data.courses || [])
+      if (response.data.pagination) {
+        setPagination(response.data.pagination)
+      }
     } catch (error: unknown) {
       console.error('Error fetching courses:', error)
     } finally {
@@ -93,6 +116,10 @@ const AdminCourses: React.FC = () => {
     setEditingCourse(null)
   }
 
+  const handlePageChange = (page: number): void => {
+    setPagination(prev => ({ ...prev, page }))
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -153,6 +180,15 @@ const AdminCourses: React.FC = () => {
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </div>
 
         {showModal && (

@@ -2,11 +2,20 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
+import Pagination from '../../components/Pagination'
 import { Program } from '../../types'
 
 interface ProgramFormData {
   name: string;
   code: string;
+}
+
+interface PaginationData {
+  page: number
+  limit: number
+  totalPages: number
+  totalCount: number
+  hasMore: boolean
 }
 
 const AdminPrograms: React.FC = () => {
@@ -15,15 +24,29 @@ const AdminPrograms: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingProgram, setEditingProgram] = useState<Program | null>(null)
   const [formData, setFormData] = useState<ProgramFormData>({ name: '', code: '' })
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  })
 
   useEffect(() => {
     fetchPrograms()
-  }, [])
+  }, [pagination.page])
 
   const fetchPrograms = async (): Promise<void> => {
     try {
-      const response = await axios.get('/api/admin/programs', { withCredentials: true })
+      setLoading(true)
+      const response = await axios.get('/api/admin/programs', { 
+        params: { page: pagination.page, limit: pagination.limit },
+        withCredentials: true 
+      })
       setPrograms(response.data.programs || [])
+      if (response.data.pagination) {
+        setPagination(response.data.pagination)
+      }
     } catch (error: unknown) {
       console.error('Error fetching programs:', error)
     } finally {
@@ -75,6 +98,10 @@ const AdminPrograms: React.FC = () => {
   const resetForm = () => {
     setFormData({ name: '', code: '' })
     setEditingProgram(null)
+  }
+
+  const handlePageChange = (page: number): void => {
+    setPagination(prev => ({ ...prev, page }))
   }
 
   if (loading) {
@@ -135,6 +162,15 @@ const AdminPrograms: React.FC = () => {
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </div>
 
         {showModal && (

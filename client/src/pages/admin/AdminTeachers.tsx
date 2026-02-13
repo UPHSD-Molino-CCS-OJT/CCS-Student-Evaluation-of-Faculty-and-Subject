@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
+import Pagination from '../../components/Pagination'
 import { Teacher } from '../../types'
 
 interface TeacherFormData {
@@ -10,6 +11,14 @@ interface TeacherFormData {
   email: string;
   department: string;
   status: 'active' | 'inactive';
+}
+
+interface PaginationData {
+  page: number
+  limit: number
+  totalPages: number
+  totalCount: number
+  hasMore: boolean
 }
 
 const AdminTeachers: React.FC = () => {
@@ -24,15 +33,29 @@ const AdminTeachers: React.FC = () => {
     department: '',
     status: 'active'
   })
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  })
 
   useEffect(() => {
     fetchTeachers()
-  }, [])
+  }, [pagination.page])
 
   const fetchTeachers = async (): Promise<void> => {
     try {
-      const response = await axios.get('/api/admin/teachers', { withCredentials: true })
+      setLoading(true)
+      const response = await axios.get('/api/admin/teachers', { 
+        params: { page: pagination.page, limit: pagination.limit },
+        withCredentials: true 
+      })
       setTeachers(response.data.teachers || [])
+      if (response.data.pagination) {
+        setPagination(response.data.pagination)
+      }
     } catch (error: unknown) {
       console.error('Error fetching teachers:', error)
     } finally {
@@ -96,6 +119,10 @@ const AdminTeachers: React.FC = () => {
       status: 'active'
     })
     setEditingTeacher(null)
+  }
+
+  const handlePageChange = (page: number): void => {
+    setPagination(prev => ({ ...prev, page }))
   }
 
   if (loading) {
@@ -190,6 +217,15 @@ const AdminTeachers: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </div>
 
         {/* Modal */}

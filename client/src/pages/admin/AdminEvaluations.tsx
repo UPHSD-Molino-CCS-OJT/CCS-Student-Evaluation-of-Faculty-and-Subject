@@ -3,25 +3,52 @@ import { Link } from 'react-router-dom'
 import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
+import Pagination from '../../components/Pagination'
 import { PopulatedEvaluation } from '../../types'
+
+interface PaginationData {
+  page: number
+  limit: number
+  totalPages: number
+  totalCount: number
+  hasMore: boolean
+}
 
 const AdminEvaluations: React.FC = () => {
   const [evaluations, setEvaluations] = useState<PopulatedEvaluation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  })
 
   useEffect(() => {
     fetchEvaluations()
-  }, [])
+  }, [pagination.page])
 
   const fetchEvaluations = async (): Promise<void> => {
     try {
-      const response = await axios.get('/api/admin/evaluations', { withCredentials: true })
+      setLoading(true)
+      const response = await axios.get('/api/admin/evaluations', { 
+        params: { page: pagination.page, limit: pagination.limit },
+        withCredentials: true 
+      })
       setEvaluations(response.data.evaluations || [])
+      if (response.data.pagination) {
+        setPagination(response.data.pagination)
+      }
     } catch (error: unknown) {
       console.error('Error fetching evaluations:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePageChange = (page: number): void => {
+    setPagination(prev => ({ ...prev, page }))
   }
 
   if (loading) {
@@ -125,6 +152,15 @@ const AdminEvaluations: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            limit={pagination.limit}
+            onPageChange={handlePageChange}
+          />
         </div>
       </div>
     </div>

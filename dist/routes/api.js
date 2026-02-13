@@ -757,13 +757,22 @@ router.get('/admin/dashboard', auth_1.isAuthenticated, async (_req, res) => {
     }
 });
 // ==================== ADMIN EVALUATIONS ====================
-router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
+router.get('/admin/evaluations', auth_1.isAuthenticated, async (req, res) => {
     try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        // Get total count
+        const totalCount = await Evaluation_1.default.countDocuments();
+        const totalPages = Math.ceil(totalCount / limit);
         const evaluationsRaw = await Evaluation_1.default.find()
             .populate('teacher_id', 'full_name employee_id')
             .populate('course_id', 'name code')
             .populate('program_id', 'name')
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .select('-anonymous_token -ip_address')
             .lean();
         // Transform to match frontend expectation
@@ -828,7 +837,16 @@ router.get('/admin/evaluations', auth_1.isAuthenticated, async (_req, res) => {
                 overall_average
             };
         });
-        res.json({ evaluations });
+        res.json({
+            evaluations,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore: page < totalPages
+            }
+        });
     }
     catch (error) {
         console.error('Error fetching evaluations:', error);
@@ -916,8 +934,11 @@ router.get('/admin/evaluations/:id', auth_1.isAuthenticated, async (req, res) =>
 });
 // ==================== ADMIN CRUD ROUTES ====================
 // Teachers
-router.get('/admin/teachers', auth_1.isAuthenticated, async (_req, res) => {
+router.get('/admin/teachers', auth_1.isAuthenticated, async (req, res) => {
     try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         // Fetch all teachers (cannot sort by encrypted field in database)
         const teachersRaw = await Teacher_1.default.find();
         // Decrypt fields and prepare for admin viewing
@@ -934,7 +955,21 @@ router.get('/admin/teachers', auth_1.isAuthenticated, async (_req, res) => {
         });
         // Sort by full_name in memory (after decryption)
         teachers.sort((a, b) => a.full_name.localeCompare(b.full_name));
-        res.json({ teachers });
+        // Apply pagination in memory
+        const totalCount = teachers.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+        const paginatedTeachers = teachers.slice(skip, skip + limit);
+        res.json({
+            teachers: paginatedTeachers,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore: page < totalPages
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Error fetching teachers' });
@@ -1011,8 +1046,11 @@ router.delete('/admin/teachers/:id', auth_1.isAuthenticated, async (req, res) =>
     }
 });
 // Programs
-router.get('/admin/programs', auth_1.isAuthenticated, async (_req, res) => {
+router.get('/admin/programs', auth_1.isAuthenticated, async (req, res) => {
     try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         // Fetch all programs (cannot sort by encrypted field in database)
         const programsRaw = await Program_1.default.find();
         // Decrypt fields and prepare for admin viewing
@@ -1026,7 +1064,21 @@ router.get('/admin/programs', auth_1.isAuthenticated, async (_req, res) => {
         });
         // Sort by name in memory (after decryption)
         programs.sort((a, b) => a.name.localeCompare(b.name));
-        res.json({ programs });
+        // Apply pagination in memory
+        const totalCount = programs.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+        const paginatedPrograms = programs.slice(skip, skip + limit);
+        res.json({
+            programs: paginatedPrograms,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore: page < totalPages
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Error fetching programs' });
@@ -1091,8 +1143,11 @@ router.delete('/admin/programs/:id', auth_1.isAuthenticated, async (req, res) =>
     }
 });
 // Courses
-router.get('/admin/courses', auth_1.isAuthenticated, async (_req, res) => {
+router.get('/admin/courses', auth_1.isAuthenticated, async (req, res) => {
     try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         // Fetch all courses (cannot sort by encrypted field in database)
         const coursesRaw = await Course_1.default.find().populate('program_id');
         // Decrypt fields and prepare for admin viewing
@@ -1113,7 +1168,21 @@ router.get('/admin/courses', auth_1.isAuthenticated, async (_req, res) => {
         });
         // Sort by name in memory (after decryption)
         courses.sort((a, b) => a.name.localeCompare(b.name));
-        res.json({ courses });
+        // Apply pagination in memory
+        const totalCount = courses.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+        const paginatedCourses = courses.slice(skip, skip + limit);
+        res.json({
+            courses: paginatedCourses,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore: page < totalPages
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Error fetching courses' });
@@ -1178,8 +1247,11 @@ router.delete('/admin/courses/:id', auth_1.isAuthenticated, async (req, res) => 
     }
 });
 // Students
-router.get('/admin/students', auth_1.isAuthenticated, async (_req, res) => {
+router.get('/admin/students', auth_1.isAuthenticated, async (req, res) => {
     try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         // Fetch all students (cannot sort by encrypted field in database)
         const studentsRaw = await Student_1.default.find().populate('program_id');
         // Decrypt fields and prepare for admin viewing
@@ -1202,7 +1274,21 @@ router.get('/admin/students', auth_1.isAuthenticated, async (_req, res) => {
         });
         // Sort by student_number in memory (after decryption)
         students.sort((a, b) => a.student_number.localeCompare(b.student_number, undefined, { numeric: true }));
-        res.json({ students });
+        // Apply pagination in memory
+        const totalCount = students.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        const skip = (page - 1) * limit;
+        const paginatedStudents = students.slice(skip, skip + limit);
+        res.json({
+            students: paginatedStudents,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalCount,
+                hasMore: page < totalPages
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ error: 'Error fetching students' });
