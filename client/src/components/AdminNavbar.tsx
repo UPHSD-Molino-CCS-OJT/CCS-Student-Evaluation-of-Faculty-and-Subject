@@ -37,8 +37,8 @@ const AdminNavbar: React.FC = () => {
           <Link to="/admin/dashboard" className="flex items-center space-x-3">
             <GraduationCap size={32} />
             <div>
-              <h1 className="text-xl font-bold">UPHSD Admin Portal</h1>
-              <p className="text-xs text-blue-200">Evaluation Management System</p>
+              <h1 className="text-xl font-bold">Evaluation Management System</h1>
+              <p className="text-xs text-blue-200">UPHSD Molino Admin Portal</p>
             </div>
           </Link>
 
