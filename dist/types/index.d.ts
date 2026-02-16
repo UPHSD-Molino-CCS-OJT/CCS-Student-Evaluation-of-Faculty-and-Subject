@@ -116,6 +116,7 @@ export interface ISessionData {
     username?: string;
     fullName?: string;
     studentId?: string;
+    teacherId?: string;
 }
 declare module 'express-session' {
     interface SessionData extends ISessionData {

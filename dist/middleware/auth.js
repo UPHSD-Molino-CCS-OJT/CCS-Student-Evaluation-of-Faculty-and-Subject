@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isGuest = exports.isAuthenticated = void 0;
+exports.isTeacherAuthenticated = exports.isGuest = exports.isAuthenticated = void 0;
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
     if (req.session && req.session.adminId) {
@@ -18,4 +18,15 @@ const isGuest = (req, res, next) => {
     next();
 };
 exports.isGuest = isGuest;
+// Teacher Authentication middleware
+const isTeacherAuthenticated = (req, res, next) => {
+    if (req.session && req.session.teacherId) {
+        return next();
+    }
+    return res.status(401).json({
+        success: false,
+        message: 'Please login to access this page'
+    });
+};
+exports.isTeacherAuthenticated = isTeacherAuthenticated;
 //# sourceMappingURL=auth.js.map

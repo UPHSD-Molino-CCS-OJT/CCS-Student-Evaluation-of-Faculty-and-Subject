@@ -142,6 +142,7 @@ export interface ISessionData {
   username?: string;
   fullName?: string;
   studentId?: string;
+  teacherId?: string;
 }
 
 // Extend express-session module to add our custom session data

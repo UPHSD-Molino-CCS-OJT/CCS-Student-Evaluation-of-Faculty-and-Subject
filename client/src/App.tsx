@@ -13,9 +13,12 @@ import AdminCourses from './pages/admin/AdminCourses'
 import AdminStudents from './pages/admin/AdminStudents'
 import AdminPrivacyAudit from './pages/admin/AdminPrivacyAudit'
 import AdminEvaluationPeriods from './pages/admin/AdminEvaluationPeriods'
+import TeacherLogin from './pages/teacher/TeacherLogin'
+import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProtectedRoute from './components/StudentProtectedRoute'
+import TeacherProtectedRoute from './components/TeacherProtectedRoute'
 
 const App: React.FC = () => {
   return (
@@ -43,6 +46,17 @@ const App: React.FC = () => {
             <StudentProtectedRoute>
               <StudentEvaluate />
             </StudentProtectedRoute>
+          } 
+        />
+        
+        {/* Teacher Routes */}
+        <Route path="/teacher/login" element={<TeacherLogin />} />
+        <Route 
+          path="/teacher/dashboard" 
+          element={
+            <TeacherProtectedRoute>
+              <TeacherDashboard />
+            </TeacherProtectedRoute>
           } 
         />
         

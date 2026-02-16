@@ -1794,5 +1794,260 @@ router.patch('/admin/evaluation-periods/:id/toggle', isAuthenticated, async (req
     }
 });
 
+// ==================== TEACHER AUTH ROUTES ====================
+
+// Check if teacher is authenticated
+router.get('/teacher/check-auth', (req: IRequest, res: Response): void => {
+    res.json({ 
+        authenticated: !!req.session.teacherId,
+        teacher: req.session.teacherId ? {
+            id: req.session.teacherId
+        } : null
+    });
+});
+
+// Teacher Login
+router.post('/teacher/login', async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        const { employee_id } = req.body;
+        
+        if (!employee_id) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'Please enter your Employee ID' 
+            });
+            return;
+        }
+        
+        // Find teacher by encrypted employee_id field
+        const teacher = await findByEncryptedField<typeof Teacher.prototype>(
+            Teacher, 
+            'employee_id', 
+            employee_id
+        );
+        
+        if (!teacher) {
+            res.status(404).json({ 
+                success: false, 
+                message: 'Employee ID not found. Please check your ID and try again.' 
+            });
+            return;
+        }
+        
+        // Check if teacher is active
+        const status = safeDecrypt(teacher.status);
+        if (status !== 'active') {
+            res.status(403).json({ 
+                success: false, 
+                message: 'Your account is not active. Please contact the administrator.' 
+            });
+            return;
+        }
+        
+        // Store teacher ObjectId in session
+        req.session.teacherId = teacher._id.toString();
+        
+        // Save session
+        const saveSession = (retries = 3): void => {
+            req.session.save((err?: Error) => {
+                if (err) {
+                    console.error(`Session save error (${4 - retries}/3 attempts):`, err.message);
+                    if (retries > 1) {
+                        setTimeout(() => saveSession(retries - 1), 100);
+                        return;
+                    }
+                    res.status(500).json({ 
+                        success: false, 
+                        message: 'Session initialization failed. Please try again.' 
+                    });
+                    return;
+                }
+                res.json({ success: true });
+            });
+        };
+        saveSession();
+    } catch (error) {
+        console.error('Error during teacher login:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'An error occurred. Please try again.' 
+        });
+    }
+});
+
+// Teacher Logout
+router.post('/teacher/logout', (req: IRequest, res: Response): void => {
+    req.session.destroy((err?: Error) => {
+        if (err) {
+            console.error('Error destroying session:', err);
+            res.status(500).json({ success: false, message: 'Error logging out' });
+            return;
+        }
+        res.clearCookie('connect.sid');
+        res.json({ success: true });
+    });
+});
+
+// Get Teacher Dashboard Data
+router.get('/teacher/dashboard', async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.session.teacherId) {
+            res.status(401).json({ 
+                success: false, 
+                message: 'Not authenticated' 
+            });
+            return;
+        }
+
+        const teacherId = new Types.ObjectId(req.session.teacherId);
+        
+        // Get teacher details
+        const teacher = await Teacher.findById(teacherId);
+        if (!teacher) {
+            res.status(404).json({ 
+                success: false, 
+                message: 'Teacher not found' 
+            });
+            return;
+        }
+
+        // Get all enrollments for this teacher
+        const enrollments = await Enrollment.find({ teacher_id: teacherId })
+            .populate('course_id')
+            .populate('student_id');
+
+        // Get all evaluations for this teacher
+        const evaluations = await Evaluation.find({ teacher_id: teacherId });
+
+        // Group by course
+        const courseMap = new Map();
+
+        for (const enrollment of enrollments) {
+            const course = enrollment.course_id as any;
+            if (!course) continue;
+
+            const courseId = course._id.toString();
+            
+            if (!courseMap.has(courseId)) {
+                courseMap.set(courseId, {
+                    course_id: courseId,
+                    course_name: safeDecrypt(course.name),
+                    course_code: safeDecrypt(course.code),
+                    section_code: safeDecrypt(enrollment.section_code),
+                    school_year: safeDecrypt(enrollment.school_year),
+                    semester: safeDecrypt(enrollment.semester),
+                    total_students: 0,
+                    evaluated_students: 0,
+                    evaluations: []
+                });
+            }
+
+            const courseData = courseMap.get(courseId);
+            courseData.total_students++;
+            if (enrollment.has_evaluated) {
+                courseData.evaluated_students++;
+            }
+        }
+
+        // Add evaluations to courses
+        for (const evaluation of evaluations) {
+            const course = await Course.findById(evaluation.course_id);
+            if (!course) continue;
+
+            const courseId = course._id.toString();
+            if (courseMap.has(courseId)) {
+                courseMap.get(courseId).evaluations.push(evaluation);
+            }
+        }
+
+        // Calculate statistics for each course
+        const courseStats = Array.from(courseMap.values()).map(courseData => {
+            const evals = courseData.evaluations;
+            const evalCount = evals.length;
+
+            if (evalCount === 0) {
+                return {
+                    ...courseData,
+                    average_rating: 0,
+                    question_averages: {},
+                    remarks: 'No evaluations yet'
+                };
+            }
+
+            // Calculate averages for all rating fields
+            const ratingFields = [
+                'teacher_diction', 'teacher_grammar', 'teacher_personality',
+                'teacher_disposition', 'teacher_dynamic', 'teacher_fairness',
+                'learning_motivation', 'learning_critical_thinking', 'learning_organization',
+                'learning_interest', 'learning_explanation', 'learning_clarity',
+                'learning_integration', 'learning_mastery', 'learning_methodology',
+                'learning_values', 'learning_grading', 'learning_synthesis',
+                'learning_reasonableness', 'classroom_attendance', 'classroom_policies',
+                'classroom_discipline', 'classroom_authority', 'classroom_prayers',
+                'classroom_punctuality'
+            ];
+
+            const questionAverages: any = {};
+            let totalSum = 0;
+            let totalCount = 0;
+
+            for (const field of ratingFields) {
+                const sum = evals.reduce((acc: number, e: any) => acc + (e[field as keyof typeof e] as number || 0), 0);
+                const avg = sum / evalCount;
+                questionAverages[field] = parseFloat(avg.toFixed(2));
+                totalSum += sum;
+                totalCount += evalCount;
+            }
+
+            const overallAverage = totalSum / totalCount;
+            
+            // Determine remarks based on average
+            let remarks = '';
+            if (overallAverage >= 4.5) {
+                remarks = 'Outstanding';
+            } else if (overallAverage >= 4.0) {
+                remarks = 'Very Satisfactory';
+            } else if (overallAverage >= 3.5) {
+                remarks = 'Satisfactory';
+            } else if (overallAverage >= 3.0) {
+                remarks = 'Fair';
+            } else {
+                remarks = 'Needs Improvement';
+            }
+
+            return {
+                course_id: courseData.course_id,
+                course_name: courseData.course_name,
+                course_code: courseData.course_code,
+                section_code: courseData.section_code,
+                school_year: courseData.school_year,
+                semester: courseData.semester,
+                total_students: courseData.total_students,
+                evaluated_students: courseData.evaluated_students,
+                average_rating: parseFloat(overallAverage.toFixed(2)),
+                question_averages: questionAverages,
+                remarks: remarks
+            };
+        });
+
+        res.json({
+            success: true,
+            teacher: {
+                full_name: safeDecrypt(teacher.full_name),
+                employee_id: safeDecrypt(teacher.employee_id),
+                department: safeDecrypt(teacher.department),
+                email: safeDecrypt(teacher.email)
+            },
+            courses: courseStats
+        });
+    } catch (error) {
+        console.error('Error fetching teacher dashboard data:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching dashboard data' 
+        });
+    }
+});
+
 export default router;
 
