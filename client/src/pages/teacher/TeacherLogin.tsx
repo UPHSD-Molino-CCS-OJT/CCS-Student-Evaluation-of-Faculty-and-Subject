@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import { Users, AlertCircle, Info, Loader, LogIn, Shield } from 'lucide-react'
+import { Users, AlertCircle, Info, Loader, LogIn } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 
 const TeacherLogin: React.FC = () => {
@@ -102,17 +102,6 @@ const TeacherLogin: React.FC = () => {
                 )}
               </button>
             </form>
-
-            {/* Info Box */}
-            <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-semibold text-green-800 mb-2 flex items-center">
-                <Shield className="mr-2" size={20} />
-                Privacy Protected
-              </h3>
-              <p className="text-sm text-green-700">
-                All student evaluations are anonymous. Individual student identities cannot be traced to their responses, ensuring honest and constructive feedback.
-              </p>
-            </div>
           </div>
         </div>
       </div>

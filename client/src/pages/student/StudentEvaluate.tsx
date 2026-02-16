@@ -412,24 +412,17 @@ const StudentEvaluate: React.FC = () => {
               Additional Comments (Optional)
             </h3>
             
-            {/* Privacy Warning */}
-            <div className="mb-4 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+            <div className="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
               <div className="flex items-start">
-                <Shield size={20} className="text-amber-600 mt-1 mr-3 flex-shrink-0" />
-                <div className="text-sm text-amber-800">
-                  <p className="font-semibold mb-1">⚠️ Anonymity Protection & Risk Warning</p>
+                <Shield size={20} className="text-blue-600 mt-1 mr-3 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-1">Guidelines for Comments</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><strong>Do NOT</strong> include your name, student number, email, or identifying details</li>
-                    <li><strong>IMPORTANT:</strong> Your writing style itself may be identifiable using advanced analysis techniques</li>
-                    <li>Avoid unique or distinctive phrasing that could identify you</li>
-                    <li><strong>For maximum anonymity:</strong> Leave comments blank or use generic professional language</li>
-                    <li>Keep comments professional and focused on course/teaching feedback</li>
+                    <li>Keep comments professional and constructive</li>
+                    <li>Focus on course content and teaching methods</li>
+                    <li>Do not include personal identifying information</li>
                     <li>Comments must be 20-500 characters if provided</li>
                   </ul>
-                  <p className="mt-2 text-xs italic">
-                    While the system strongly protects your identity through cryptographic anonymization, 
-                    we cannot guarantee absolute anonymity against all possible identification methods.
-                  </p>
                 </div>
               </div>
             </div>

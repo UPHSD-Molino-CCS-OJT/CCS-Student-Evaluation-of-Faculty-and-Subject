@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Info, Loader, LogIn, Shield } from 'lucide-react'
+import { GraduationCap, AlertCircle, Info, Loader, LogIn } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 
 const StudentLogin: React.FC = () => {
@@ -102,17 +102,6 @@ const StudentLogin: React.FC = () => {
                 )}
               </button>
             </form>
-
-            {/* Info Box */}
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-800 mb-2 flex items-center">
-                <Shield className="mr-2" size={20} />
-                Privacy Protected
-              </h3>
-              <p className="text-sm text-blue-700">
-                Your responses are designed to be anonymous. We use advanced privacy protection with multiple layers to make it extremely difficult to trace your identity to your evaluations.
-              </p>
-            </div>
           </div>
         </div>
       </div>

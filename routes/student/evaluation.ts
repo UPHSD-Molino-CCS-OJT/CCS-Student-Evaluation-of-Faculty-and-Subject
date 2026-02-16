@@ -31,19 +31,16 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
             return;
         }
         
-        // PRIVACY PROTECTION: Add random delay
         const submissionDelay = PrivacyProtection.calculateSubmissionDelay(2, 8);
         await new Promise(resolve => setTimeout(resolve, submissionDelay));
         
         const data = req.body;
         
-        // LAYER 10: Validate anonymous submission data
         const validationResult = PrivacyProtection.validateAnonymousSubmission(data);
         if (!validationResult.isValid) {
             res.status(400).json({
                 success: false,
-                message: validationResult.errors.join('. '),
-                privacyViolation: true
+                message: validationResult.errors.join('. ')
             });
             return;
         }
@@ -79,7 +76,6 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
             return;
         }
         
-        // PRIVACY PROTECTION
         const rawIp = req.headers['x-forwarded-for'] || 
                      req.socket.remoteAddress ||
                      req.ip;
@@ -90,7 +86,6 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
         // Type guard for populated student
         const populatedStudent = enrollment.student_id as IEnrollment['student_id'] & { program_id: Types.ObjectId; year_level: string; status: string; };
         
-        // FIELD-LEVEL ENCRYPTION: Encrypt comments at rest (AES-256-GCM)
         let encryptedComments: EncryptedData | string = '';
         if (data.comments && data.comments.trim()) {
             if (!isEncryptionConfigured()) {
@@ -102,7 +97,6 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
                 return;
             }
             
-            // LAYER 12: Stylometric protection — sanitize before encryption
             const sanitizationResult = PrivacyProtection.sanitizeCommentForAnonymity(data.comments);
             if (!sanitizationResult.valid) {
                 res.status(400).json({
@@ -127,7 +121,6 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
             }
         }
         
-        // Create evaluation (stored completely separately, no link to enrollment)
         await Evaluation.create({
             school_year: enrollment.school_year,
             anonymous_token: anonymousToken,
@@ -173,26 +166,15 @@ router.post('/', async (req: IRequest, res: Response): Promise<void> => {
             submitted_at: safeTimestamp
         });
         
-        // Generate receipt hash for student verification (no reversible link)
-        const receiptHash = PrivacyProtection.generateReceiptHash(
-            anonymousToken,
-            safeTimestamp
-        );
-        
-        // Update enrollment - mark as used WITHOUT linking evaluation ID
         enrollment.has_evaluated = true;
         enrollment.submission_token_used = true;
-        enrollment.receipt_hash = receiptHash;
-        // NO evaluation_id stored - complete structural unlinkability ✅
         await enrollment.save();
         
-        // PRIVACY PROTECTION: Clear session data
         PrivacyProtection.clearSensitiveSessionData(req.session);
         
         res.json({ 
             success: true, 
-            message: 'Evaluation submitted successfully!',
-            receipt: receiptHash // Give student verification receipt
+            message: 'Evaluation submitted successfully!'
         });
         
     } catch (error) {
