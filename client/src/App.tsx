@@ -15,6 +15,7 @@ import AdminPrivacyAudit from './pages/admin/AdminPrivacyAudit'
 import AdminEvaluationPeriods from './pages/admin/AdminEvaluationPeriods'
 import TeacherLogin from './pages/teacher/TeacherLogin'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
+import TeacherCourseDetail from './pages/teacher/TeacherCourseDetail'
 import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProtectedRoute from './components/StudentProtectedRoute'
@@ -56,6 +57,14 @@ const App: React.FC = () => {
           element={
             <TeacherProtectedRoute>
               <TeacherDashboard />
+            </TeacherProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/teacher/course/:courseId" 
+          element={
+            <TeacherProtectedRoute>
+              <TeacherCourseDetail />
             </TeacherProtectedRoute>
           } 
         />
