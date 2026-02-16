@@ -95,33 +95,33 @@ const TeacherCourseDetail: React.FC = () => {
   const getQuestionLabel = (key: string): string => {
     const labels: { [key: string]: string } = {
       // Teacher ratings
-      'teacher_diction': '1. Diction (clear and understandable speech)',
-      'teacher_grammar': '2. Grammar (correct use of language)',
-      'teacher_personality': '3. Personality (approachable and professional)',
-      'teacher_disposition': '4. Disposition (positive attitude)',
-      'teacher_dynamic': '5. Dynamic (engaging and energetic)',
-      'teacher_fairness': '6. Fairness (treats students equally)',
+      'teacher_diction': "1. Clarity's of diction (voice projection)",
+      'teacher_grammar': '2. Use of correct grammar (and appropriate words)',
+      'teacher_personality': '3. Personality (Grooming and attire)',
+      'teacher_disposition': '4. Disposition (Composure and sense of humor)',
+      'teacher_dynamic': '5. Dynamic and interesting in sharing of ideas',
+      'teacher_fairness': '6. Just and fair in dealings with students (No favoritism)',
       // Learning Process
-      'learning_motivation': '7. Motivation (inspires and encourages learning)',
-      'learning_critical_thinking': '8. Critical Thinking (promotes analysis)',
-      'learning_organization': '9. Organization (well-structured lessons)',
-      'learning_interest': '10. Interest (makes subject engaging)',
-      'learning_explanation': '11. Explanation (clear and thorough)',
-      'learning_clarity': '12. Clarity (easy to understand)',
-      'learning_integration': '13. Integration (connects concepts)',
-      'learning_mastery': '14. Mastery (demonstrates subject expertise)',
-      'learning_methodology': '15. Methodology (effective teaching methods)',
-      'learning_values': '16. Values (promotes ethics and values)',
-      'learning_grading': '17. Grading (fair and transparent assessment)',
-      'learning_synthesis': '18. Synthesis (helps combine ideas)',
-      'learning_reasonableness': '19. Reasonableness (realistic expectations)',
+      'learning_motivation': "7. Motivation (Ability to sustain students' interest)",
+      'learning_critical_thinking': '8. Encouragement given to students to develop critical thinking',
+      'learning_organization': '9. Organization of lessons / lectures',
+      'learning_interest': '10. Interest on ensuring that students are learning the lessons',
+      'learning_explanation': '11. The teacher can very well explain words and concepts.',
+      'learning_clarity': '12. Clarity in the Formulation of questions',
+      'learning_integration': '13. Integration of subject matter to life situations',
+      'learning_mastery': '14. Mastery of teaching the subject (not bookish)',
+      'learning_methodology': '15. Teaching methodology is dynamic and interesting',
+      'learning_values': '16. Integration of perpetualite values to the lessons',
+      'learning_grading': '17. Fair and just in giving grades in Exams, assignments and recitations',
+      'learning_synthesis': '18. Ability to synthesize learning activities',
+      'learning_reasonableness': '19. Reasonableness of quizzes and examinations',
       // Classroom Management
-      'classroom_attendance': '20. Attendance (monitors attendance)',
-      'classroom_policies': '21. Policies (clear class rules)',
-      'classroom_discipline': '22. Discipline (maintains order)',
-      'classroom_authority': '23. Authority (commands respect)',
-      'classroom_prayers': '24. Prayers (includes spiritual activities)',
-      'classroom_punctuality': '25. Punctuality (starts and ends on time)'
+      'classroom_attendance': "20. Regularity of checking students' attendance",
+      'classroom_policies': '21. Ability to convey classroom policies to students',
+      'classroom_discipline': '22. Maintenance of classroom discipline',
+      'classroom_authority': '23. Exercise of Reasonable authority in the classroom (hindi nananakot)',
+      'classroom_prayers': '24. Recitation of opening and / or closing prayers',
+      'classroom_punctuality': '25. Punctuality in Starting and Ending of class'
     }
     return labels[key] || key
   }

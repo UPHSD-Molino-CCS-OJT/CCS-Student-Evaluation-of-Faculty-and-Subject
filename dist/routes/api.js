@@ -1802,13 +1802,13 @@ router.get('/teacher/dashboard', async (req, res) => {
                 remarks = 'Outstanding';
             }
             else if (overallAverage >= 4.0) {
-                remarks = 'Very Satisfactory';
+                remarks = 'High Satisfactory';
             }
             else if (overallAverage >= 3.5) {
                 remarks = 'Satisfactory';
             }
             else if (overallAverage >= 3.0) {
-                remarks = 'Fair';
+                remarks = 'Fairly Satisfactory';
             }
             else {
                 remarks = 'Needs Improvement';
@@ -1942,13 +1942,13 @@ router.get('/teacher/course/:courseId', async (req, res) => {
             remarks = 'Outstanding';
         }
         else if (overallAverage >= 4.0) {
-            remarks = 'Very Satisfactory';
+            remarks = 'High Satisfactory';
         }
         else if (overallAverage >= 3.5) {
             remarks = 'Satisfactory';
         }
         else if (overallAverage >= 3.0) {
-            remarks = 'Fair';
+            remarks = 'Fairly Satisfactory';
         }
         else {
             remarks = 'Needs Improvement';

@@ -184,12 +184,12 @@ const AdminEvaluationDetail: React.FC = () => {
               <Presentation size={24} className="text-blue-600 mr-2" />
               The Teacher
             </h2>
-            <RatingItem label="1. Diction (clear and understandable speech)" rating={evaluation.teacher_diction} />
-            <RatingItem label="2. Grammar (correct use of language)" rating={evaluation.teacher_grammar} />
-            <RatingItem label="3. Personality (pleasant and approachable)" rating={evaluation.teacher_personality} />
-            <RatingItem label="4. Disposition (temperament and attitude)" rating={evaluation.teacher_disposition} />
-            <RatingItem label="5. Dynamic (energetic and engaging)" rating={evaluation.teacher_dynamic} />
-            <RatingItem label="6. Fairness (treats students equally)" rating={evaluation.teacher_fairness} />
+            <RatingItem label="1. Clarity's of diction (voice projection)" rating={evaluation.teacher_diction} />
+            <RatingItem label="2. Use of correct grammar (and appropriate words)" rating={evaluation.teacher_grammar} />
+            <RatingItem label="3. Personality (Grooming and attire)" rating={evaluation.teacher_personality} />
+            <RatingItem label="4. Disposition (Composure and sense of humor)" rating={evaluation.teacher_disposition} />
+            <RatingItem label="5. Dynamic and interesting in sharing of ideas" rating={evaluation.teacher_dynamic} />
+            <RatingItem label="6. Just and fair in dealings with students (No favoritism)" rating={evaluation.teacher_fairness} />
           </div>
 
           {/* Learning Process Section */}
@@ -198,19 +198,19 @@ const AdminEvaluationDetail: React.FC = () => {
               <BookOpen size={24} className="text-blue-600 mr-2" />
               The Learning Process
             </h2>
-            <RatingItem label="7. Motivation (inspires and encourages learning)" rating={evaluation.learning_motivation} />
-            <RatingItem label="8. Critical Thinking (promotes analytical skills)" rating={evaluation.learning_critical_thinking} />
-            <RatingItem label="9. Organization (well-structured lessons)" rating={evaluation.learning_organization} />
-            <RatingItem label="10. Interest (makes subject engaging)" rating={evaluation.learning_interest} />
-            <RatingItem label="11. Explanation (clear and easy to understand)" rating={evaluation.learning_explanation} />
-            <RatingItem label="12. Clarity (presents ideas clearly)" rating={evaluation.learning_clarity} />
-            <RatingItem label="13. Integration (connects theory and practice)" rating={evaluation.learning_integration} />
-            <RatingItem label="14. Mastery (demonstrates subject expertise)" rating={evaluation.learning_mastery} />
-            <RatingItem label="15. Methodology (effective teaching methods)" rating={evaluation.learning_methodology} />
-            <RatingItem label="16. Values (promotes ethical values)" rating={evaluation.learning_values} />
-            <RatingItem label="17. Grading (fair assessment system)" rating={evaluation.learning_grading} />
-            <RatingItem label="18. Synthesis (brings ideas together)" rating={evaluation.learning_synthesis} />
-            <RatingItem label="19. Reasonableness (realistic expectations)" rating={evaluation.learning_reasonableness} />
+            <RatingItem label="7. Motivation (Ability to sustain students' interest)" rating={evaluation.learning_motivation} />
+            <RatingItem label="8. Encouragement given to students to develop critical thinking" rating={evaluation.learning_critical_thinking} />
+            <RatingItem label="9. Organization of lessons / lectures" rating={evaluation.learning_organization} />
+            <RatingItem label="10. Interest on ensuring that students are learning the lessons" rating={evaluation.learning_interest} />
+            <RatingItem label="11. The teacher can very well explain words and concepts." rating={evaluation.learning_explanation} />
+            <RatingItem label="12. Clarity in the Formulation of questions" rating={evaluation.learning_clarity} />
+            <RatingItem label="13. Integration of subject matter to life situations" rating={evaluation.learning_integration} />
+            <RatingItem label="14. Mastery of teaching the subject (not bookish)" rating={evaluation.learning_mastery} />
+            <RatingItem label="15. Teaching methodology is dynamic and interesting" rating={evaluation.learning_methodology} />
+            <RatingItem label="16. Integration of perpetualite values to the lessons" rating={evaluation.learning_values} />
+            <RatingItem label="17. Fair and just in giving grades in Exams, assignments and recitations" rating={evaluation.learning_grading} />
+            <RatingItem label="18. Ability to synthesize learning activities" rating={evaluation.learning_synthesis} />
+            <RatingItem label="19. Reasonableness of quizzes and examinations" rating={evaluation.learning_reasonableness} />
           </div>
 
           {/* Classroom Management Section */}
@@ -219,12 +219,12 @@ const AdminEvaluationDetail: React.FC = () => {
               <DoorOpen size={24} className="text-blue-600 mr-2" />
               Classroom Management
             </h2>
-            <RatingItem label="20. Attendance (monitors student attendance)" rating={evaluation.classroom_attendance} />
-            <RatingItem label="21. Policies (implements class policies)" rating={evaluation.classroom_policies} />
-            <RatingItem label="22. Discipline (maintains order and discipline)" rating={evaluation.classroom_discipline} />
-            <RatingItem label="23. Authority (commands respect and attention)" rating={evaluation.classroom_authority} />
-            <RatingItem label="24. Prayers (facilitates spiritual activities)" rating={evaluation.classroom_prayers} />
-            <RatingItem label="25. Punctuality (starts and ends on time)" rating={evaluation.classroom_punctuality} />
+            <RatingItem label="20. Regularity of checking students' attendance" rating={evaluation.classroom_attendance} />
+            <RatingItem label="21. Ability to convey classroom policies to students" rating={evaluation.classroom_policies} />
+            <RatingItem label="22. Maintenance of classroom discipline" rating={evaluation.classroom_discipline} />
+            <RatingItem label="23. Exercise of Reasonable authority in the classroom (hindi nananakot)" rating={evaluation.classroom_authority} />
+            <RatingItem label="24. Recitation of opening and / or closing prayers" rating={evaluation.classroom_prayers} />
+            <RatingItem label="25. Punctuality in Starting and Ending of class" rating={evaluation.classroom_punctuality} />
           </div>
 
           {/* Comments Section */}

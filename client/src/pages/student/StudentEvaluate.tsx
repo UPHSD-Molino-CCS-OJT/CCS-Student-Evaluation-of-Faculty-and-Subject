@@ -242,8 +242,8 @@ const StudentEvaluate: React.FC = () => {
           { value: '5', label: 'Outstanding', color: 'bg-green-500' },
           { value: '4', label: 'High Satisfactory', color: 'bg-blue-500' },
           { value: '3', label: 'Satisfactory', color: 'bg-yellow-500' },
-          { value: '2', label: 'Needs Improvement', color: 'bg-orange-500' },
-          { value: '1', label: 'Poor', color: 'bg-red-500' }
+          { value: '2', label: 'Fairly Satisfactory', color: 'bg-orange-500' },
+          { value: '1', label: 'Needs Improvement', color: 'bg-red-500' }
         ].map((option) => (
           <label
             key={option.value}
@@ -357,12 +357,12 @@ const StudentEvaluate: React.FC = () => {
               Section 1: The Teacher
             </div>
             <div className="p-6 space-y-6">
-              <RatingQuestion name="teacher_diction" label="1. Diction (clear and understandable speech)" />
-              <RatingQuestion name="teacher_grammar" label="2. Grammar (correct use of language)" />
-              <RatingQuestion name="teacher_personality" label="3. Personality (pleasant and approachable)" />
-              <RatingQuestion name="teacher_disposition" label="4. Disposition (temperament and attitude)" />
-              <RatingQuestion name="teacher_dynamic" label="5. Dynamic (energetic and engaging)" />
-              <RatingQuestion name="teacher_fairness" label="6. Fairness (treats students equally)" />
+              <RatingQuestion name="teacher_diction" label="1. Clarity's of diction (voice projection)" />
+              <RatingQuestion name="teacher_grammar" label="2. Use of correct grammar (and appropriate words)" />
+              <RatingQuestion name="teacher_personality" label="3. Personality (Grooming and attire)" />
+              <RatingQuestion name="teacher_disposition" label="4. Disposition (Composure and sense of humor)" />
+              <RatingQuestion name="teacher_dynamic" label="5. Dynamic and interesting in sharing of ideas" />
+              <RatingQuestion name="teacher_fairness" label="6. Just and fair in dealings with students (No favoritism)" />
             </div>
           </div>
 
@@ -373,19 +373,19 @@ const StudentEvaluate: React.FC = () => {
               Section 2: The Learning Process
             </div>
             <div className="p-6 space-y-6">
-              <RatingQuestion name="learning_motivation" label="7. Motivation (inspires and encourages learning)" />
-              <RatingQuestion name="learning_critical_thinking" label="8. Critical Thinking (promotes analytical skills)" />
-              <RatingQuestion name="learning_organization" label="9. Organization (well-structured lessons)" />
-              <RatingQuestion name="learning_interest" label="10. Interest (makes subject engaging)" />
-              <RatingQuestion name="learning_explanation" label="11. Explanation (clear and easy to understand)" />
-              <RatingQuestion name="learning_clarity" label="12. Clarity (presents ideas clearly)" />
-              <RatingQuestion name="learning_integration" label="13. Integration (connects theory and practice)" />
-              <RatingQuestion name="learning_mastery" label="14. Mastery (demonstrates subject expertise)" />
-              <RatingQuestion name="learning_methodology" label="15. Methodology (effective teaching methods)" />
-              <RatingQuestion name="learning_values" label="16. Values (promotes ethical values)" />
-              <RatingQuestion name="learning_grading" label="17. Grading (fair assessment system)" />
-              <RatingQuestion name="learning_synthesis" label="18. Synthesis (brings ideas together)" />
-              <RatingQuestion name="learning_reasonableness" label="19. Reasonableness (realistic expectations)" />
+              <RatingQuestion name="learning_motivation" label="7. Motivation (Ability to sustain students' interest)" />
+              <RatingQuestion name="learning_critical_thinking" label="8. Encouragement given to students to develop critical thinking" />
+              <RatingQuestion name="learning_organization" label="9. Organization of lessons / lectures" />
+              <RatingQuestion name="learning_interest" label="10. Interest on ensuring that students are learning the lessons" />
+              <RatingQuestion name="learning_explanation" label="11. The teacher can very well explain words and concepts." />
+              <RatingQuestion name="learning_clarity" label="12. Clarity in the Formulation of questions" />
+              <RatingQuestion name="learning_integration" label="13. Integration of subject matter to life situations" />
+              <RatingQuestion name="learning_mastery" label="14. Mastery of teaching the subject (not bookish)" />
+              <RatingQuestion name="learning_methodology" label="15. Teaching methodology is dynamic and interesting" />
+              <RatingQuestion name="learning_values" label="16. Integration of perpetualite values to the lessons" />
+              <RatingQuestion name="learning_grading" label="17. Fair and just in giving grades in Exams, assignments and recitations" />
+              <RatingQuestion name="learning_synthesis" label="18. Ability to synthesize learning activities" />
+              <RatingQuestion name="learning_reasonableness" label="19. Reasonableness of quizzes and examinations" />
             </div>
           </div>
 
@@ -396,12 +396,12 @@ const StudentEvaluate: React.FC = () => {
               Section 3: Classroom Management
             </div>
             <div className="p-6 space-y-6">
-              <RatingQuestion name="classroom_attendance" label="20. Attendance (monitors student attendance)\" />
-              <RatingQuestion name="classroom_policies" label="21. Policies (implements class policies)\" />
-              <RatingQuestion name="classroom_discipline" label="22. Discipline (maintains order and discipline)\" />
-              <RatingQuestion name="classroom_authority" label="23. Authority (commands respect and attention)\" />
-              <RatingQuestion name="classroom_prayers" label="24. Prayers (facilitates spiritual activities)\" />
-              <RatingQuestion name="classroom_punctuality" label="25. Punctuality (starts and ends on time)\" />
+              <RatingQuestion name="classroom_attendance" label="20. Regularity of checking students' attendance" />
+              <RatingQuestion name="classroom_policies" label="21. Ability to convey classroom policies to students" />
+              <RatingQuestion name="classroom_discipline" label="22. Maintenance of classroom discipline" />
+              <RatingQuestion name="classroom_authority" label="23. Exercise of Reasonable authority in the classroom (hindi nananakot)" />
+              <RatingQuestion name="classroom_prayers" label="24. Recitation of opening and / or closing prayers" />
+              <RatingQuestion name="classroom_punctuality" label="25. Punctuality in Starting and Ending of class" />
             </div>
           </div>
 
