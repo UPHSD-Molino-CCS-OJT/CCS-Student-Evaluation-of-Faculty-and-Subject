@@ -21,11 +21,11 @@ const AdminNavbar: React.FC = () => {
 
   const handleLogout = async (): Promise<void> => {
     try {
-      await axios.get('/admin/logout', { withCredentials: true })
-      navigate('/admin/login')
+      await axios.post('/api/staff/logout', {}, { withCredentials: true })
+      navigate('/staff/login')
     } catch (error: unknown) {
       console.error('Logout error:', error)
-      navigate('/admin/login')
+      navigate('/staff/login')
     }
   }
 

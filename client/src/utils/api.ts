@@ -8,8 +8,7 @@ import type {
   Evaluation,
   DashboardStats,
   AuditResults,
-  Enrollment,
-  AuthState
+  Enrollment
 } from '../types';
 
 /**
@@ -49,8 +48,8 @@ api.interceptors.response.use(
         case 401:
           // Unauthorized - redirect to login if not already there
           if (!window.location.pathname.includes('/login')) {
-            const isAdmin = window.location.pathname.includes('/admin');
-            window.location.href = isAdmin ? '/admin/login' : '/student/login';
+            const isStaff = window.location.pathname.includes('/admin') || window.location.pathname.includes('/teacher');
+            window.location.href = isStaff ? '/staff/login' : '/student/login';
           }
           break;
         case 403:
@@ -101,16 +100,6 @@ export const studentApi = {
 // ==================== ADMIN API METHODS ====================
 
 export const adminApi = {
-  // Auth
-  checkAuth: (): Promise<AxiosResponse<AuthState>> =>
-    api.get('/api/admin/check-auth'),
-    
-  login: (credentials: LoginCredentials): Promise<AxiosResponse<{ success: boolean; admin?: any }>> =>
-    api.post('/api/admin/login', credentials),
-    
-  logout: (): Promise<AxiosResponse> =>
-    api.post('/api/admin/logout'),
-  
   // Dashboard
   getDashboard: (): Promise<AxiosResponse<DashboardStats>> =>
     api.get('/api/admin/dashboard'),

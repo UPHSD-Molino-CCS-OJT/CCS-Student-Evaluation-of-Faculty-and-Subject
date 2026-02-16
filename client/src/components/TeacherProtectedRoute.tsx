@@ -15,10 +15,10 @@ const TeacherProtectedRoute: React.FC<TeacherProtectedRouteProps> = ({ children 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get('/api/teacher/check-auth', {
+        const response = await axios.get('/api/staff/check-auth', {
           withCredentials: true
         })
-        setIsAuthenticated(response.data.authenticated)
+        setIsAuthenticated(response.data.authenticated && response.data.userType === 'teacher')
       } catch (error: unknown) {
         setIsAuthenticated(false)
       } finally {

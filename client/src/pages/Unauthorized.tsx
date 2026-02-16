@@ -13,10 +13,9 @@ const Unauthorized: React.FC = () => {
     const timer = setTimeout(() => {
       if (context === 'student') {
         navigate('/student/login', { state: { returnUrl } })
-      } else if (context === 'teacher') {
-        navigate('/teacher/login', { state: { returnUrl } })
       } else {
-        navigate('/admin/login', { state: { returnUrl } })
+        // Both admin and teacher use unified staff login
+        navigate('/staff/login', { state: { returnUrl } })
       }
     }, 3000)
 
@@ -26,10 +25,9 @@ const Unauthorized: React.FC = () => {
   const handleLoginNow = () => {
     if (context === 'student') {
       navigate('/student/login', { state: { returnUrl } })
-    } else if (context === 'teacher') {
-      navigate('/teacher/login', { state: { returnUrl } })
     } else {
-      navigate('/admin/login', { state: { returnUrl } })
+      // Both admin and teacher use unified staff login
+      navigate('/staff/login', { state: { returnUrl } })
     }
   }
 
@@ -53,9 +51,7 @@ const Unauthorized: React.FC = () => {
           <p className="text-gray-600 mb-6">
             {context === 'student' 
               ? 'You need to be logged in as a student to access this page.'
-              : context === 'teacher'
-              ? 'You need to be logged in as a teacher to access this page.'
-              : 'You need to be logged in as an administrator to access this page.'
+              : 'You need to be logged in as a staff member (Admin or Teacher) to access this page.'
             }
           </p>
 
@@ -64,7 +60,7 @@ const Unauthorized: React.FC = () => {
             <div className="flex items-center justify-center text-blue-700">
               <Info size={20} className="mr-2" />
               <p className="text-sm">
-                Redirecting to {context === 'student' ? 'student' : context === 'teacher' ? 'teacher' : 'admin'} login in 3 seconds...
+                Redirecting to {context === 'student' ? 'student' : 'staff'} login in 3 seconds...
               </p>
             </div>
           </div>
@@ -83,53 +79,22 @@ const Unauthorized: React.FC = () => {
             <p className="text-sm text-gray-600">
               {context === 'student' ? (
                 <>
-                  Are you an administrator or teacher?{' '}
+                  Are you a staff member?{' '}
                   <a
-                    href="/admin/login"
+                    href="/staff/login"
                     className="text-blue-600 hover:text-blue-800 font-semibold"
                   >
-                    Admin Login
-                  </a>
-                  {' '} | {' '}
-                  <a
-                    href="/teacher/login"
-                    className="text-green-600 hover:text-green-800 font-semibold"
-                  >
-                    Teacher Login
-                  </a>
-                </>
-              ) : context === 'teacher' ? (
-                <>
-                  Are you a student or administrator?{' '}
-                  <a
-                    href="/student/login"
-                    className="text-blue-600 hover:text-blue-800 font-semibold"
-                  >
-                    Student Login
-                  </a>
-                  {' '} | {' '}
-                  <a
-                    href="/admin/login"
-                    className="text-blue-600 hover:text-blue-800 font-semibold"
-                  >
-                    Admin Login
+                    Staff Login
                   </a>
                 </>
               ) : (
                 <>
-                  Are you a student or teacher?{' '}
+                  Are you a student?{' '}
                   <a
                     href="/student/login"
                     className="text-blue-600 hover:text-blue-800 font-semibold"
                   >
                     Student Login
-                  </a>
-                  {' '} | {' '}
-                  <a
-                    href="/teacher/login"
-                    className="text-green-600 hover:text-green-800 font-semibold"
-                  >
-                    Teacher Login
                   </a>
                 </>
               )}

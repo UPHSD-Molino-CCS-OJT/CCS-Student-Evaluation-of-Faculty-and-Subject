@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { GraduationCap, ShieldCheck, Users } from 'lucide-react'
+import { GraduationCap, ShieldCheck } from 'lucide-react'
 
 interface NavbarProps {
   showAdminButton?: boolean;

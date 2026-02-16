@@ -24,8 +24,8 @@ const TeacherNavbar: React.FC = () => {
 
     try {
       setLoggingOut(true)
-      await axios.post('/api/teacher/logout', {}, { withCredentials: true })
-      navigate('/teacher/login')
+      await axios.post('/api/staff/logout', {}, { withCredentials: true })
+      navigate('/staff/login')
     } catch (error) {
       console.error('Logout error:', error)
       showAlert('Error logging out. Please try again.', {
