@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import { ShieldCheck, AlertCircle, User, Lock, Loader, LogIn } from 'lucide-react'
 import Navbar from '../../components/Navbar'
-import { useModal } from '../../components/ModalContext'
 
 interface Credentials {
   username: string;
@@ -19,7 +18,6 @@ const StaffLogin: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { showAlert } = useModal()
   
   // Determine return URL from location state or query params
   const returnUrl = (location.state as any)?.returnUrl || 
@@ -38,12 +36,6 @@ const StaffLogin: React.FC = () => {
 
       if (response.data.success) {
         const { userType } = response.data
-        
-        // Show success message
-        showAlert(`Welcome back! Logging in as ${userType}...`, {
-          variant: 'success',
-          title: 'Login Successful'
-        })
         
         // Navigate based on user type and return URL
         if (returnUrl) {

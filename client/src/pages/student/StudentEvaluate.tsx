@@ -20,7 +20,6 @@ const StudentEvaluate: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [enrollment, setEnrollment] = useState<PopulatedEnrollment | null>(null)
-  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [draftSaved, setDraftSaved] = useState<boolean>(false)
   const { showConfirm } = useModal()
@@ -234,12 +233,7 @@ const StudentEvaluate: React.FC = () => {
       if (response.data.success) {
         // Clear draft
         localStorage.removeItem(`evaluation_draft_${enrollmentId}`)
-        setShowSuccessModal(true)
-        
-        // Redirect after 3 seconds
-        setTimeout(() => {
-          navigate('/student/subjects')
-        }, 3000)
+        navigate('/student/subjects')
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -515,26 +509,6 @@ const StudentEvaluate: React.FC = () => {
           </div>
         </form>
       </div>
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md mx-4 fade-in">
-            <div className="text-center">
-              <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
-                <CheckCircle size={64} className="text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Evaluation Submitted!</h2>
-              <p className="text-gray-600 mb-4">
-                Thank you for your feedback. Your evaluation has been successfully submitted.
-              </p>
-              <p className="text-sm text-gray-500">
-                Redirecting to subjects page...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
