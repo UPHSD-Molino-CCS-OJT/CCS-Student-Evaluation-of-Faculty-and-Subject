@@ -5,6 +5,7 @@ import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
 import Pagination from '../../components/Pagination'
 import { Teacher } from '../../types'
+import { useModal } from '../../components/ModalContext'
 
 interface TeacherFormData {
   full_name: string;
@@ -27,6 +28,7 @@ const AdminTeachers: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null)
+  const { showAlert, showConfirm } = useModal()
   const [formData, setFormData] = useState<TeacherFormData>({
     full_name: '',
     employee_id: '',
@@ -77,9 +79,15 @@ const AdminTeachers: React.FC = () => {
       fetchTeachers()
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(error.response?.data?.message || 'Error saving teacher')
+        showAlert(error.response?.data?.message || 'Error saving teacher', {
+          title: 'Error',
+          variant: 'danger'
+        })
       } else {
-        alert('Error saving teacher')
+        showAlert('Error saving teacher', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }
@@ -97,16 +105,32 @@ const AdminTeachers: React.FC = () => {
   }
 
   const handleDelete = async (id: string): Promise<void> => {
-    if (window.confirm('Are you sure you want to delete this teacher?')) {
-      try {
-        await axios.delete(`/api/admin/teachers/${id}`, { withCredentials: true })
-        fetchTeachers()
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          alert(error.response?.data?.message || 'Error deleting teacher')
-        } else {
-          alert('Error deleting teacher')
-        }
+    const confirmed = await showConfirm(
+      'Are you sure you want to delete this teacher? This action cannot be undone.',
+      {
+        title: 'Delete Teacher',
+        variant: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
+
+    try {
+      await axios.delete(`/api/admin/teachers/${id}`, { withCredentials: true })
+      fetchTeachers()
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        showAlert(error.response?.data?.message || 'Error deleting teacher', {
+          title: 'Error',
+          variant: 'danger'
+        })
+      } else {
+        showAlert('Error deleting teacher', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }

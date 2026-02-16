@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar'
 import { EvaluationFormSkeleton } from '../../components/Skeleton'
 import { EvaluationFormData, RatingQuestionProps } from '../../types'
 import { CheckCircle, AlertTriangle, AlertCircle, Presentation, BookOpen, DoorOpen, MessageSquare, Shield, Trash2, Save, Loader, Send, ArrowLeft } from 'lucide-react'
+import { useModal } from '../../components/ModalContext'
 
 interface PopulatedEnrollment {
   _id: string;
@@ -22,6 +23,7 @@ const StudentEvaluate: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [draftSaved, setDraftSaved] = useState<boolean>(false)
+  const { showConfirm } = useModal()
 
   // Form data
   const [formData, setFormData] = useState<EvaluationFormData>({
@@ -145,21 +147,31 @@ const StudentEvaluate: React.FC = () => {
     }
   }
 
-  const clearDraft = () => {
-    if (window.confirm('Are you sure you want to clear your draft? This cannot be undone.')) {
-      localStorage.removeItem(`evaluation_draft_${enrollmentId}`)
-      setFormData({
-        teacher_diction: '', teacher_grammar: '', teacher_personality: '',
-        teacher_disposition: '', teacher_dynamic: '', teacher_fairness: '',
-        learning_motivation: '', learning_critical_thinking: '', learning_organization: '',
-        learning_interest: '', learning_explanation: '', learning_clarity: '',
-        learning_integration: '', learning_mastery: '', learning_methodology: '',
-        learning_values: '', learning_grading: '', learning_synthesis: '',
-        learning_reasonableness: '', classroom_attendance: '', classroom_policies: '',
-        classroom_discipline: '', classroom_authority: '', classroom_prayers: '',
-        classroom_punctuality: '', comments: ''
-      })
-    }
+  const clearDraft = async () => {
+    const confirmed = await showConfirm(
+      'Are you sure you want to clear your draft? This cannot be undone.',
+      {
+        title: 'Clear Draft',
+        variant: 'danger',
+        confirmText: 'Clear Draft',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
+
+    localStorage.removeItem(`evaluation_draft_${enrollmentId}`)
+    setFormData({
+      teacher_diction: '', teacher_grammar: '', teacher_personality: '',
+      teacher_disposition: '', teacher_dynamic: '', teacher_fairness: '',
+      learning_motivation: '', learning_critical_thinking: '', learning_organization: '',
+      learning_interest: '', learning_explanation: '', learning_clarity: '',
+      learning_integration: '', learning_mastery: '', learning_methodology: '',
+      learning_values: '', learning_grading: '', learning_synthesis: '',
+      learning_reasonableness: '', classroom_attendance: '', classroom_policies: '',
+      classroom_discipline: '', classroom_authority: '', classroom_prayers: '',
+      classroom_punctuality: '', comments: ''
+    })
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
@@ -199,9 +211,17 @@ const StudentEvaluate: React.FC = () => {
       return
     }
 
-    if (!window.confirm('Are you sure you want to submit this evaluation? You cannot edit it after submission.')) {
-      return
-    }
+    const confirmed = await showConfirm(
+      'Are you sure you want to submit this evaluation? You cannot edit it after submission.',
+      {
+        title: 'Submit Evaluation',
+        variant: 'warning',
+        confirmText: 'Submit',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
 
     setSubmitting(true)
 

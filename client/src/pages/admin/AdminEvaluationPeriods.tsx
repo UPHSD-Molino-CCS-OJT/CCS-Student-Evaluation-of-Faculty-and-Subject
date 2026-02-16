@@ -5,6 +5,7 @@ import Pagination from '../../components/Pagination'
 import { TableSkeleton } from '../../components/Skeleton'
 import { EvaluationPeriod } from '../../types'
 import { Plus, Pencil, Trash2, Calendar, CheckCircle, XCircle, AlertCircle, Power } from 'lucide-react'
+import { useModal } from '../../components/ModalContext'
 
 interface PaginationData {
   page: number
@@ -21,6 +22,7 @@ const AdminEvaluationPeriods: React.FC = () => {
   const [editingPeriod, setEditingPeriod] = useState<EvaluationPeriod | null>(null)
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState<string>('')
+  const { showConfirm } = useModal()
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
     limit: 10,
@@ -149,9 +151,17 @@ const AdminEvaluationPeriods: React.FC = () => {
   }
 
   const handleDelete = async (id: string): Promise<void> => {
-    if (!window.confirm('Are you sure you want to delete this evaluation period? This action cannot be undone.')) {
-      return
-    }
+    const confirmed = await showConfirm(
+      'Are you sure you want to delete this evaluation period? This action cannot be undone.',
+      {
+        title: 'Delete Evaluation Period',
+        variant: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
 
     try {
       const response = await axios.delete(`/api/admin/evaluation-periods/${id}`, {

@@ -10,6 +10,7 @@ const TeacherNavbar: React.FC = () => {
   const { showAlert, showConfirm } = useModal()
 
   const handleLogout = async () => {
+    // Replace window.confirm with modal confirm
     const confirmed = await showConfirm(
       'Are you sure you want to logout?',
       {
@@ -28,6 +29,7 @@ const TeacherNavbar: React.FC = () => {
       navigate('/teacher/login')
     } catch (error) {
       console.error('Logout error:', error)
+      // Replace alert with modal alert
       showAlert('Error logging out. Please try again.', {
         title: 'Logout Error',
         variant: 'danger'

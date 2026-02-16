@@ -109,3 +109,21 @@ export interface PopulatedEvaluation extends Omit<Evaluation, 'teacher' | 'cours
     code: string;
   };
 }
+
+// Modal component types
+export interface ModalOptions {
+  title?: string;
+  message?: string;
+  variant?: 'info' | 'warning' | 'danger' | 'success';
+  confirmText?: string;
+  cancelText?: string;
+  showCloseButton?: boolean;
+  closeOnBackdropClick?: boolean;
+}
+
+export interface ModalContextType {
+  showAlert: (message: string, options?: ModalOptions) => void;
+  showConfirm: (message: string, options?: ModalOptions) => Promise<boolean>;
+  showCustomModal: (content: React.ReactNode, options?: ModalOptions & { onConfirm?: () => void }) => void;
+  closeModal: () => void;
+}

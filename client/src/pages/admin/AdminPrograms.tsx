@@ -5,6 +5,7 @@ import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
 import Pagination from '../../components/Pagination'
 import { Program } from '../../types'
+import { useModal } from '../../components/ModalContext'
 
 interface ProgramFormData {
   name: string;
@@ -24,6 +25,7 @@ const AdminPrograms: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingProgram, setEditingProgram] = useState<Program | null>(null)
+  const { showAlert, showConfirm } = useModal()
   const [formData, setFormData] = useState<ProgramFormData>({ name: '', code: '' })
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
@@ -68,9 +70,15 @@ const AdminPrograms: React.FC = () => {
       fetchPrograms()
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(error.response?.data?.message || 'Error saving program')
+        showAlert(error.response?.data?.message || 'Error saving program', {
+          title: 'Error',
+          variant: 'danger'
+        })
       } else {
-        alert('Error saving program')
+        showAlert('Error saving program', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }
@@ -82,16 +90,32 @@ const AdminPrograms: React.FC = () => {
   }
 
   const handleDelete = async (id: string): Promise<void> => {
-    if (window.confirm('Are you sure you want to delete this program?')) {
-      try {
-        await axios.delete(`/api/admin/programs/${id}`, { withCredentials: true })
-        fetchPrograms()
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          alert(error.response?.data?.message || 'Error deleting program')
-        } else {
-          alert('Error deleting program')
-        }
+    const confirmed = await showConfirm(
+      'Are you sure you want to delete this program? This action cannot be undone.',
+      {
+        title: 'Delete Program',
+        variant: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
+
+    try {
+      await axios.delete(`/api/admin/programs/${id}`, { withCredentials: true })
+      fetchPrograms()
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        showAlert(error.response?.data?.message || 'Error deleting program', {
+          title: 'Error',
+          variant: 'danger'
+        })
+      } else {
+        showAlert('Error deleting program', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }

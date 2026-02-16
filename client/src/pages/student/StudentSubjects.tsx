@@ -5,6 +5,7 @@ import { GraduationCap, AlertCircle, Inbox, Presentation, CheckCircle, Clock, Ch
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
+import { useModal } from '../../components/ModalContext'
 
 const StudentSubjects: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -13,6 +14,7 @@ const StudentSubjects: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [loggingOut, setLoggingOut] = useState<boolean>(false)
   const navigate = useNavigate()
+  const { showAlert, showConfirm } = useModal()
 
   useEffect(() => {
     fetchSubjects()
@@ -38,16 +40,29 @@ const StudentSubjects: React.FC = () => {
   }
 
   const handleLogout = async (): Promise<void> => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      try {
-        setLoggingOut(true)
-        await axios.get('/student/logout', { withCredentials: true })
-        navigate('/student/login')
-      } catch (error) {
-        console.error('Logout error:', error)
-        alert('Error logging out. Please try again.')
-        setLoggingOut(false)
+    const confirmed = await showConfirm(
+      'Are you sure you want to logout?',
+      {
+        title: 'Confirm Logout',
+        variant: 'warning',
+        confirmText: 'Logout',
+        cancelText: 'Cancel'
       }
+    )
+
+    if (!confirmed) return
+
+    try {
+      setLoggingOut(true)
+      await axios.get('/student/logout', { withCredentials: true })
+      navigate('/student/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      showAlert('Error logging out. Please try again.', {
+        title: 'Logout Error',
+        variant: 'danger'
+      })
+      setLoggingOut(false)
     }
   }
 

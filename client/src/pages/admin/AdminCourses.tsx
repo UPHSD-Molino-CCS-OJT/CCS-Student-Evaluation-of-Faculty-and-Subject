@@ -5,6 +5,7 @@ import AdminNavbar from '../../components/AdminNavbar'
 import { TableSkeleton } from '../../components/Skeleton'
 import Pagination from '../../components/Pagination'
 import { Course, Program } from '../../types'
+import { useModal } from '../../components/ModalContext'
 
 interface CourseFormData {
   name: string;
@@ -30,6 +31,7 @@ const AdminCourses: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [showModal, setShowModal] = useState<boolean>(false)
   const [editingCourse, setEditingCourse] = useState<PopulatedCourse | null>(null)
+  const { showAlert, showConfirm } = useModal()
   const [formData, setFormData] = useState<CourseFormData>({ name: '', code: '', program_id: '' })
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
@@ -84,9 +86,15 @@ const AdminCourses: React.FC = () => {
       fetchCourses()
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(error.response?.data?.message || 'Error saving course')
+        showAlert(error.response?.data?.message || 'Error saving course', {
+          title: 'Error',
+          variant: 'danger'
+        })
       } else {
-        alert('Error saving course')
+        showAlert('Error saving course', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }
@@ -98,16 +106,32 @@ const AdminCourses: React.FC = () => {
   }
 
   const handleDelete = async (id: string): Promise<void> => {
-    if (window.confirm('Are you sure you want to delete this course?')) {
-      try {
-        await axios.delete(`/api/admin/courses/${id}`, { withCredentials: true })
-        fetchCourses()
-      } catch (error: unknown) {
-        if (axios.isAxiosError(error)) {
-          alert(error.response?.data?.message || 'Error deleting course')
-        } else {
-          alert('Error deleting course')
-        }
+    const confirmed = await showConfirm(
+      'Are you sure you want to delete this course? This action cannot be undone.',
+      {
+        title: 'Delete Course',
+        variant: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    )
+
+    if (!confirmed) return
+
+    try {
+      await axios.delete(`/api/admin/courses/${id}`, { withCredentials: true })
+      fetchCourses()
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        showAlert(error.response?.data?.message || 'Error deleting course', {
+          title: 'Error',
+          variant: 'danger'
+        })
+      } else {
+        showAlert('Error deleting course', {
+          title: 'Error',
+          variant: 'danger'
+        })
       }
     }
   }

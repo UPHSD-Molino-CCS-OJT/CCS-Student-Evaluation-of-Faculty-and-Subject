@@ -3,10 +3,12 @@ import axios from 'axios'
 import AdminNavbar from '../../components/AdminNavbar'
 import { DetailedAuditResults } from '../../types'
 import { CheckCircle, AlertTriangle, Shield, Loader, PlayCircle, Lightbulb, ArrowRight, ClipboardCheck } from 'lucide-react'
+import { useModal } from '../../components/ModalContext'
 
 const AdminPrivacyAudit: React.FC = () => {
   const [auditResults, setAuditResults] = useState<DetailedAuditResults | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
+  const { showAlert } = useModal()
 
   const runAudit = async (): Promise<void> => {
     setLoading(true)
@@ -15,7 +17,10 @@ const AdminPrivacyAudit: React.FC = () => {
       setAuditResults(response.data.results)
     } catch (error: unknown) {
       console.error('Error running audit:', error)
-      alert('Error running privacy audit')
+      showAlert('Error running privacy audit. Please try again.', {
+        title: 'Audit Error',
+        variant: 'danger'
+      })
     } finally {
       setLoading(false)
     }

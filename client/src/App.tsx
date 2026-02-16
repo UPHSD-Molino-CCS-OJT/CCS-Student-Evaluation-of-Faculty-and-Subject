@@ -21,13 +21,15 @@ import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProtectedRoute from './components/StudentProtectedRoute'
 import TeacherProtectedRoute from './components/TeacherProtectedRoute'
+import { ModalProvider } from './components/ModalContext'
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <Routes>
-        {/* Redirect root to student login */}
-        <Route path="/" element={<Navigate to="/student/login" replace />} />
+    <ModalProvider>
+      <Router>
+        <Routes>
+          {/* Redirect root to student login */}
+          <Route path="/" element={<Navigate to="/student/login" replace />} />
         
         {/* Public Pages */}
         <Route path="/unauthorized" element={<Unauthorized />} />
@@ -146,7 +148,8 @@ const App: React.FC = () => {
           } 
         />
       </Routes>
-    </Router>
+      </Router>
+    </ModalProvider>
   )
 }
 
