@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Loader, BookOpen, Users, TrendingUp, Award, MessageSquare, Calendar, ArrowLeft, BarChart3 } from 'lucide-react'
+import { Loader, BookOpen, Users, TrendingUp, Award, MessageSquare, ArrowLeft, BarChart3 } from 'lucide-react'
 import TeacherNavbar from '../../components/TeacherNavbar'
 
 interface QuestionAverages {
@@ -124,17 +124,6 @@ const TeacherCourseDetail: React.FC = () => {
       'classroom_punctuality': '25. Punctuality (starts and ends on time)'
     }
     return labels[key] || key
-  }
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
   }
 
   if (loading) {
@@ -339,16 +328,9 @@ const TeacherCourseDetail: React.FC = () => {
                   <p className="text-gray-600">No comments submitted for this course.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {data.comments.map((comment, index) => (
                     <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-sm font-semibold text-gray-700">Anonymous Student</span>
-                        <span className="text-xs text-gray-500 flex items-center">
-                          <Calendar size={14} className="mr-1" />
-                          {formatDate(comment.submitted_at)}
-                        </span>
-                      </div>
                       <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                         {comment.comment}
                       </p>
