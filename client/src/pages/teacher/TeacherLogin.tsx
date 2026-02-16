@@ -102,6 +102,18 @@ const TeacherLogin: React.FC = () => {
                 )}
               </button>
             </form>
+            
+            {/* Security Information Link */}
+            <div className="mt-6 text-center">
+              <a 
+                href="/security-privacy" 
+                className="text-sm text-green-600 hover:text-green-700 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Security & Privacy Information
+              </a>
+            </div>
           </div>
         </div>
       </div>

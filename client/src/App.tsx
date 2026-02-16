@@ -16,6 +16,7 @@ import AdminEvaluationPeriods from './pages/admin/AdminEvaluationPeriods'
 import TeacherLogin from './pages/teacher/TeacherLogin'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherCourseDetail from './pages/teacher/TeacherCourseDetail'
+import SecurityPrivacy from './pages/SecurityPrivacy'
 import Unauthorized from './pages/Unauthorized'
 import ProtectedRoute from './components/ProtectedRoute'
 import StudentProtectedRoute from './components/StudentProtectedRoute'
@@ -28,8 +29,9 @@ const App: React.FC = () => {
         {/* Redirect root to student login */}
         <Route path="/" element={<Navigate to="/student/login" replace />} />
         
-        {/* Unauthorized page */}
+        {/* Public Pages */}
         <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/security-privacy" element={<SecurityPrivacy />} />
         
         {/* Student Routes */}
         <Route path="/student/login" element={<StudentLogin />} />
