@@ -24,20 +24,11 @@ const Navbar: React.FC<NavbarProps> = ({ showAdminButton = true }) => {
           {showAdminButton && (
             <div className="flex items-center space-x-3">
               <Link
-                to="/teacher/login"
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
-              >
-                <Users size={20} />
-                <span className="hidden sm:inline">Teacher Login</span>
-                <span className="sm:hidden">Teacher</span>
-              </Link>
-              <Link
-                to="/admin/login"
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                to="/staff/login"
+                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-6 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md"
               >
                 <ShieldCheck size={20} />
-                <span className="hidden sm:inline">Admin Login</span>
-                <span className="sm:hidden">Admin</span>
+                <span className="font-medium">Staff Login</span>
               </Link>
             </div>
           )}

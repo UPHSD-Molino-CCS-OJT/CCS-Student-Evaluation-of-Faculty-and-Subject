@@ -11,6 +11,15 @@ const teacherSchema = new Schema<ITeacher>({
     unique: true,
     sparse: true
   },
+  username: {
+    type: Schema.Types.Mixed, // Encrypted field
+    unique: true,
+    sparse: true
+  },
+  password: {
+    type: String, // Hashed password, not encrypted
+    required: true
+  },
   email: {
     type: Schema.Types.Mixed // Encrypted field
   },
@@ -20,6 +29,9 @@ const teacherSchema = new Schema<ITeacher>({
   status: {
     type: Schema.Types.Mixed, // Encrypted field
     default: 'active'
+  },
+  last_login: {
+    type: Date
   }
 }, {
   timestamps: true,

@@ -29,9 +29,12 @@ export interface ITeacher extends Document {
   _id: Types.ObjectId;
   full_name: EncryptedData | string;
   employee_id: EncryptedData | string;
+  username: EncryptedData | string;
+  password: string; // Hashed, not encrypted
   email?: EncryptedData | string;
   department?: EncryptedData | string;
   status: EncryptedData | string;
+  last_login?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -100,12 +100,15 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   ]);
   console.log(`✓ Created ${programs.length} programs`);
 
-  // Create sample teachers
+  // Create sample teachers with username and password
   console.log('👨‍🏫 Creating sample teachers...');
+  const teacherPassword = await bcrypt.hash('teacher123', 10); // Default password for all teachers
   const teachers = await Teacher.create([
     {
       full_name: 'Prof. Juan Dela Cruz',
       employee_id: 'EMP001',
+      username: 'jdelacruz',
+      password: teacherPassword,
       email: 'jdelacruz@uphsd.edu.ph',
       department: 'Computer Science',
       status: 'active' as const
@@ -113,6 +116,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     {
       full_name: 'Prof. Maria Santos',
       employee_id: 'EMP002',
+      username: 'msantos',
+      password: teacherPassword,
       email: 'msantos@uphsd.edu.ph',
       department: 'Information Technology',
       status: 'active' as const
@@ -120,6 +125,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     {
       full_name: 'Prof. Jose Garcia',
       employee_id: 'EMP003',
+      username: 'jgarcia',
+      password: teacherPassword,
       email: 'jgarcia@uphsd.edu.ph',
       department: 'Computer Science',
       status: 'active' as const
@@ -127,6 +134,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     {
       full_name: 'Prof. Ana Reyes',
       employee_id: 'EMP004',
+      username: 'areyes',
+      password: teacherPassword,
       email: 'areyes@uphsd.edu.ph',
       department: 'Information Technology',
       status: 'active' as const
@@ -134,12 +143,15 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     {
       full_name: 'Prof. Pedro Martinez',
       employee_id: 'EMP005',
+      username: 'pmartinez',
+      password: teacherPassword,
       email: 'pmartinez@uphsd.edu.ph',
       department: 'Computer Science',
       status: 'active' as const
     }
   ]);
   console.log(`✓ Created ${teachers.length} teachers`);
+  console.log('  Default teacher password: teacher123');
 
   // Create sample courses
   console.log('📖 Creating sample courses...');
@@ -236,9 +248,9 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   // Summary
   console.log('\n✅ Database initialized successfully!');
   console.log('📊 Summary:');
-  console.log(`  • 1 admin account`);
+  console.log(`  • 1 admin account (username: admin, password: admin123)`);
   console.log(`  • ${programs.length} programs`);
-  console.log(`  • ${teachers.length} teachers`);
+  console.log(`  • ${teachers.length} teachers (password: teacher123 for all)`);
   console.log(`  • ${courses.length} courses`);
   console.log(`  • ${students.length} students`);
   console.log(`  • ${enrollments.length} enrollments\n`);
@@ -268,15 +280,26 @@ if (require.main === module) {
         await createSampleData();
         
         console.log('🚀 You can now run: npm start');
-        console.log('\n📝 Sample Student Logins (first 5 students):');
         
+        console.log('\n👨‍🏫 Staff Login Credentials:');
+        console.log('  Admin:');
+        console.log('    Username: admin');
+        console.log('    Password: admin123');
+        console.log('\n  Teachers (username/password):');
+        const sampleTeachers = await Teacher.find({}).limit(5).select('username employee_id');
+        sampleTeachers.forEach((teacher, index) => {
+          const username = teacher.get('username');
+          const employeeId = teacher.get('employee_id');
+          console.log(`    ${index + 1}. ${username} / teacher123 (${employeeId})`);
+        });
+        
+        console.log('\n📝 Sample Student Logins (first 5 students):');
         // Fetch and display first 5 students as examples
         const sampleStudents = await Student.find({}).limit(5).select('student_number');
         sampleStudents.forEach((student, index) => {
           console.log(`  ${index + 1}. ${student.get('student_number')}`);
         });
         console.log(`  ... and 45 more students\n`);
-        console.log('💡 Use any student number above to test the system\n');
         
       } catch (error) {
         const err = error as Error;

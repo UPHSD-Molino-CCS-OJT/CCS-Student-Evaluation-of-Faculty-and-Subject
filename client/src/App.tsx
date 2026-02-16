@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import StudentLogin from './pages/student/StudentLogin'
 import StudentSubjects from './pages/student/StudentSubjects'
 import StudentEvaluate from './pages/student/StudentEvaluate'
-import AdminLogin from './pages/admin/AdminLogin'
+import StaffLogin from './pages/staff/StaffLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminEvaluations from './pages/admin/AdminEvaluations'
 import AdminEvaluationDetail from './pages/admin/AdminEvaluationDetail'
@@ -13,7 +13,6 @@ import AdminCourses from './pages/admin/AdminCourses'
 import AdminStudents from './pages/admin/AdminStudents'
 import AdminPrivacyAudit from './pages/admin/AdminPrivacyAudit'
 import AdminEvaluationPeriods from './pages/admin/AdminEvaluationPeriods'
-import TeacherLogin from './pages/teacher/TeacherLogin'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherCourseDetail from './pages/teacher/TeacherCourseDetail'
 import SecurityPrivacy from './pages/SecurityPrivacy'
@@ -35,6 +34,13 @@ const App: React.FC = () => {
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/security-privacy" element={<SecurityPrivacy />} />
         
+        {/* Staff Login (Unified for Admin & Teacher) */}
+        <Route path="/staff/login" element={<StaffLogin />} />
+        
+        {/* Redirect old login pages to unified staff login */}
+        <Route path="/admin/login" element={<Navigate to="/staff/login" replace />} />
+        <Route path="/teacher/login" element={<Navigate to="/staff/login" replace />} />
+        
         {/* Student Routes */}
         <Route path="/student/login" element={<StudentLogin />} />
         <Route 
@@ -55,7 +61,6 @@ const App: React.FC = () => {
         />
         
         {/* Teacher Routes */}
-        <Route path="/teacher/login" element={<TeacherLogin />} />
         <Route 
           path="/teacher/dashboard" 
           element={
@@ -74,7 +79,6 @@ const App: React.FC = () => {
         />
         
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
           element={

@@ -20,6 +20,9 @@ import studentEvaluationRoutes from './student/evaluation';
 import teacherAuthRoutes from './teacher/auth';
 import teacherDashboardRoutes from './teacher/dashboard';
 
+// Staff routes (unified admin/teacher auth)
+import staffAuthRoutes from './staff/auth';
+
 const router: Router = Router();
 
 // ==================== ADMIN ROUTES ====================
@@ -48,5 +51,8 @@ router.use('/student/submit-evaluation', studentEvaluationRoutes);
 // ==================== TEACHER ROUTES ====================
 router.use('/teacher', teacherAuthRoutes);
 router.use('/teacher', teacherDashboardRoutes);
+
+// ==================== STAFF ROUTES (UNIFIED) ====================
+router.use('/staff', staffAuthRoutes);
 
 export default router;
