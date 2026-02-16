@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Inbox, Presentation, CheckCircle, Clock, Check, Pencil } from 'lucide-react'
+import { GraduationCap, AlertCircle, Inbox, Presentation, CheckCircle, Clock, Check, Pencil, LogOut } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
@@ -11,6 +11,7 @@ const StudentSubjects: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
+  const [loggingOut, setLoggingOut] = useState<boolean>(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -33,6 +34,20 @@ const StudentSubjects: React.FC = () => {
       console.error('Error fetching subjects:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLogout = async (): Promise<void> => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      try {
+        setLoggingOut(true)
+        await axios.get('/student/logout', { withCredentials: true })
+        navigate('/student/login')
+      } catch (error) {
+        console.error('Logout error:', error)
+        alert('Error logging out. Please try again.')
+        setLoggingOut(false)
+      }
     }
   }
 
@@ -72,16 +87,26 @@ const StudentSubjects: React.FC = () => {
         {/* Student Info Card */}
         {student && (
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg shadow-lg p-6 mb-8 fade-in">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 rounded-full p-4">
-                <GraduationCap size={28} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 rounded-full p-4">
+                  <GraduationCap size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Student Dashboard</h2>
+                  <p className="text-blue-100">
+                    {student.program?.name} - Year {student.year_level}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold">Student Dashboard</h2>
-                <p className="text-blue-100">
-                  {student.program?.name} - Year {student.year_level}
-                </p>
-              </div>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <LogOut size={20} />
+                <span className="hidden sm:inline">{loggingOut ? 'Logging out...' : 'Logout'}</span>
+              </button>
             </div>
           </div>
         )}

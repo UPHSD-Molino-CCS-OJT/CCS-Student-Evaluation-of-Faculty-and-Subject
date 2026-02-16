@@ -4,7 +4,7 @@ import axios from 'axios'
 import Navbar from '../../components/Navbar'
 import { EvaluationFormSkeleton } from '../../components/Skeleton'
 import { EvaluationFormData, RatingQuestionProps } from '../../types'
-import { CheckCircle, AlertTriangle, AlertCircle, Presentation, BookOpen, DoorOpen, MessageSquare, Shield, Trash2, Save, Loader, Send } from 'lucide-react'
+import { CheckCircle, AlertTriangle, AlertCircle, Presentation, BookOpen, DoorOpen, MessageSquare, Shield, Trash2, Save, Loader, Send, ArrowLeft } from 'lucide-react'
 
 interface PopulatedEnrollment {
   _id: string;
@@ -450,6 +450,14 @@ const StudentEvaluate: React.FC = () => {
           {/* Action Buttons */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/student/subjects')}
+                className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
+              >
+                <ArrowLeft size={20} className="mr-2 inline" />
+                Back to Subjects
+              </button>
               <button
                 type="button"
                 onClick={clearDraft}

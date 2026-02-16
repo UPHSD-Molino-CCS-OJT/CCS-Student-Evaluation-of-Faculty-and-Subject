@@ -1,19 +1,33 @@
 import React from 'react'
-import { Shield, Lock, Database, Eye, Clock, FileCheck, Server, Key } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Shield, Lock, Database, Eye, Clock, FileCheck, Server, Key, ArrowLeft } from 'lucide-react'
 
 const SecurityPrivacy: React.FC = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <Shield className="text-blue-600" size={32} />
-            <h1 className="text-3xl font-bold text-gray-800">Security & Privacy</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className="text-blue-600" size={32} />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">Security & Privacy</h1>
+                <p className="text-gray-600 mt-2">
+                  Technical overview of security measures implemented in this evaluation system
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(-1)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+            >
+              <ArrowLeft size={20} />
+              <span className="hidden sm:inline">Back</span>
+            </button>
           </div>
-          <p className="text-gray-600 mt-2">
-            Technical overview of security measures implemented in this evaluation system
-          </p>
         </div>
       </div>
 
