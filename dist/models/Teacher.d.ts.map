@@ -1,1 +1,1 @@
-{"version":3,"file":"Teacher.d.ts","sourceRoot":"","sources":["../../models/Teacher.ts"],"names":[],"mappings":"AAAA,OAAiB,EAAU,KAAK,EAAE,MAAM,UAAU,CAAC;AACnD,OAAO,EAAE,QAAQ,EAAE,MAAM,UAAU,CAAC;AA2BpC,QAAA,MAAM,OAAO,EAAE,KAAK,CAAC,QAAQ,CAAsD,CAAC;AAEpF,eAAe,OAAO,CAAC"}
+{"version":3,"file":"Teacher.d.ts","sourceRoot":"","sources":["../../models/Teacher.ts"],"names":[],"mappings":"AAAA,OAAiB,EAAU,KAAK,EAAE,MAAM,UAAU,CAAC;AACnD,OAAO,EAAE,QAAQ,EAAE,MAAM,UAAU,CAAC;AAuCpC,QAAA,MAAM,OAAO,EAAE,KAAK,CAAC,QAAQ,CAAsD,CAAC;AAEpF,eAAe,OAAO,CAAC"}

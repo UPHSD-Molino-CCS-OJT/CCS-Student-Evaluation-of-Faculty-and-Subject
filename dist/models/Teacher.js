@@ -44,6 +44,15 @@ const teacherSchema = new mongoose_1.Schema({
         unique: true,
         sparse: true
     },
+    username: {
+        type: mongoose_1.Schema.Types.Mixed, // Encrypted field
+        unique: true,
+        sparse: true
+    },
+    password: {
+        type: String, // Hashed password, not encrypted
+        required: true
+    },
     email: {
         type: mongoose_1.Schema.Types.Mixed // Encrypted field
     },
@@ -53,6 +62,9 @@ const teacherSchema = new mongoose_1.Schema({
     status: {
         type: mongoose_1.Schema.Types.Mixed, // Encrypted field
         default: 'active'
+    },
+    last_login: {
+        type: Date
     }
 }, {
     timestamps: true,
