@@ -65,8 +65,8 @@ app.use((req, res, next) => {
     next();
 });
 // Import and use API routes
-const api_1 = __importDefault(require("./routes/api"));
-app.use('/api', api_1.default);
+const index_1 = __importDefault(require("./routes/index"));
+app.use('/api', index_1.default);
 // Legacy admin logout route (for compatibility)
 app.get('/admin/logout', (req, res) => {
     req.session.destroy((err) => {

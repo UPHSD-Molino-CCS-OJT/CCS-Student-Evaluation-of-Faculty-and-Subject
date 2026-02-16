@@ -72,7 +72,7 @@ app.use((req: IRequest, res: Response, next: NextFunction): void => {
 });
 
 // Import and use API routes
-import apiRoutes from './routes/api';
+import apiRoutes from './routes/index';
 app.use('/api', apiRoutes);
 
 // Legacy admin logout route (for compatibility)
