@@ -206,7 +206,7 @@ npm run setup-db
 
 ## 📄 License
 
-ISC License
+[MIT License](LICENSE)
 
 ## 👥 Support
 
