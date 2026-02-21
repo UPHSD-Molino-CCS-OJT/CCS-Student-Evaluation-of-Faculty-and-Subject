@@ -25,14 +25,15 @@
     "types": ["node"]
   },
   "include": [
-    "server.ts",
-    "index.ts",
-    "setup-db-mongodb.ts",
-    "config/**/*.ts",
-    "middleware/**/*.ts",
-    "models/**/*.ts",
-    "routes/**/*.ts",
-    "utils/**/*.ts"
+    "backend/server.ts",
+    "backend/index.ts",
+    "backend/setup-db-mongodb.ts",
+    "backend/config/**/*.ts",
+    "backend/middleware/**/*.ts",
+    "backend/models/**/*.ts",
+    "backend/routes/**/*.ts",
+    "backend/types/**/*.ts",
+    "backend/utils/**/*.ts"
   ],
   "exclude": [
     "node_modules",

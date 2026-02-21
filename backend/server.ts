@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 
 // Serve static files from public and client/dist (React build)
 app.use(express.static('public'));
-app.use(express.static(path.join(__dirname, 'client', 'dist')));
+app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
 // Session configuration with MongoDB store for Vercel compatibility
 // IMPORTANT: For serverless, session store may not be ready on first request
@@ -110,7 +110,7 @@ app.get('/api/health', (_req: Request, res: Response): void => {
 app.get('*', async (_req: Request, res: Response): Promise<void> => {
     // Initialize database on first request (for Vercel serverless)
     await initializeDatabase();
-    res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 // Only start server if not in Vercel environment
