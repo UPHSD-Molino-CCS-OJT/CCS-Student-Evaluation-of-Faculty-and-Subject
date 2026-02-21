@@ -6,13 +6,24 @@
     "node": ">=18.x"
   },
   "scripts": {
+    "install:backend": "npm install --prefix backend",
+    "install:frontend": "npm install --prefix frontend",
+    "install:all": "npm install && npm run install:backend && npm run install:frontend",
+
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run --prefix backend dev",
+    "dev:frontend": "npm run --prefix frontend dev",
+
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "npm run --prefix backend build",
+    "build:frontend": "npm run --prefix frontend build",
+
     "start": "npm run --prefix backend start",
-    "dev": "npm run --prefix backend dev",
-    "dev:fullstack": "concurrently \"npm run --prefix backend dev\" \"npm run --prefix frontend dev\"",
-    "build": "npm run --prefix backend build && npm run --prefix frontend build",
+    "start:backend": "npm run --prefix backend start",
+    "preview:frontend": "npm run --prefix frontend preview",
+
     "setup-db": "npm run --prefix backend setup-db",
-    "frontend": "npm run --prefix frontend dev",
-    "frontend:build": "npm run --prefix frontend build",
+
     "heroku-postbuild": "npm run build",
     "test:evaluate": "npx playwright install chromium && ts-node-dev --transpile-only --project tsconfig.json test-student-evaluation.ts",
     "test:evaluate:headless": "npx playwright install chromium && ts-node-dev --transpile-only --project tsconfig.json test-student-evaluation.ts --headless"
