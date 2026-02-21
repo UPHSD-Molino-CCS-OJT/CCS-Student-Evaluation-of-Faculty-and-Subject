@@ -11,18 +11,18 @@
     "install:all": "npm install && npm run install:backend && npm run install:frontend",
 
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run --prefix backend dev",
+    "dev:backend": "ts-node-dev --respawn --transpile-only --project tsconfig.json backend/server.ts",
     "dev:frontend": "npm run --prefix frontend dev",
 
     "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "npm run --prefix backend build",
+    "build:backend": "tsc -p tsconfig.json",
     "build:frontend": "npm run --prefix frontend build",
 
-    "start": "npm run --prefix backend start",
-    "start:backend": "npm run --prefix backend start",
+    "start": "node dist/backend/server.js",
+    "start:backend": "node dist/backend/server.js",
     "preview:frontend": "npm run --prefix frontend preview",
 
-    "setup-db": "npm run --prefix backend setup-db",
+    "setup-db": "ts-node --project tsconfig.json backend/setup-db-mongodb.ts",
 
     "heroku-postbuild": "npm run build",
     "test:evaluate": "npx playwright install chromium && ts-node-dev --transpile-only --project tsconfig.json test-student-evaluation.ts",
