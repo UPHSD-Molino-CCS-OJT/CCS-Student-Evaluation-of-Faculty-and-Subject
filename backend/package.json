@@ -9,7 +9,7 @@
   "scripts": {
     "start": "ts-node-dev --respawn --transpile-only --project ../tsconfig.json server.ts",
     "dev": "ts-node-dev --respawn --transpile-only --project ../tsconfig.json server.ts",
-    "build": "cd .. && tsc",
+    "build": "tsc -p ../tsconfig.json",
     "setup-db": "ts-node --project ../tsconfig.json setup-db-mongodb.ts"
   },
   "dependencies": {
