@@ -10,6 +10,10 @@ import Course from './models/Course';
 import Student from './models/Student';
 import Enrollment from './models/Enrollment';
 import Evaluation from './models/Evaluation';
+import EvaluationPeriod from './models/EvaluationPeriod';
+
+// Import encryption helpers
+import { safeEncrypt, safeDecrypt } from './utils/encryption-helpers';
 
 // Load environment variables
 dotenv.config();
@@ -70,7 +74,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
       Course.deleteMany({}),
       Student.deleteMany({}),
       Enrollment.deleteMany({}),
-      Evaluation.deleteMany({})
+      Evaluation.deleteMany({}),
+      EvaluationPeriod.deleteMany({})
     ]);
     console.log('✓ Collections cleared\n');
   }
@@ -79,10 +84,10 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log('👤 Creating default admin...');
   const hashedPassword = await bcrypt.hash('admin123', 10);
   await Admin.create({
-    username: 'admin',
+    username: safeEncrypt('admin'),
     password: hashedPassword,
-    full_name: 'System Administrator',
-    email: 'admin@uphsd.edu.ph'
+    full_name: safeEncrypt('System Administrator'),
+    email: safeEncrypt('admin@uphsd.edu.ph')
   });
   console.log('✓ Admin created (username: admin, password: admin123)');
 
@@ -90,12 +95,12 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log('📚 Creating default programs...');
   const programs = await Program.create([
     {
-      name: 'BS Computer Science - Data Science',
-      code: 'BSCS-DS'
+      name: safeEncrypt('BS Computer Science - Data Science'),
+      code: safeEncrypt('BSCS-DS')
     },
     {
-      name: 'BS Information Technology - Game Development',
-      code: 'BSIT-GD'
+      name: safeEncrypt('BS Information Technology - Game Development'),
+      code: safeEncrypt('BSIT-GD')
     }
   ]);
   console.log(`✓ Created ${programs.length} programs`);
@@ -105,49 +110,49 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const teacherPassword = await bcrypt.hash('teacher123', 10); // Default password for all teachers
   const teachers = await Teacher.create([
     {
-      full_name: 'Prof. Juan Dela Cruz',
-      employee_id: 'EMP001',
-      username: 'jdelacruz',
+      full_name: safeEncrypt('Prof. Juan Dela Cruz'),
+      employee_id: safeEncrypt('EMP001'),
+      username: safeEncrypt('jdelacruz'),
       password: teacherPassword,
-      email: 'jdelacruz@uphsd.edu.ph',
-      department: 'Computer Science',
-      status: 'active' as const
+      email: safeEncrypt('jdelacruz@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
     },
     {
-      full_name: 'Prof. Maria Santos',
-      employee_id: 'EMP002',
-      username: 'msantos',
+      full_name: safeEncrypt('Prof. Maria Santos'),
+      employee_id: safeEncrypt('EMP002'),
+      username: safeEncrypt('msantos'),
       password: teacherPassword,
-      email: 'msantos@uphsd.edu.ph',
-      department: 'Information Technology',
-      status: 'active' as const
+      email: safeEncrypt('msantos@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
     },
     {
-      full_name: 'Prof. Jose Garcia',
-      employee_id: 'EMP003',
-      username: 'jgarcia',
+      full_name: safeEncrypt('Prof. Jose Garcia'),
+      employee_id: safeEncrypt('EMP003'),
+      username: safeEncrypt('jgarcia'),
       password: teacherPassword,
-      email: 'jgarcia@uphsd.edu.ph',
-      department: 'Computer Science',
-      status: 'active' as const
+      email: safeEncrypt('jgarcia@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
     },
     {
-      full_name: 'Prof. Ana Reyes',
-      employee_id: 'EMP004',
-      username: 'areyes',
+      full_name: safeEncrypt('Prof. Ana Reyes'),
+      employee_id: safeEncrypt('EMP004'),
+      username: safeEncrypt('areyes'),
       password: teacherPassword,
-      email: 'areyes@uphsd.edu.ph',
-      department: 'Information Technology',
-      status: 'active' as const
+      email: safeEncrypt('areyes@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
     },
     {
-      full_name: 'Prof. Pedro Martinez',
-      employee_id: 'EMP005',
-      username: 'pmartinez',
+      full_name: safeEncrypt('Prof. Pedro Martinez'),
+      employee_id: safeEncrypt('EMP005'),
+      username: safeEncrypt('pmartinez'),
       password: teacherPassword,
-      email: 'pmartinez@uphsd.edu.ph',
-      department: 'Computer Science',
-      status: 'active' as const
+      email: safeEncrypt('pmartinez@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
     }
   ]);
   console.log(`✓ Created ${teachers.length} teachers`);
@@ -157,17 +162,17 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log('📖 Creating sample courses...');
   const courses = await Course.create([
     // BSCS-DS courses
-    { name: 'Data Structures and Algorithms', code: 'CS201', program_id: programs[0]._id },
-    { name: 'Database Management Systems', code: 'CS202', program_id: programs[0]._id },
-    { name: 'Machine Learning', code: 'CS301', program_id: programs[0]._id },
-    { name: 'Statistical Analysis', code: 'CS302', program_id: programs[0]._id },
-    { name: 'Big Data Analytics', code: 'CS401', program_id: programs[0]._id },
+    { name: safeEncrypt('Data Structures and Algorithms'), code: safeEncrypt('CS201'), program_id: programs[0]._id },
+    { name: safeEncrypt('Database Management Systems'), code: safeEncrypt('CS202'), program_id: programs[0]._id },
+    { name: safeEncrypt('Machine Learning'), code: safeEncrypt('CS301'), program_id: programs[0]._id },
+    { name: safeEncrypt('Statistical Analysis'), code: safeEncrypt('CS302'), program_id: programs[0]._id },
+    { name: safeEncrypt('Big Data Analytics'), code: safeEncrypt('CS401'), program_id: programs[0]._id },
     // BSIT-GD courses
-    { name: 'Game Design Fundamentals', code: 'IT201', program_id: programs[1]._id },
-    { name: 'Game Programming', code: 'IT202', program_id: programs[1]._id },
-    { name: '3D Modeling and Animation', code: 'IT301', program_id: programs[1]._id },
-    { name: 'Game Engine Architecture', code: 'IT302', program_id: programs[1]._id },
-    { name: 'Mobile Game Development', code: 'IT401', program_id: programs[1]._id }
+    { name: safeEncrypt('Game Design Fundamentals'), code: safeEncrypt('IT201'), program_id: programs[1]._id },
+    { name: safeEncrypt('Game Programming'), code: safeEncrypt('IT202'), program_id: programs[1]._id },
+    { name: safeEncrypt('3D Modeling and Animation'), code: safeEncrypt('IT301'), program_id: programs[1]._id },
+    { name: safeEncrypt('Game Engine Architecture'), code: safeEncrypt('IT302'), program_id: programs[1]._id },
+    { name: safeEncrypt('Mobile Game Development'), code: safeEncrypt('IT401'), program_id: programs[1]._id }
   ]);
   console.log(`✓ Created ${courses.length} courses`);
 
@@ -176,6 +181,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const yearLevels = ['1st', '2nd', '3rd', '4th'] as const;
   const studentsData = [];
   
+  const programCodes = ['BSCS-DS', 'BSIT-GD']; // plaintext codes matching programs array order
+
   for (let i = 1; i <= 50; i++) {
     // Generate random student number in format 00-0000-000
     const batch = 20 + Math.floor(Math.random() * 5); // 20-24
@@ -185,7 +192,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     
     // Randomly assign to a program
     const programIndex = Math.floor(Math.random() * programs.length);
-    const programCode = programs[programIndex].get('code') as string;
+    const programCode = programCodes[programIndex]; // use plaintext code for logic
     const yearLevel = yearLevels[Math.floor(Math.random() * yearLevels.length)];
     
     // Generate section based on program
@@ -195,11 +202,11 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     const section = `${sectionPrefix}-${sectionYear}${sectionLetter}`;
     
     studentsData.push({
-      student_number: studentNumber,
+      student_number: safeEncrypt(studentNumber),
       program_id: programs[programIndex]._id,
-      year_level: yearLevel,
-      section: section,
-      status: 'Regular' as const
+      year_level: safeEncrypt(yearLevel),
+      section: safeEncrypt(section),
+      status: safeEncrypt('Regular')
     });
   }
   
@@ -234,9 +241,9 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
         student_id: student._id,
         course_id: course._id,
         teacher_id: randomTeacher._id,
-        section_code: student.section,
-        school_year: '2025-2026',
-        semester: '1st Semester' as const,
+        section_code: student.section, // already encrypted from student creation
+        school_year: safeEncrypt('2025-2026'),
+        semester: safeEncrypt('1st Semester'),
         has_evaluated: false
       });
     }
@@ -244,6 +251,16 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   
   const enrollments = await Enrollment.create(enrollmentsData);
   console.log(`✓ Created ${enrollments.length} enrollments`);
+
+  // Create default evaluation period
+  console.log('📅 Creating default evaluation period...');
+  await EvaluationPeriod.create({
+    academic_year: '2025-2026',
+    semester: '1st Semester',
+    is_active: true,
+    description: 'First semester evaluation period for AY 2025-2026'
+  });
+  console.log('✓ Evaluation period created (2025-2026, 1st Semester - Active)');
 
   // Summary
   console.log('\n✅ Database initialized successfully!');
@@ -253,7 +270,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log(`  • ${teachers.length} teachers (password: teacher123 for all)`);
   console.log(`  • ${courses.length} courses`);
   console.log(`  • ${students.length} students`);
-  console.log(`  • ${enrollments.length} enrollments\n`);
+  console.log(`  • ${enrollments.length} enrollments`);
+  console.log(`  • 1 evaluation period (2025-2026, 1st Semester - Active)\n`);
 }
 
 // ==================== STANDALONE SCRIPT MODE ====================
@@ -288,8 +306,8 @@ if (require.main === module) {
         console.log('\n  Teachers (username/password):');
         const sampleTeachers = await Teacher.find({}).limit(5).select('username employee_id');
         sampleTeachers.forEach((teacher, index) => {
-          const username = teacher.get('username');
-          const employeeId = teacher.get('employee_id');
+          const username = safeDecrypt(teacher.get('username'));
+          const employeeId = safeDecrypt(teacher.get('employee_id'));
           console.log(`    ${index + 1}. ${username} / teacher123 (${employeeId})`);
         });
         
@@ -297,7 +315,7 @@ if (require.main === module) {
         // Fetch and display first 5 students as examples
         const sampleStudents = await Student.find({}).limit(5).select('student_number');
         sampleStudents.forEach((student, index) => {
-          console.log(`  ${index + 1}. ${student.get('student_number')}`);
+          console.log(`  ${index + 1}. ${safeDecrypt(student.get('student_number'))}`);
         });
         console.log(`  ... and 45 more students\n`);
         
