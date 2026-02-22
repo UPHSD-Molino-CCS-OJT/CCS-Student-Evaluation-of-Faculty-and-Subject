@@ -36,21 +36,30 @@ export interface EncryptedData {
 }
 
 /**
- * Get master KEK (Key Encryption Key) from environment
+ * Get master KEK (Key Encryption Key) from environment.
+ *
+ * Accepts a 128-hex-character (64-byte / 512-bit) key produced by
+ *   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+ *
+ * A 32-byte AES-256 key is derived from the raw key material using HKDF-SHA-256
+ * so that the full entropy of the longer key is used.
  */
 function getMasterKey(): Buffer {
     const key = process.env.ENCRYPTION_MASTER_KEY;
-    
+
     if (!key) {
         throw new Error('ENCRYPTION_MASTER_KEY not configured. Set this environment variable for field-level encryption.');
     }
-    
-    // Key must be 64 hex characters (32 bytes = 256 bits)
-    if (key.length !== 64 || !/^[0-9a-fA-F]+$/.test(key)) {
-        throw new Error('ENCRYPTION_MASTER_KEY must be 64 hex characters (256-bit key).');
+
+    // Accept 128 hex characters (64 bytes = 512 bits)
+    if (key.length !== 128 || !/^[0-9a-fA-F]+$/.test(key)) {
+        throw new Error('ENCRYPTION_MASTER_KEY must be 128 hex characters (64-byte / 512-bit key).');
     }
-    
-    return Buffer.from(key, 'hex');
+
+    const keyMaterial = Buffer.from(key, 'hex');
+
+    // Derive a 32-byte AES-256 key via HKDF-SHA-256 (preserves full entropy)
+    return Buffer.from(crypto.hkdfSync('sha256', keyMaterial, Buffer.alloc(0), 'aes-256-gcm-master-key', KEY_LENGTH));
 }
 
 /**
@@ -197,11 +206,11 @@ export function isEncryptionConfigured(): boolean {
 }
 
 /**
- * Generate a new master key (for initial setup)
- * Usage: node -e "console.log(require('./dist/utils/encryption').generateMasterKey())"
+ * Generate a new 64-byte master key (for initial setup)
+ * Usage: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
  */
 export function generateMasterKey(): string {
-    return crypto.randomBytes(KEY_LENGTH).toString('hex');
+    return crypto.randomBytes(64).toString('hex'); // 128 hex chars = 64 bytes = 512 bits
 }
 
 /**
