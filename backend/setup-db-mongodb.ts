@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
@@ -15,8 +16,8 @@ import EvaluationPeriod from './models/EvaluationPeriod';
 // Import encryption helpers
 import { safeEncrypt, safeDecrypt } from './utils/encryption-helpers';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from backend/.env regardless of CWD
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 /**
  * Auto-initialize database with sample data if empty

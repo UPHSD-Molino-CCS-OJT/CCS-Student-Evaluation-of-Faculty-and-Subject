@@ -1,6 +1,6 @@
 // Only load dotenv in development, Vercel provides environment variables directly
 if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
+    require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 }
 
 import express, { Application, Request, Response, NextFunction } from 'express';

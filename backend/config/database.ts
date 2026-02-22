@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
+import path from 'path';
 import mongoose from 'mongoose';
 import dns from 'dns';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from backend/.env regardless of CWD
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Fix DNS resolution for Windows + MongoDB Atlas (only in development)
 if (process.env.NODE_ENV !== 'production') {
