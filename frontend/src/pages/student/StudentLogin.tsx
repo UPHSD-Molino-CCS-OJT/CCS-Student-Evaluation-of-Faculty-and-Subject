@@ -12,9 +12,17 @@ const StudentLogin: React.FC = () => {
   const location = useLocation()
   const returnUrl = (location.state as any)?.returnUrl || '/student/subjects'
 
+  const STUDENT_NUMBER_REGEX = /^\d{2}-\d{4}-\d{3}$/
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
     setError('')
+
+    if (!STUDENT_NUMBER_REGEX.test(studentNumber)) {
+      setError('Invalid School ID format. Please use the format: 00-0000-000')
+      return
+    }
+
     setLoading(true)
 
     try {

@@ -59,8 +59,14 @@ router.get('/', isAuthenticated, async (req: IRequest, res: Response): Promise<v
     }
 });
 
+const STUDENT_NUMBER_REGEX = /^\d{2}-\d{4}-\d{3}$/;
+
 router.post('/', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
+        if (!STUDENT_NUMBER_REGEX.test(req.body.student_number)) {
+            res.status(400).json({ message: 'Invalid Student Number format. Please use the format: 00-0000-000' });
+            return;
+        }
         // Encrypt fields before saving
         const studentData = {
             ...req.body,
@@ -89,6 +95,10 @@ router.post('/', isAuthenticated, async (req: IRequest, res: Response): Promise<
 
 router.put('/:id', isAuthenticated, async (req: IRequest, res: Response): Promise<void> => {
     try {
+        if (!STUDENT_NUMBER_REGEX.test(req.body.student_number)) {
+            res.status(400).json({ message: 'Invalid Student Number format. Please use the format: 00-0000-000' });
+            return;
+        }
         // Encrypt fields before updating
         const studentData = {
             ...req.body,

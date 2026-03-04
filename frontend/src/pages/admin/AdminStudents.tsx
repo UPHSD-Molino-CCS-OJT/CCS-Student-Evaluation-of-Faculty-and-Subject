@@ -81,8 +81,17 @@ const AdminStudents: React.FC = () => {
     }
   }
 
+  const STUDENT_NUMBER_REGEX = /^\d{2}-\d{4}-\d{3}$/
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
+    if (!STUDENT_NUMBER_REGEX.test(formData.student_number)) {
+      showAlert('Invalid Student Number format. Please use the format: 00-0000-000', {
+        title: 'Validation Error',
+        variant: 'danger'
+      })
+      return
+    }
     try {
       if (editingStudent) {
         await axios.put(`/api/admin/students/${editingStudent._id}`, formData, { withCredentials: true })

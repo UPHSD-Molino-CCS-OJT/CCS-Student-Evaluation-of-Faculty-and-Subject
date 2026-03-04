@@ -27,6 +27,15 @@ router.post('/login', async (req: IRequest, res: Response): Promise<void> => {
             });
             return;
         }
+
+        const STUDENT_NUMBER_REGEX = /^\d{2}-\d{4}-\d{3}$/;
+        if (!STUDENT_NUMBER_REGEX.test(student_number)) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid School ID format. Please use the format: 00-0000-000'
+            });
+            return;
+        }
         
         // Find student by encrypted student_number field
         // Must fetch and decrypt because student_number is encrypted at rest
