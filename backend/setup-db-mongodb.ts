@@ -462,7 +462,11 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const sectionsData = [];
   const schoolYear = '2025-2026';
 
-  // For each course, create 1-3 sections with varying teachers and section codes
+  // Round-robin counters per department for equal course-load distribution
+  let csTeacherCounter = 0;
+  let itTeacherCounter = 0;
+
+  // For each course, create 2 sections distributed evenly across teachers
   for (let i = 0; i < courses.length; i++) {
     const course = courses[i];
     const isCS = course.program_id.toString() === programs[0]._id.toString();
@@ -478,9 +482,15 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     for (let s = 0; s < numSections; s++) {
       const sectionLetter = String.fromCharCode(65 + s); // A, B, C
       const yearDigit = courseYearLevelMap[course._id.toString()] ?? 1;
+
+      // Round-robin: cycle through all 8 department teachers across every section
+      const teacherIdx = isCS
+        ? (csTeacherCounter++ % courseTeachers.length)
+        : (itTeacherCounter++ % courseTeachers.length);
+
       sectionsData.push({
         course_id: course._id,
-        teacher_id: courseTeachers[s % courseTeachers.length]._id,
+        teacher_id: courseTeachers[teacherIdx]._id,
         section_code: safeEncrypt(`${prefix}-${yearDigit}${sectionLetter}`),
         school_year: safeEncrypt(schoolYear),
         semester: safeEncrypt(courseSemesterMap[course._id.toString()] ?? '1st Semester'),
