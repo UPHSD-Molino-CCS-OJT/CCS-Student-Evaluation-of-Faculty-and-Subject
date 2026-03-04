@@ -109,9 +109,12 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log(`✓ Created ${programs.length} programs`);
 
   // Create sample teachers with username and password
+  // 8 CS professors (cover BSCS-DS) + 8 IT professors (cover BSIT-GD) = 16 total
   console.log('👨‍🏫 Creating sample teachers...');
   const teacherPassword = await bcrypt.hash('teacher123', 10); // Default password for all teachers
   const teachers = await Teacher.create([
+    // ── Computer Science Department (BSCS-DS) ──────────────────────────────
+    // Programming & Fundamentals
     {
       full_name: safeEncrypt('Prof. Juan Dela Cruz'),
       employee_id: safeEncrypt('EMP001'),
@@ -121,15 +124,17 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
       department: safeEncrypt('Computer Science'),
       status: safeEncrypt('active')
     },
+    // Mathematics (Discrete Structures, Linear Algebra, Calculus)
     {
-      full_name: safeEncrypt('Prof. Maria Santos'),
+      full_name: safeEncrypt('Prof. Clara Reyes'),
       employee_id: safeEncrypt('EMP002'),
-      username: safeEncrypt('msantos'),
+      username: safeEncrypt('creyes'),
       password: teacherPassword,
-      email: safeEncrypt('msantos@uphsd.edu.ph'),
-      department: safeEncrypt('Information Technology'),
+      email: safeEncrypt('creyes@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
       status: safeEncrypt('active')
     },
+    // Systems & Networking (Computer Organization, OS, Networks)
     {
       full_name: safeEncrypt('Prof. Jose Garcia'),
       employee_id: safeEncrypt('EMP003'),
@@ -139,15 +144,17 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
       department: safeEncrypt('Computer Science'),
       status: safeEncrypt('active')
     },
+    // Databases & Data Science (Database Systems, Intro to Data Science)
     {
-      full_name: safeEncrypt('Prof. Ana Reyes'),
+      full_name: safeEncrypt('Prof. Maria Santos'),
       employee_id: safeEncrypt('EMP004'),
-      username: safeEncrypt('areyes'),
+      username: safeEncrypt('msantos'),
       password: teacherPassword,
-      email: safeEncrypt('areyes@uphsd.edu.ph'),
-      department: safeEncrypt('Information Technology'),
+      email: safeEncrypt('msantos@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
       status: safeEncrypt('active')
     },
+    // Algorithms, Theory & AI (Automata, Design & Analysis, Artificial Intelligence)
     {
       full_name: safeEncrypt('Prof. Pedro Martinez'),
       employee_id: safeEncrypt('EMP005'),
@@ -156,9 +163,120 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
       email: safeEncrypt('pmartinez@uphsd.edu.ph'),
       department: safeEncrypt('Computer Science'),
       status: safeEncrypt('active')
+    },
+    // Data Analytics (Data Mining, Data Visualization, Business Intelligence, Data Warehousing)
+    {
+      full_name: safeEncrypt('Prof. Rosa Villanueva'),
+      employee_id: safeEncrypt('EMP006'),
+      username: safeEncrypt('rvillanueva'),
+      password: teacherPassword,
+      email: safeEncrypt('rvillanueva@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
+    },
+    // Software Engineering & Web (Software Engineering, Web Systems, App Dev)
+    {
+      full_name: safeEncrypt('Prof. Carlos Bautista'),
+      employee_id: safeEncrypt('EMP007'),
+      username: safeEncrypt('cbautista'),
+      password: teacherPassword,
+      email: safeEncrypt('cbautista@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
+    },
+    // Security, HCI & Professional Issues (Info Assurance, HCI, Social Issues)
+    {
+      full_name: safeEncrypt('Prof. Liza Fernandez'),
+      employee_id: safeEncrypt('EMP008'),
+      username: safeEncrypt('lfernandez'),
+      password: teacherPassword,
+      email: safeEncrypt('lfernandez@uphsd.edu.ph'),
+      department: safeEncrypt('Computer Science'),
+      status: safeEncrypt('active')
+    },
+    // ── Information Technology Department (BSIT-GD) ───────────────────────
+    // Programming & Fundamentals
+    {
+      full_name: safeEncrypt('Prof. Ana Reyes'),
+      employee_id: safeEncrypt('EMP009'),
+      username: safeEncrypt('areyes'),
+      password: teacherPassword,
+      email: safeEncrypt('areyes@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // Networking, Security & Systems (Networking, Info Assurance, System Integration, System Admin)
+    {
+      full_name: safeEncrypt('Prof. Ramon Cruz'),
+      employee_id: safeEncrypt('EMP010'),
+      username: safeEncrypt('rcruz'),
+      password: teacherPassword,
+      email: safeEncrypt('rcruz@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // Databases & Web (Data Structures, Database Systems 1 & 2, Web Systems, Integrated Programming)
+    {
+      full_name: safeEncrypt('Prof. Teresa Lim'),
+      employee_id: safeEncrypt('EMP011'),
+      username: safeEncrypt('tlim'),
+      password: teacherPassword,
+      email: safeEncrypt('tlim@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // Game Design & AI (Game Design, Advanced Game Design, AI in Games, Capstone)
+    {
+      full_name: safeEncrypt('Prof. Marco Aquino'),
+      employee_id: safeEncrypt('EMP012'),
+      username: safeEncrypt('maquino'),
+      password: teacherPassword,
+      email: safeEncrypt('maquino@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // Computer Graphics & Game Networking (Graphics & Visual Computing, Computer Graphics Programming, Game Networking)
+    {
+      full_name: safeEncrypt('Prof. Leo Castillo'),
+      employee_id: safeEncrypt('EMP013'),
+      username: safeEncrypt('lcastillo'),
+      password: teacherPassword,
+      email: safeEncrypt('lcastillo@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // 3D Art & Animation (Modelling & Rigging, Animation Design, Texture & Mapping)
+    {
+      full_name: safeEncrypt('Prof. Nina Soriano'),
+      employee_id: safeEncrypt('EMP014'),
+      username: safeEncrypt('nsoriano'),
+      password: teacherPassword,
+      email: safeEncrypt('nsoriano@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // HCI, Scriptwriting & Professional Issues
+    {
+      full_name: safeEncrypt('Prof. Grace Mendoza'),
+      employee_id: safeEncrypt('EMP015'),
+      username: safeEncrypt('gmendoza'),
+      password: teacherPassword,
+      email: safeEncrypt('gmendoza@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
+    },
+    // App Development & Emerging Technologies / Practicum Coordinator
+    {
+      full_name: safeEncrypt('Prof. Victor Navarro'),
+      employee_id: safeEncrypt('EMP016'),
+      username: safeEncrypt('vnavarro'),
+      password: teacherPassword,
+      email: safeEncrypt('vnavarro@uphsd.edu.ph'),
+      department: safeEncrypt('Information Technology'),
+      status: safeEncrypt('active')
     }
   ]);
-  console.log(`✓ Created ${teachers.length} teachers`);
+  console.log(`✓ Created ${teachers.length} teachers (8 CS + 8 IT)`);
   console.log('  Default teacher password: teacher123');
 
   // Create sample courses
@@ -301,12 +419,13 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     const course = courses[i];
     const isCS = course.program_id.toString() === programs[0]._id.toString();
     const prefix = isCS ? 'CS' : 'IT';
+    // CS teachers: indices 0-7; IT teachers: indices 8-15
     const courseTeachers = isCS
-      ? [teachers[0], teachers[2], teachers[4]] // CS dept teachers
-      : [teachers[1], teachers[3], teachers[4]]; // IT dept teachers
+      ? [teachers[0], teachers[1], teachers[2], teachers[3], teachers[4], teachers[5], teachers[6], teachers[7]]
+      : [teachers[8], teachers[9], teachers[10], teachers[11], teachers[12], teachers[13], teachers[14], teachers[15]];
 
-    // First course of each program gets 3 sections, others get 2
-    const numSections = (i === 0 || i === 5) ? 3 : 2;
+    // Each course gets 2 sections
+    const numSections = 2;
 
     for (let s = 0; s < numSections; s++) {
       const sectionLetter = String.fromCharCode(65 + s); // A, B, C
@@ -474,11 +593,12 @@ if (require.main === module) {
         console.log('    Username: admin');
         console.log('    Password: admin123');
         console.log('\n  Teachers (username/password):');
-        const sampleTeachers = await Teacher.find({}).limit(5).select('username employee_id');
+        const sampleTeachers = await Teacher.find({}).limit(16).select('username employee_id department');
         sampleTeachers.forEach((teacher, index) => {
           const username = safeDecrypt(teacher.get('username'));
           const employeeId = safeDecrypt(teacher.get('employee_id'));
-          console.log(`    ${index + 1}. ${username} / teacher123 (${employeeId})`);
+          const department = safeDecrypt(teacher.get('department'));
+          console.log(`    ${index + 1}. ${username} / teacher123 (${employeeId} - ${department})`);
         });
         
         console.log('\n📝 Sample Student Logins (first 5 students):');
