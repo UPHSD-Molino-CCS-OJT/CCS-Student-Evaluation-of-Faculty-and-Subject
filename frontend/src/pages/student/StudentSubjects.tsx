@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Inbox, Presentation, Check, Pencil, LogOut } from 'lucide-react'
+import { GraduationCap, AlertCircle, Inbox, Presentation, Check, Pencil, LogOut, BookPlus } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
@@ -145,7 +145,14 @@ const StudentSubjects: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <Inbox className="mx-auto text-gray-300 mb-4" size={80} />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No Subjects Found</h3>
-            <p className="text-gray-500">You have no enrolled subjects at this time.</p>
+            <p className="text-gray-500 mb-6">You have no enrolled subjects at this time.</p>
+            <Link
+              to="/student/enroll"
+              className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors duration-200"
+            >
+              <BookPlus size={18} className="mr-2" />
+              Enroll in a Course
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -197,6 +204,17 @@ const StudentSubjects: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Enroll Button */}
+        <div className="mt-6 flex justify-end">
+          <Link
+            to="/student/enroll"
+            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors duration-200"
+          >
+            <BookPlus size={18} className="mr-2" />
+            Enroll in a Course
+          </Link>
+        </div>
 
         {/* Progress Summary */}
         {enrollments.length > 0 && (
