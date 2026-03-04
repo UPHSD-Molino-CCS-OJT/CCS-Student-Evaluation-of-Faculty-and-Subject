@@ -11,7 +11,7 @@ import { decryptCommentsField } from '../helpers';
 const router: Router = Router();
 
 // Get Teacher Dashboard Data
-router.get('/', async (req: IRequest, res: Response): Promise<void> => {
+router.get('/dashboard', async (req: IRequest, res: Response): Promise<void> => {
     try {
         if (!req.session.teacherId) {
             res.status(401).json({ 
