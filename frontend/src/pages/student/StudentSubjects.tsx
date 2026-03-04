@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Inbox, Presentation, Check, Pencil, LogOut, BookPlus } from 'lucide-react'
+import { GraduationCap, AlertCircle, Inbox, Presentation, Check, Pencil, LogOut, BookPlus, Tag } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
@@ -169,11 +169,19 @@ const StudentSubjects: React.FC = () => {
 
                 {/* Card Body */}
                 <div className="p-4">
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <p className="text-sm text-gray-500 mb-1">Instructor</p>
                     <p className="font-semibold text-gray-800 flex items-center">
                       <Presentation className="mr-2 text-blue-600" size={20} />
                       {enrollment.teacher?.full_name}
+                    </p>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-500 mb-1">Section</p>
+                    <p className="font-semibold text-gray-800 flex items-center">
+                      <Tag className="mr-2 text-blue-600" size={20} />
+                      {enrollment.section_code || '—'}
                     </p>
                   </div>
 
