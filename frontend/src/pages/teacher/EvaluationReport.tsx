@@ -571,15 +571,38 @@ const EvaluationReport: React.FC = () => {
 
         /* ── Print ── */
         @media print {
+          /* Force background colours / images to print */
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
           .no-print { display: none !important; }
           body { margin: 0 !important; background: white !important; }
-          .word-workspace { background: white !important; padding: 0 !important; }
+
+          .word-workspace {
+            display: block !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
           .page-gap, .page-label { display: none !important; }
+
+          /* Inline styles set mm widths for screen — override them all for print */
           .report-page {
+            display: block !important;
+            /* @page margin is already the whitespace — fill the printable area */
+            width: 100% !important;
+            min-height: unset !important;
+            max-width: unset !important;
+            /* Remove all padding — @page margin handles it */
+            padding: 0 !important;
+            margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            margin: 0 !important;
-            ${!hasPageLayout ? 'padding: 0 !important; width: 100% !important;' : 'padding: 0 !important; width: 100% !important;'}
+            background: white !important;
+            /* Page break between page 1 and page 2 */
             page-break-after: always;
             break-after: page;
             font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
@@ -587,11 +610,14 @@ const EvaluationReport: React.FC = () => {
             color: #000;
             box-sizing: border-box;
           }
+
           .report-page:last-of-type {
-            page-break-after: avoid;
-            break-after: avoid;
+            page-break-after: auto;
+            break-after: auto;
           }
+
           input { border: none !important; outline: none !important; background: transparent !important; }
+
           ${hasPageLayout
             ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${pageLayout.marginTopMm || 18}mm ${pageLayout.marginRightMm || 16}mm ${pageLayout.marginBottomMm || 18}mm ${pageLayout.marginLeftMm || 16}mm; }`
             : '@page { size: A4 portrait; margin: 18mm 16mm; }'}
