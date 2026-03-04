@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Loader, BookOpen, Users, TrendingUp, Award, MessageSquare, ArrowLeft, BarChart3 } from 'lucide-react'
+import { Loader, BookOpen, Users, TrendingUp, Award, MessageSquare, ArrowLeft, BarChart3, Printer } from 'lucide-react'
 import TeacherNavbar from '../../components/TeacherNavbar'
 
 interface QuestionAverages {
@@ -170,14 +170,25 @@ const TeacherCourseDetail: React.FC = () => {
       <TeacherNavbar />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate('/teacher/dashboard')}
-          className="mb-6 flex items-center text-green-600 hover:text-green-700 font-semibold transition-colors"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Back to Dashboard
-        </button>
+        {/* Back Button + Print Report */}
+        <div className="mb-6 flex items-center justify-between">
+          <button
+            onClick={() => navigate('/teacher/dashboard')}
+            className="flex items-center text-green-600 hover:text-green-700 font-semibold transition-colors"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            Back to Dashboard
+          </button>
+          {data.course.evaluated_students > 0 && (
+            <button
+              onClick={() => navigate(`/teacher/course/${courseId}/report`)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition-colors"
+            >
+              <Printer size={18} />
+              Print Report
+            </button>
+          )}
+        </div>
 
         {/* Course Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
