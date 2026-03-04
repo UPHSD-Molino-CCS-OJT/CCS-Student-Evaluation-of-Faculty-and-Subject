@@ -584,10 +584,10 @@ async function processStudentBatch(
 
   const results = await Promise.allSettled(
     students.map(async (student, index) => {
-      // Stagger browser launches by 2 seconds each to prevent connection pool exhaustion
-      // This helps avoid overwhelming the database and session store during parallel testing
+      // Stagger browser launches to spread the initial load across the server.
+      // 1 second apart gives 10 browsers a 0–9s spread without excessive total delay.
       if (index > 0) {
-        await new Promise(resolve => setTimeout(resolve, index * 2000));
+        await new Promise(resolve => setTimeout(resolve, index * 1000));
       }
       
       const studentConfig = {
@@ -631,7 +631,7 @@ async function main() {
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
 
   const config = parseArgs();
-  const PARALLEL_LIMIT = 5;
+  const PARALLEL_LIMIT = 10;
   
   // If no specific student is provided, test all students from database
   if (!config.studentNumber) {
