@@ -128,6 +128,19 @@ export interface IEvaluation extends Document {
   updatedAt: Date;
 }
 
+// Section Interface (pre-configured course offering)
+export interface ISection extends Document {
+  _id: Types.ObjectId;
+  course_id: Types.ObjectId | ICourse;
+  teacher_id: Types.ObjectId | ITeacher;
+  section_code: EncryptedData | string;
+  school_year: EncryptedData | string;
+  semester: EncryptedData | string;
+  is_active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Evaluation Period Interface
 export interface IEvaluationPeriod extends Document {
   _id: Types.ObjectId;
