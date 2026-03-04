@@ -618,12 +618,14 @@ function readWVal(el: Element, attr: string): number {
 }
 
 interface DocxPageLayout {
-  pageWidthMm:   number
-  pageHeightMm:  number
-  marginTopMm:   number
-  marginRightMm: number
-  marginBottomMm:number
-  marginLeftMm:  number
+  pageWidthMm:      number
+  pageHeightMm:     number
+  marginTopMm:      number
+  marginRightMm:    number
+  marginBottomMm:   number
+  marginLeftMm:     number
+  headerDistanceMm: number  // w:header — page-edge to header-content top
+  footerDistanceMm: number  // w:footer — page-edge to footer-content top
 }
 
 async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; footerHtml: string } & DocxPageLayout> {
@@ -684,6 +686,7 @@ async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; foot
   // ── Page layout from document.xml ──────────────────────────────────────
   let pageWidthMm = 0, pageHeightMm = 0
   let marginTopMm = 0, marginRightMm = 0, marginBottomMm = 0, marginLeftMm = 0
+  let headerDistanceMm = 0, footerDistanceMm = 0
   const docFile = zip.file('word/document.xml')
   if (docFile) {
     const docDom = new DOMParser().parseFromString(await docFile.async('text'), 'application/xml')
@@ -697,20 +700,27 @@ async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; foot
         if (h) pageHeightMm = twipToMm(h)
       }
       if (ln === 'pgMar') {
-        const t = readWVal(allDocEls[i], 'top')
-        const r = readWVal(allDocEls[i], 'right')
-        const b = readWVal(allDocEls[i], 'bottom')
-        const l = readWVal(allDocEls[i], 'left')
-        if (t) marginTopMm    = twipToMm(t)
-        if (r) marginRightMm  = twipToMm(r)
-        if (b) marginBottomMm = twipToMm(b)
-        if (l) marginLeftMm   = twipToMm(l)
+        const t  = readWVal(allDocEls[i], 'top')
+        const r  = readWVal(allDocEls[i], 'right')
+        const b  = readWVal(allDocEls[i], 'bottom')
+        const l  = readWVal(allDocEls[i], 'left')
+        const hd = readWVal(allDocEls[i], 'header')
+        const fd = readWVal(allDocEls[i], 'footer')
+        if (t)  marginTopMm      = twipToMm(t)
+        if (r)  marginRightMm    = twipToMm(r)
+        if (b)  marginBottomMm   = twipToMm(b)
+        if (l)  marginLeftMm     = twipToMm(l)
+        if (hd) headerDistanceMm = twipToMm(hd)
+        if (fd) footerDistanceMm = twipToMm(fd)
         break // first sectPr wins
       }
     }
   }
+  // Fall back to sensible Word defaults when not specified
+  if (!headerDistanceMm) headerDistanceMm = 12.7  // 1.27 cm
+  if (!footerDistanceMm) footerDistanceMm = 12.7
 
-  return { headerHtml, footerHtml, pageWidthMm, pageHeightMm, marginTopMm, marginRightMm, marginBottomMm, marginLeftMm }
+  return { headerHtml, footerHtml, pageWidthMm, pageHeightMm, marginTopMm, marginRightMm, marginBottomMm, marginLeftMm, headerDistanceMm, footerDistanceMm }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -755,8 +765,9 @@ const EvaluationReport: React.FC = () => {
   const [footerHtml, setFooterHtml] = useState<string>(() => localStorage.getItem(STORAGE_FOOTER) ?? '')
   const [docxName, setDocxName]     = useState<string>(() => localStorage.getItem(STORAGE_FNAME) ?? '')
   const [pageLayout, setPageLayout] = useState<DocxPageLayout>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_PAGE) ?? 'null') ?? { pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 } }
-    catch { return { pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 } }
+    const blank: DocxPageLayout = { pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0, headerDistanceMm:0, footerDistanceMm:0 }
+    try { return { ...blank, ...(JSON.parse(localStorage.getItem(STORAGE_PAGE) ?? 'null') ?? {}) } }
+    catch { return blank }
   })
   const [docxParsing, setDocxParsing] = useState(false)
   const [docxError, setDocxError]     = useState('')
@@ -800,7 +811,7 @@ const EvaluationReport: React.FC = () => {
 
   const clearTemplate = () => {
     setHeaderHtml(''); setFooterHtml(''); setDocxName('')
-    setPageLayout({ pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 })
+    setPageLayout({ pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0, headerDistanceMm:0, footerDistanceMm:0 })
     localStorage.removeItem(STORAGE_HEADER)
     localStorage.removeItem(STORAGE_FOOTER)
     localStorage.removeItem(STORAGE_FNAME)
@@ -849,17 +860,37 @@ const EvaluationReport: React.FC = () => {
 
   const hasPageLayout = pageLayout.pageWidthMm > 0 && pageLayout.pageHeightMm > 0
 
-  // Shared page style — overrides .report-page CSS-class defaults when a docx is loaded
-  const pagePaddingStyle: React.CSSProperties = hasPageLayout ? {
-    paddingTop:    `${pageLayout.marginTopMm}mm`,
-    paddingRight:  `${pageLayout.marginRightMm}mm`,
-    paddingBottom: `${pageLayout.marginBottomMm}mm`,
-    paddingLeft:   `${pageLayout.marginLeftMm}mm`,
+  // headerDistanceMm: distance from page top to where header content starts (w:header)
+  // footerDistanceMm: distance from page bottom to where footer content starts (w:footer)
+  // marginTopMm: distance from page top to where body content starts (w:top)
+  // The body top gap fills the space between the header zone bottom and the body start.
+  const hDist = hasPageLayout ? (pageLayout.headerDistanceMm || 12.7) : 12.7
+  const fDist = hasPageLayout ? (pageLayout.footerDistanceMm || 12.7) : 12.7
+  const bodyTopGapMm = hasPageLayout ? Math.max(0, pageLayout.marginTopMm - hDist) : 0
+
+  // The page container itself has only left/right padding; top/bottom are handled per-section.
+  const pageContainerStyle: React.CSSProperties = hasPageLayout ? {
+    width:     `${pageLayout.pageWidthMm}mm`,
+    minHeight: `${pageLayout.pageHeightMm}mm`,
+    paddingRight: `${pageLayout.marginRightMm}mm`,
+    paddingLeft:  `${pageLayout.marginLeftMm}mm`,
   } : {}
 
-  const pageWidthStyle: React.CSSProperties = hasPageLayout
-    ? { width: `${pageLayout.pageWidthMm}mm`, minHeight: `${pageLayout.pageHeightMm}mm`, ...pagePaddingStyle }
+  // Section-level styles
+  const headerSectionStyle: React.CSSProperties = hasPageLayout
+    ? { paddingTop: `${hDist}mm`, marginLeft: `-${pageLayout.marginLeftMm}mm`, marginRight: `-${pageLayout.marginRightMm}mm`, paddingLeft: `${pageLayout.marginLeftMm}mm`, paddingRight: `${pageLayout.marginRightMm}mm` }
     : {}
+
+  const bodySectionStyle: React.CSSProperties = hasPageLayout
+    ? { paddingTop: `${bodyTopGapMm}mm` }
+    : {}
+
+  const footerSectionStyle: React.CSSProperties = hasPageLayout
+    ? { marginLeft: `-${pageLayout.marginLeftMm}mm`, marginRight: `-${pageLayout.marginRightMm}mm`, paddingLeft: `${pageLayout.marginLeftMm}mm`, paddingRight: `${pageLayout.marginRightMm}mm`, paddingBottom: `${fDist}mm` }
+    : {}
+
+  // Legacy alias kept for the @page CSS rule
+  const pageWidthStyle = pageContainerStyle
 
   return (
     <>
@@ -964,8 +995,8 @@ const EvaluationReport: React.FC = () => {
           input { border: none !important; outline: none !important; background: transparent !important; }
 
           ${hasPageLayout
-            ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${pageLayout.marginTopMm || 18}mm ${pageLayout.marginRightMm || 16}mm ${pageLayout.marginBottomMm || 18}mm ${pageLayout.marginLeftMm || 16}mm; }`
-            : '@page { size: A4 portrait; margin: 18mm 16mm; }'}
+            ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${hDist}mm ${pageLayout.marginRightMm || 16}mm ${fDist}mm ${pageLayout.marginLeftMm || 16}mm; }`
+            : '@page { size: A4 portrait; margin: 12.7mm 16mm; }'}
         }
       `}</style>
 
@@ -1048,16 +1079,18 @@ const EvaluationReport: React.FC = () => {
         <div className="page-label no-print">Page 1</div>
         <div className="report-page" style={pageWidthStyle}>
 
-          {/* Header */}
-          {useCustomHeader
-            ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
-            : <FallbackHeader />
-          }
+          {/* Header — sits at headerDistanceMm from page top */}
+          <div style={headerSectionStyle}>
+            {useCustomHeader
+              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+              : <FallbackHeader />
+            }
+          </div>
 
           <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
 
-          {/* ── Main content ── */}
-          <div className="report-page-body">
+          {/* ── Main content — starts at marginTopMm from page top ── */}
+          <div className="report-page-body" style={bodySectionStyle}>
 
           {/* Meta info row */}
           <table style={{ width: '100%', marginBottom: '10px', fontSize: '9pt', borderCollapse: 'collapse' }}>
@@ -1145,7 +1178,7 @@ const EvaluationReport: React.FC = () => {
 
           {/* Footer (bottom of page 1) */}
           {useCustomFooter && (
-            <div className="report-page-footer">
+            <div className="report-page-footer" style={footerSectionStyle}>
               <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
               <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
             </div>
@@ -1160,16 +1193,18 @@ const EvaluationReport: React.FC = () => {
         <div className="page-label no-print">Page 2</div>
         <div className="report-page" style={pageWidthStyle}>
 
-          {/* Header (repeated) */}
-          {useCustomHeader
-            ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
-            : <FallbackHeader />
-          }
+          {/* Header (repeated) — sits at headerDistanceMm from page top */}
+          <div style={headerSectionStyle}>
+            {useCustomHeader
+              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+              : <FallbackHeader />
+            }
+          </div>
 
           <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
 
-          {/* ── Main content ── */}
-          <div className="report-page-body">
+          {/* ── Main content — starts at marginTopMm from page top ── */}
+          <div className="report-page-body" style={bodySectionStyle}>
 
           {/* Comments table */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333' }}>
@@ -1227,7 +1262,7 @@ const EvaluationReport: React.FC = () => {
 
           {/* Footer (bottom of page 2) */}
           {useCustomFooter && (
-            <div className="report-page-footer">
+            <div className="report-page-footer" style={footerSectionStyle}>
               <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
               <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
             </div>
