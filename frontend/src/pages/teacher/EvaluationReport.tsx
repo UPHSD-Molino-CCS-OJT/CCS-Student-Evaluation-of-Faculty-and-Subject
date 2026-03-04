@@ -544,6 +544,8 @@ const EvaluationReport: React.FC = () => {
             overflow-y: auto;
           }
           .report-page {
+            display: flex;
+            flex-direction: column;
             background: #fff;
             ${!hasPageLayout
               ? 'width: 210mm; min-height: 297mm; padding: 18mm 16mm;'
@@ -555,6 +557,12 @@ const EvaluationReport: React.FC = () => {
             color: #000;
             position: relative;
             box-sizing: border-box;
+          }
+          .report-page-body {
+            flex: 1;
+          }
+          .report-page-footer {
+            margin-top: auto;
           }
           .page-gap {
             height: 20px;
@@ -591,7 +599,8 @@ const EvaluationReport: React.FC = () => {
 
           /* Inline styles set mm widths for screen — override them all for print */
           .report-page {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
             /* @page margin is already the whitespace — fill the printable area */
             width: 100% !important;
             min-height: unset !important;
@@ -609,6 +618,12 @@ const EvaluationReport: React.FC = () => {
             font-size: 10pt;
             color: #000;
             box-sizing: border-box;
+          }
+          .report-page-body {
+            flex: 1;
+          }
+          .report-page-footer {
+            margin-top: auto;
           }
 
           .report-page:last-of-type {
@@ -699,7 +714,7 @@ const EvaluationReport: React.FC = () => {
       {/* ── Word workspace ───────────────────────────────────────────── */}
       <div className="word-workspace">
 
-        {/* ═══ PAGE 1 — Header + Criteria table ═══════════════════════ */}
+        {/* ═══ PAGE 1 — Header + Criteria table + Footer ══════════════ */}
         <div className="page-label no-print">Page 1</div>
         <div className="report-page" style={pageWidthStyle}>
 
@@ -710,6 +725,9 @@ const EvaluationReport: React.FC = () => {
           }
 
           <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
+
+          {/* ── Main content ── */}
+          <div className="report-page-body">
 
           {/* Meta info row */}
           <table style={{ width: '100%', marginBottom: '10px', fontSize: '9pt', borderCollapse: 'collapse' }}>
@@ -792,22 +810,36 @@ const EvaluationReport: React.FC = () => {
               </tbody>
             </table>
           )}
+
+          </div>{/* end report-page-body */}
+
+          {/* Footer (bottom of page 1) */}
+          {useCustomFooter && (
+            <div className="report-page-footer">
+              <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
+              <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
+            </div>
+          )}
+
         </div>
 
         {/* ── Gap between pages (screen only) ─────────────────────── */}
         <div className="page-gap" />
 
-        {/* ═══ PAGE 2 — Footer banner + Comments + Action Plan ════════ */}
+        {/* ═══ PAGE 2 — Header + Comments + Action Plan + Footer ════════ */}
         <div className="page-label no-print">Page 2</div>
         <div className="report-page" style={pageWidthStyle}>
 
-          {/* Footer banner (from docx) at top of page 2 */}
-          {useCustomFooter && (
-            <>
-              <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
-              <hr style={{ borderTop: '1px solid #bbb', margin: '4px 0 10px' }} />
-            </>
-          )}
+          {/* Header (repeated) */}
+          {useCustomHeader
+            ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+            : <FallbackHeader />
+          }
+
+          <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
+
+          {/* ── Main content ── */}
+          <div className="report-page-body">
 
           {/* Comments table */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333' }}>
@@ -860,6 +892,17 @@ const EvaluationReport: React.FC = () => {
               {conformeName}
             </div>
           </div>
+
+          </div>{/* end report-page-body */}
+
+          {/* Footer (bottom of page 2) */}
+          {useCustomFooter && (
+            <div className="report-page-footer">
+              <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
+              <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
+            </div>
+          )}
+
         </div>
 
       </div>{/* end word-workspace */}
