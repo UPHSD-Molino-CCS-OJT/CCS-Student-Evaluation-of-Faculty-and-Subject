@@ -320,7 +320,7 @@ const EvaluationReport: React.FC = () => {
                       CRITERIA
                     </th>
                     <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '14%', fontWeight: 'bold', lineHeight: '1.3' }}>
-                      {teacher.full_name.replace(/^Prof\.\s*/i, '').toUpperCase()}
+                      QUESTION AVERAGE
                     </th>
                     <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '28%', fontWeight: 'bold' }}>
                       REMARK
