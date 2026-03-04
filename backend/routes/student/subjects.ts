@@ -1,8 +1,10 @@
 import { Router, Response } from 'express';
 import Student from '../../models/Student';
 import Enrollment from '../../models/Enrollment';
+import Course from '../../models/Course';
+import Teacher from '../../models/Teacher';
 import { IRequest } from '../../types';
-import { safeDecrypt } from '../../utils/encryption-helpers';
+import { safeDecrypt, safeEncrypt } from '../../utils/encryption-helpers';
 
 const router: Router = Router();
 
@@ -98,6 +100,93 @@ router.get('/', async (req: IRequest, res: Response): Promise<void> => {
             success: false, 
             message: 'Error loading subjects' 
         });
+    }
+});
+
+// Get available courses and teachers for enrollment form
+router.get('/available', async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.session.studentId) {
+            res.json({ success: false, message: 'Please login first' });
+            return;
+        }
+
+        const student = await Student.findById(req.session.studentId);
+        if (!student) {
+            res.json({ success: false, message: 'Student not found' });
+            return;
+        }
+
+        // Courses filtered by student's program
+        const coursesRaw = await Course.find({ program_id: student.program_id }).populate('program_id');
+        const courses = coursesRaw.map(c => {
+            const obj = c.toObject();
+            return {
+                _id: obj._id,
+                name: safeDecrypt(obj.name),
+                code: safeDecrypt(obj.code),
+                program_id: obj.program_id
+            };
+        }).sort((a, b) => a.name.localeCompare(b.name));
+
+        // All teachers
+        const teachersRaw = await Teacher.find();
+        const teachers = teachersRaw.map(t => {
+            const obj = t.toObject();
+            return {
+                _id: obj._id,
+                full_name: safeDecrypt(obj.full_name),
+                employee_id: safeDecrypt(obj.employee_id),
+                department: safeDecrypt(obj.department)
+            };
+        }).filter(t => t.full_name).sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+        res.json({ success: true, courses, teachers });
+    } catch (error) {
+        console.error('Error loading available courses:', error);
+        res.status(500).json({ success: false, message: 'Error loading available courses' });
+    }
+});
+
+// Enroll student in a course
+router.post('/enroll', async (req: IRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.session.studentId) {
+            res.json({ success: false, message: 'Please login first' });
+            return;
+        }
+
+        const { course_id, teacher_id, section_code, school_year, semester } = req.body;
+
+        if (!course_id || !teacher_id || !section_code || !school_year || !semester) {
+            res.status(400).json({ success: false, message: 'All fields are required' });
+            return;
+        }
+
+        // Check for duplicate enrollment in the same course & semester
+        const existingEnrollments = await Enrollment.find({ student_id: req.session.studentId, course_id });
+        for (const e of existingEnrollments) {
+            const eYear = safeDecrypt(e.school_year);
+            const eSem = safeDecrypt(e.semester);
+            if (eYear === school_year && eSem === semester) {
+                res.status(409).json({ success: false, message: 'You are already enrolled in this course for the selected semester' });
+                return;
+            }
+        }
+
+        const enrollment = await Enrollment.create({
+            student_id: req.session.studentId,
+            course_id,
+            teacher_id,
+            section_code: safeEncrypt(section_code),
+            school_year: safeEncrypt(school_year),
+            semester: safeEncrypt(semester)
+        });
+
+        res.json({ success: true, enrollment: { _id: enrollment._id } });
+    } catch (error) {
+        console.error('Error enrolling student:', error);
+        res.status(500).json({ success: false, message: 'Error creating enrollment' });
     }
 });
 
