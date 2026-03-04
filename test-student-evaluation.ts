@@ -1,4 +1,4 @@
-import { chromium, Browser, Page, Dialog } from 'playwright';
+import { chromium, Browser, Page } from 'playwright';
 
 /**
  * Automated Student Evaluation Testing Script
@@ -270,41 +270,37 @@ class StudentEvaluationAutomation {
 
   /**
    * Submit evaluation
+   * The app uses a custom React modal (not a native browser dialog) for confirmation.
+   * After clicking the form submit button we wait for [role="dialog"] to appear,
+   * then click the "Submit" confirm button inside it.
    */
   async submitEvaluation(): Promise<boolean> {
     if (!this.page) throw new Error('Browser not initialized');
 
     try {
-      // Set up dialog handler BEFORE clicking submit
-      const dialogPromise = new Promise<void>((resolve) => {
-        this.page!.once('dialog', async (dialog: Dialog) => {
-          console.log(`  ⚠️  Confirmation dialog: ${dialog.message()}`);
-          await dialog.accept();
-          resolve();
-        });
-      });
-
-      // Scroll to submit button and click
+      // Scroll to and click the form submit button
       const submitButton = this.page.locator('button[type="submit"]').first();
       await submitButton.scrollIntoViewIfNeeded();
       await submitButton.click();
 
-      // Wait for dialog to be handled
-      await dialogPromise;
+      // Wait for the custom confirmation modal to appear
+      console.log('  ⏳ Waiting for confirmation modal...');
+      await this.page.waitForSelector('[role="dialog"]', { state: 'visible', timeout: 8000 });
+      console.log('  ⚠️  Confirmation modal appeared');
+
+      // Click the "Submit" confirm button inside the modal
+      // It is the last button in the modal footer (not the Cancel button)
+      const confirmButton = this.page.locator('[role="dialog"] button', { hasText: 'Submit' });
+      await confirmButton.waitFor({ state: 'visible', timeout: 3000 });
+      await confirmButton.click();
       console.log('  ✓ Confirmation accepted');
 
-      // Wait for success modal or redirect (extended timeout for backend delay + processing)
-      try {
-        await this.page.waitForSelector('.modal, .success', { timeout: 8000 });
-        console.log('  ✓ Evaluation submitted successfully!\n');
-        // Wait for navigation back to subjects page
-        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 8000 });
-      } catch {
-        // Sometimes it redirects directly without modal
-        // Backend has 2-8s random delay + database operations, so allow up to 15s total
-        await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 15000 });
-        console.log('  ✓ Evaluation submitted successfully!\n');
-      }
+      // Wait for modal to close and then redirect back to subjects page
+      await this.page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 5000 }).catch(() => {});
+
+      // Wait for navigation back to subjects (backend has processing time)
+      await this.page.waitForURL(`${this.config.baseUrl}/student/subjects`, { timeout: 15000 });
+      console.log('  ✓ Evaluation submitted successfully!\n');
 
       return true;
     } catch (error) {
@@ -314,7 +310,7 @@ class StudentEvaluationAutomation {
       // Enhanced error logging
       if (errorMessage.includes('timeout')) {
         console.error('  🕐 Timeout Error: Submission exceeded time limit');
-        console.error('     Backend implements 2-8s random delay + database operations');
+        console.error('     Backend implements processing delay + database operations');
         console.error('     This may indicate server overload during parallel testing');
       }
       
