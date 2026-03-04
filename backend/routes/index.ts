@@ -9,6 +9,7 @@ import adminCoursesRoutes from './admin/courses';
 import adminStudentsRoutes from './admin/students';
 import adminPrivacyRoutes from './admin/privacy';
 import adminEvaluationPeriodsRoutes from './admin/evaluation-periods';
+import adminSectionsRoutes from './admin/sections';
 
 // Student routes
 import studentAuthRoutes from './student/auth';
@@ -32,6 +33,7 @@ router.use('/admin/courses', adminCoursesRoutes);
 router.use('/admin/students', adminStudentsRoutes);
 router.use('/admin/privacy-audit', adminPrivacyRoutes);
 router.use('/admin/evaluation-periods', adminEvaluationPeriodsRoutes);
+router.use('/admin/sections', adminSectionsRoutes);
 
 // Public evaluation period endpoint (no auth required)
 router.use('/evaluation-period', adminEvaluationPeriodsRoutes);
