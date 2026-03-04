@@ -409,8 +409,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log(`✓ Created ${courses.length} courses`);
 
   // Map each course _id to its year level (1-4) based on curriculum structure
-  // BSCS-DS (50 courses, indices 0-49): 1st yr: 0-8 | 2nd yr: 9-23 | 3rd yr: 24-42 | 4th yr: 43-49
-  // BSIT-GD (53 courses, indices 50-102): 1st yr: 50-59 | 2nd yr: 60-74 | 3rd yr: 75-95 | 4th yr: 96-102
+  // BSCS-DS indices 0-49  | BSIT-GD indices 50-102
   const courseYearLevelMap: Record<string, number> = {};
   const yearLevelRanges: Array<[number, number, number]> = [
     [0,   8,   1], // BSCS-DS 1st year
@@ -428,11 +427,40 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     }
   }
 
+  // Map each course _id to its semester based on curriculum structure
+  const courseSemesterMap: Record<string, string> = {};
+  const semesterRanges: Array<[number, number, string]> = [
+    // BSCS-DS
+    [0,   4,   '1st Semester'], // 1st yr 1st sem
+    [5,   8,   '2nd Semester'], // 1st yr 2nd sem
+    [9,   15,  '1st Semester'], // 2nd yr 1st sem
+    [16,  23,  '2nd Semester'], // 2nd yr 2nd sem
+    [24,  31,  '1st Semester'], // 3rd yr 1st sem
+    [32,  39,  '2nd Semester'], // 3rd yr 2nd sem
+    [40,  42,  'Summer'],       // 3rd yr summer
+    [43,  47,  '1st Semester'], // 4th yr 1st sem
+    [48,  49,  '2nd Semester'], // 4th yr 2nd sem
+    // BSIT-GD
+    [50,  54,  '1st Semester'], // 1st yr 1st sem
+    [55,  59,  '2nd Semester'], // 1st yr 2nd sem
+    [60,  66,  '1st Semester'], // 2nd yr 1st sem
+    [67,  74,  '2nd Semester'], // 2nd yr 2nd sem
+    [75,  83,  '1st Semester'], // 3rd yr 1st sem
+    [84,  92,  '2nd Semester'], // 3rd yr 2nd sem
+    [93,  95,  'Summer'],       // 3rd yr summer
+    [96,  100, '1st Semester'], // 4th yr 1st sem
+    [101, 102, '2nd Semester'], // 4th yr 2nd sem
+  ];
+  for (const [start, end, sem] of semesterRanges) {
+    for (let ri = start; ri <= end; ri++) {
+      if (courses[ri]) courseSemesterMap[courses[ri]._id.toString()] = sem;
+    }
+  }
+
   // Create sample sections (pre-configured course offerings for student enrollment)
   console.log('🗂️  Creating sample sections...');
   const sectionsData = [];
   const schoolYear = '2025-2026';
-  const semester = '1st Semester';
 
   // For each course, create 1-3 sections with varying teachers and section codes
   for (let i = 0; i < courses.length; i++) {
@@ -455,7 +483,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
         teacher_id: courseTeachers[s % courseTeachers.length]._id,
         section_code: safeEncrypt(`${prefix}-${yearDigit}${sectionLetter}`),
         school_year: safeEncrypt(schoolYear),
-        semester: safeEncrypt(semester),
+        semester: safeEncrypt(courseSemesterMap[course._id.toString()] ?? '1st Semester'),
         is_active: true
       });
     }
@@ -533,9 +561,12 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     const studentYear = yearLevelToNumber[studentYearStr] ?? 1;
 
     // Enroll in ALL courses that belong to the student's program AND year level
+    // that match the active evaluation period semester (1st Semester)
+    const activeSemester = '1st Semester';
     const eligibleCourses = courses.filter(c =>
       c.program_id.toString() === studentProgramId.toString() &&
-      courseYearLevelMap[c._id.toString()] === studentYear
+      courseYearLevelMap[c._id.toString()] === studentYear &&
+      courseSemesterMap[c._id.toString()] === activeSemester
     );
 
     for (const course of eligibleCourses) {
