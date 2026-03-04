@@ -170,12 +170,69 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     { name: safeEncrypt('Machine Learning'), code: safeEncrypt('CS301'), program_id: programs[0]._id },
     { name: safeEncrypt('Statistical Analysis'), code: safeEncrypt('CS302'), program_id: programs[0]._id },
     { name: safeEncrypt('Big Data Analytics'), code: safeEncrypt('CS401'), program_id: programs[0]._id },
-    // BSIT-GD courses
-    { name: safeEncrypt('Game Design Fundamentals'), code: safeEncrypt('IT201'), program_id: programs[1]._id },
-    { name: safeEncrypt('Game Programming'), code: safeEncrypt('IT202'), program_id: programs[1]._id },
-    { name: safeEncrypt('3D Modeling and Animation'), code: safeEncrypt('IT301'), program_id: programs[1]._id },
-    { name: safeEncrypt('Game Engine Architecture'), code: safeEncrypt('IT302'), program_id: programs[1]._id },
-    { name: safeEncrypt('Mobile Game Development'), code: safeEncrypt('IT401'), program_id: programs[1]._id }
+    // BSIT-GD courses (2022-2023 Curriculum)
+    // First Year, First Semester
+    { name: safeEncrypt('Introduction to Computing - Lec'), code: safeEncrypt('BSCSIT 1101'), program_id: programs[1]._id },
+    { name: safeEncrypt('Introduction to Computing - Lab'), code: safeEncrypt('BSCSIT 1101L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Fundamentals of Programming - Lec'), code: safeEncrypt('BSCSIT 1102'), program_id: programs[1]._id },
+    { name: safeEncrypt('Fundamentals of Programming - Lab'), code: safeEncrypt('BSCSIT 1102L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Information Assurance and Security'), code: safeEncrypt('BSIT 1101'), program_id: programs[1]._id },
+    // First Year, Second Semester
+    { name: safeEncrypt('Programming 2 - Lec'), code: safeEncrypt('BSCSIT 1203'), program_id: programs[1]._id },
+    { name: safeEncrypt('Programming 2 - Lab'), code: safeEncrypt('BSCSIT 1203L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Human Computer Interaction 1 - Lec'), code: safeEncrypt('BSIT 1202'), program_id: programs[1]._id },
+    { name: safeEncrypt('Human Computer Interaction 1 - Lab'), code: safeEncrypt('BSIT 1202L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Scriptwriting and Storyboard Design'), code: safeEncrypt('BSIT 1203'), program_id: programs[1]._id },
+    // Second Year, First Semester
+    { name: safeEncrypt('Data Structures - Lec'), code: safeEncrypt('BSCSIT 2104'), program_id: programs[1]._id },
+    { name: safeEncrypt('Data Structures - Lab'), code: safeEncrypt('BSCSIT 2104L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Networking and Communication 1 - Lec'), code: safeEncrypt('BSCSIT 2105'), program_id: programs[1]._id },
+    { name: safeEncrypt('Networking and Communication 1 - Lab'), code: safeEncrypt('BSCSIT 2105L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Social and Professional Issues'), code: safeEncrypt('BSCSIT 2106'), program_id: programs[1]._id },
+    { name: safeEncrypt('Graphics and Visual Computing - Lec'), code: safeEncrypt('BSIT 2104'), program_id: programs[1]._id },
+    { name: safeEncrypt('Graphics and Visual Computing - Lab'), code: safeEncrypt('BSIT 2104L'), program_id: programs[1]._id },
+    // Second Year, Second Semester
+    { name: safeEncrypt('Database System 1 (Information Management) - Lec'), code: safeEncrypt('BSCSIT 2207'), program_id: programs[1]._id },
+    { name: safeEncrypt('Database System 1 (Information Management) - Lab'), code: safeEncrypt('BSCSIT 2207L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Introduction to Game Design and Development - Lec'), code: safeEncrypt('BSIT 2205'), program_id: programs[1]._id },
+    { name: safeEncrypt('Introduction to Game Design and Development - Lab'), code: safeEncrypt('BSIT 2205L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Integrated Programming and Technologies - Lec'), code: safeEncrypt('BSIT 2206'), program_id: programs[1]._id },
+    { name: safeEncrypt('Integrated Programming and Technologies - Lab'), code: safeEncrypt('BSIT 2206L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Web Systems and Technologies - Lec'), code: safeEncrypt('BSIT 2207'), program_id: programs[1]._id },
+    { name: safeEncrypt('Web Systems and Technologies - Lab'), code: safeEncrypt('BSIT 2207L'), program_id: programs[1]._id },
+    // Third Year, First Semester
+    { name: safeEncrypt('Discrete Mathematics'), code: safeEncrypt('BSIT 3108'), program_id: programs[1]._id },
+    { name: safeEncrypt('Database System 2 - Lec'), code: safeEncrypt('BSIT 3109'), program_id: programs[1]._id },
+    { name: safeEncrypt('Database System 2 - Lab'), code: safeEncrypt('BSIT 3109L'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Integration and Architecture - Lec'), code: safeEncrypt('BSIT 3110'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Integration and Architecture - Lab'), code: safeEncrypt('BSIT 3110L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Advanced Game Design - Lec'), code: safeEncrypt('BSIT 3111'), program_id: programs[1]._id },
+    { name: safeEncrypt('Advanced Game Design - Lab'), code: safeEncrypt('BSIT 3111L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Computer Graphics Programming - Lec'), code: safeEncrypt('BSIT 3112'), program_id: programs[1]._id },
+    { name: safeEncrypt('Computer Graphics Programming - Lab'), code: safeEncrypt('BSIT 3112L'), program_id: programs[1]._id },
+    // Third Year, Second Semester
+    { name: safeEncrypt('Human Computer Interaction 2 - Lec'), code: safeEncrypt('BSIT 3213'), program_id: programs[1]._id },
+    { name: safeEncrypt('Human Computer Interaction 2 - Lab'), code: safeEncrypt('BSIT 3213L'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Administration and Maintenance - Lec'), code: safeEncrypt('BSIT 3214'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Administration and Maintenance - Lab'), code: safeEncrypt('BSIT 3214L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Modelling and Rigging - Lec'), code: safeEncrypt('BSIT 3215'), program_id: programs[1]._id },
+    { name: safeEncrypt('Modelling and Rigging - Lab'), code: safeEncrypt('BSIT 3215L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Animation Design and Production - Lec'), code: safeEncrypt('BSIT 3216'), program_id: programs[1]._id },
+    { name: safeEncrypt('Animation Design and Production - Lab'), code: safeEncrypt('BSIT 3216L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Artificial Intelligence in Games'), code: safeEncrypt('BSIT 3217'), program_id: programs[1]._id },
+    // Third Year, Summer
+    { name: safeEncrypt('Capstone Project 1'), code: safeEncrypt('BSIT 3318'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Fundamentals - Lec'), code: safeEncrypt('BSIT 3319'), program_id: programs[1]._id },
+    { name: safeEncrypt('System Fundamentals - Lab'), code: safeEncrypt('BSIT 3319L'), program_id: programs[1]._id },
+    // Fourth Year, First Semester
+    { name: safeEncrypt('Capstone Project 2'), code: safeEncrypt('BSIT 4120'), program_id: programs[1]._id },
+    { name: safeEncrypt('Texture and Mapping - Lec'), code: safeEncrypt('BSIT 4121'), program_id: programs[1]._id },
+    { name: safeEncrypt('Texture and Mapping - Lab'), code: safeEncrypt('BSIT 4121L'), program_id: programs[1]._id },
+    { name: safeEncrypt('Game Networking - Lec'), code: safeEncrypt('BSIT 4122'), program_id: programs[1]._id },
+    { name: safeEncrypt('Game Networking - Lab'), code: safeEncrypt('BSIT 4122L'), program_id: programs[1]._id },
+    // Fourth Year, Second Semester
+    { name: safeEncrypt('Application Development and Emerging Technologies'), code: safeEncrypt('BSCSIT 4208'), program_id: programs[1]._id },
+    { name: safeEncrypt('Practicum'), code: safeEncrypt('BSIT 4223'), program_id: programs[1]._id }
   ]);
   console.log(`✓ Created ${courses.length} courses`);
 
@@ -188,13 +245,13 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   // For each course, create 1-3 sections with varying teachers and section codes
   for (let i = 0; i < courses.length; i++) {
     const course = courses[i];
-    const isCS = i < 5; // first 5 are BSCS-DS courses
+    const isCS = course.program_id.toString() === programs[0]._id.toString();
     const prefix = isCS ? 'CS' : 'IT';
     const courseTeachers = isCS
       ? [teachers[0], teachers[2], teachers[4]] // CS dept teachers
       : [teachers[1], teachers[3], teachers[4]]; // IT dept teachers
 
-    // Courses 0 and 5 get 3 sections, others get 2 to demonstrate multi-section selection
+    // First course of each program gets 3 sections, others get 2
     const numSections = (i === 0 || i === 5) ? 3 : 2;
 
     for (let s = 0; s < numSections; s++) {
