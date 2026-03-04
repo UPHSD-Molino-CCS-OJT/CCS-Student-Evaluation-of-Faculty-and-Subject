@@ -408,6 +408,26 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   ]);
   console.log(`✓ Created ${courses.length} courses`);
 
+  // Map each course _id to its year level (1-4) based on curriculum structure
+  // BSCS-DS (50 courses, indices 0-49): 1st yr: 0-8 | 2nd yr: 9-23 | 3rd yr: 24-42 | 4th yr: 43-49
+  // BSIT-GD (53 courses, indices 50-102): 1st yr: 50-59 | 2nd yr: 60-74 | 3rd yr: 75-95 | 4th yr: 96-102
+  const courseYearLevelMap: Record<string, number> = {};
+  const yearLevelRanges: Array<[number, number, number]> = [
+    [0,   8,   1], // BSCS-DS 1st year
+    [9,   23,  2], // BSCS-DS 2nd year
+    [24,  42,  3], // BSCS-DS 3rd year (incl. summer)
+    [43,  49,  4], // BSCS-DS 4th year
+    [50,  59,  1], // BSIT-GD 1st year
+    [60,  74,  2], // BSIT-GD 2nd year
+    [75,  95,  3], // BSIT-GD 3rd year (incl. summer)
+    [96,  102, 4], // BSIT-GD 4th year
+  ];
+  for (const [start, end, year] of yearLevelRanges) {
+    for (let ri = start; ri <= end; ri++) {
+      if (courses[ri]) courseYearLevelMap[courses[ri]._id.toString()] = year;
+    }
+  }
+
   // Create sample sections (pre-configured course offerings for student enrollment)
   console.log('🗂️  Creating sample sections...');
   const sectionsData = [];
@@ -429,7 +449,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
 
     for (let s = 0; s < numSections; s++) {
       const sectionLetter = String.fromCharCode(65 + s); // A, B, C
-      const yearDigit = (i % 4) + 1; // 1-4 year level hint
+      const yearDigit = courseYearLevelMap[course._id.toString()] ?? 1;
       sectionsData.push({
         course_id: course._id,
         teacher_id: courseTeachers[s % courseTeachers.length]._id,
@@ -502,24 +522,23 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const students = await Student.create(studentsData);
   console.log(`✓ Created ${students.length} students`);
 
-  // Create sample enrollments (randomized for all students)
+  // Create enrollments: each student is enrolled in ALL courses matching their program and year level
   console.log('📝 Creating sample enrollments...');
   const enrollmentsData = [];
-  
+  const yearLevelToNumber: Record<string, number> = { '1st': 1, '2nd': 2, '3rd': 3, '4th': 4 };
+
   for (const student of students) {
     const studentProgramId = student.program_id;
-    
-    // Get courses for this program
-    const programCourses = courses.filter(c =>
-      c.program_id.toString() === studentProgramId.toString()
+    const studentYearStr = safeDecrypt(student.year_level as string);
+    const studentYear = yearLevelToNumber[studentYearStr] ?? 1;
+
+    // Enroll in ALL courses that belong to the student's program AND year level
+    const eligibleCourses = courses.filter(c =>
+      c.program_id.toString() === studentProgramId.toString() &&
+      courseYearLevelMap[c._id.toString()] === studentYear
     );
-    
-    // Randomly select 2-4 courses for this student
-    const numCourses = 2 + Math.floor(Math.random() * 3);
-    const shuffledCourses = [...programCourses].sort(() => Math.random() - 0.5);
-    const selectedCourses = shuffledCourses.slice(0, Math.min(numCourses, programCourses.length));
-    
-    for (const course of selectedCourses) {
+
+    for (const course of eligibleCourses) {
       // Pick a random pre-configured section for this course
       const courseSections = sectionsByCourse[course._id.toString()] || [];
       if (courseSections.length === 0) continue;
