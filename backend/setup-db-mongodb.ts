@@ -333,39 +333,51 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
     sectionsByCourse[key].push(sec);
   }
 
-  // Create sample students (50 students with randomized data)
+  // Create sample students (50 students)
+  // Guaranteed: 5 students per year level per program (40 students), plus 10 random
   console.log('👨‍🎓 Creating sample students...');
   const yearLevels = ['1st', '2nd', '3rd', '4th'] as const;
   const studentsData = [];
   
   const programCodes = ['BSCS-DS', 'BSIT-GD']; // plaintext codes matching programs array order
 
-  for (let i = 1; i <= 50; i++) {
-    // Generate sequential student number in format 00-0000-000, incrementing from right to left
-    const idx = i - 1;
+  const makeStudentNumber = (idx: number) => {
     const third = String(idx % 1000).padStart(3, '0');
     const second = String(Math.floor(idx / 1000) % 10000).padStart(4, '0');
     const first = String(Math.floor(idx / 10000000) % 100).padStart(2, '0');
-    const studentNumber = `${first}-${second}-${third}`;
-    
-    // Randomly assign to a program
-    const programIndex = Math.floor(Math.random() * programs.length);
-    const programCode = programCodes[programIndex]; // use plaintext code for logic
-    const yearLevel = yearLevels[Math.floor(Math.random() * yearLevels.length)];
-    
-    // Generate section based on program
+    return `${first}-${second}-${third}`;
+  };
+
+  const makeStudentEntry = (idx: number, programIndex: number, yearLevel: typeof yearLevels[number]) => {
+    const programCode = programCodes[programIndex];
     const sectionLetter = String.fromCharCode(65 + Math.floor(Math.random() * 3)); // A, B, or C
     const sectionPrefix = programCode.startsWith('BSCS') ? 'CS' : 'IT';
     const sectionYear = yearLevel.charAt(0);
     const section = `${sectionPrefix}-${sectionYear}${sectionLetter}`;
-    
-    studentsData.push({
-      student_number: safeEncrypt(studentNumber),
+    return {
+      student_number: safeEncrypt(makeStudentNumber(idx)),
       program_id: programs[programIndex]._id,
       year_level: safeEncrypt(yearLevel),
       section: safeEncrypt(section),
       status: safeEncrypt('Regular')
-    });
+    };
+  };
+
+  // Guarantee at least 5 students per year level per program (40 total)
+  let studentIdx = 0;
+  for (const yearLevel of yearLevels) {
+    for (let p = 0; p < programs.length; p++) {
+      for (let k = 0; k < 5; k++) {
+        studentsData.push(makeStudentEntry(studentIdx++, p, yearLevel));
+      }
+    }
+  }
+
+  // Add 10 more random students to reach 50
+  for (let i = 0; i < 10; i++) {
+    const programIndex = Math.floor(Math.random() * programs.length);
+    const yearLevel = yearLevels[Math.floor(Math.random() * yearLevels.length)];
+    studentsData.push(makeStudentEntry(studentIdx++, programIndex, yearLevel));
   }
   
   const students = await Student.create(studentsData);
