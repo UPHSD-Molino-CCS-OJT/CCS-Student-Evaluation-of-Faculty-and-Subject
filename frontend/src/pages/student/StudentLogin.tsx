@@ -77,14 +77,12 @@ const StudentLogin: React.FC = () => {
                 <label className="block text-gray-700 font-semibold mb-3">
                   School ID <span className="text-red-500">*</span>
                 </label>
-                <div className="flex justify-center">
-                  <StudentIdInput
-                    value={studentNumber}
-                    onChange={setStudentNumber}
-                    disabled={loading}
-                    hasError={!!error}
-                  />
-                </div>
+                <StudentIdInput
+                  value={studentNumber}
+                  onChange={setStudentNumber}
+                  disabled={loading}
+                  hasError={!!error}
+                />
                 <p className="mt-3 text-xs text-center text-gray-400 tracking-widest font-mono">
                   00 — 0000 — 000
                 </p>

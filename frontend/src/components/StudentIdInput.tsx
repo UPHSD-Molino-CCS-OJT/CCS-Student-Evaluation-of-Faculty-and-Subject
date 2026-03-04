@@ -102,19 +102,23 @@ const StudentIdInput: React.FC<StudentIdInputProps> = ({ value, onChange, disabl
     [onChange]
   )
 
+  // Responsive cell classes: compact on xs, larger on sm+
   const baseCell =
-    'w-10 h-12 text-center text-lg font-mono border-2 rounded-lg focus:outline-none transition-colors'
+    'w-8 h-10 text-base sm:w-10 sm:h-12 sm:text-lg ' +
+    'text-center font-mono border-2 rounded-lg focus:outline-none transition-colors'
   const normalCell = hasError
     ? `${baseCell} border-red-400 bg-red-50 focus:border-red-600`
     : `${baseCell} border-gray-300 focus:border-blue-500 bg-white`
 
-  let flatIdx = 0
   return (
-    <div className="flex items-center gap-1 select-none" aria-label="Student ID input">
+    <div
+      className="flex items-center justify-center gap-1 sm:gap-1.5 select-none w-full"
+      aria-label="Student ID input"
+    >
       {GROUPS.map((groupLen, groupIdx) => (
         <React.Fragment key={groupIdx}>
           {/* Cells for this group */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 sm:gap-1.5">
             {Array.from({ length: groupLen }).map((_, pos) => {
               const fi = flatIndex(groupIdx, pos)
               const digit = digits[fi] && digits[fi] !== ' ' ? digits[fi] : ''
@@ -139,7 +143,7 @@ const StudentIdInput: React.FC<StudentIdInputProps> = ({ value, onChange, disabl
           </div>
           {/* Dash separator between groups */}
           {groupIdx < GROUPS.length - 1 && (
-            <span className="text-2xl font-bold text-gray-400 mx-0.5 select-none">-</span>
+            <span className="text-xl sm:text-2xl font-bold text-gray-400 mx-0.5 sm:mx-1 select-none">-</span>
           )}
         </React.Fragment>
       ))}
