@@ -210,6 +210,11 @@ function convertNode(node: Element, imageMap: Record<string, string>): string {
   if (n === 'hyperlink' || n === 'smartTag' || n === 'ins' || n === 'bdo') {
     return processChildren(node, imageMap)
   }
+  // DrawingML / VML textbox wrappers — just render their w:p / w:tbl children
+  if (n === 'txbxContent' || n === 'wsp' || n === 'txbx' || n === 'textbox' ||
+      n === 'graphicData' || n === 'graphic' || n === 'inline' || n === 'anchor') {
+    return processChildren(node, imageMap)
+  }
   // Structured document tag — render its content
   if (n === 'sdt') {
     const content = gc(node, 'sdtContent')
@@ -543,6 +548,9 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
   let lineColorHex = '000000'
   let lineWidthEmu = 12700  // 1 pt default
 
+  // Textbox content nodes found inside this drawing
+  const txbxContentEls: Element[] = []
+
   for (let i = 0; i < allEls.length; i++) {
     const el = allEls[i]
     const ln = el.localName
@@ -584,6 +592,10 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
       const lastClr = el.getAttribute('lastClr') || ''
       if (lastClr && el.parentElement?.localName === 'solidFill') lineColorHex = lastClr
     }
+    // Collect textbox content nodes (wps:txbxContent or w:txbxContent)
+    if (ln === 'txbxContent') {
+      txbxContentEls.push(el)
+    }
   }
 
   // ── Render a DrawingML line shape ──────────────────────────────────────
@@ -599,6 +611,12 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
     return `<div style="display:block;${wStyle}border-top:${strokePx}px solid #${lineColorHex};margin:2px 0;"></div>`
   }
 
+  // ── Render textbox content (DrawingML wps:wsp shape with text) ─────────
+  if (txbxContentEls.length > 0 && !rId) {
+    return txbxContentEls.map(el => processChildren(el, imageMap)).join('')
+  }
+
+  // ── Image ──────────────────────────────────────────────────────────────
   if (!rId || !imageMap[rId]) return ''
 
   const w = cx ? Math.round(cx * EMU_PX) : 0
@@ -696,6 +714,34 @@ function processPict(node: Element, imageMap: Record<string, string>): string {
       if (mTop)  shapeTop  = mTop[1].trim()
     }
   }
+
+  // ── VML textbox text (v:textbox > w:txbxContent) ─────────────────────
+  for (let i = 0; i < allEls.length; i++) {
+    if (allEls[i].localName === 'textbox') {
+      const txbxContent = Array.from(allEls[i].getElementsByTagName('*')).find(e => e.localName === 'txbxContent')
+        ?? (allEls[i].children.length ? allEls[i] : undefined)
+      if (txbxContent) {
+        const textHtml = processChildren(txbxContent, imageMap)
+        if (textHtml.trim()) {
+          // Try to size/position using the parent shape's style
+          const shEl = allEls[i].parentElement
+          const shS  = shEl?.getAttribute('style') || ''
+          const mW   = shS.match(/width\s*:\s*([^;]+)/i)
+          const mH   = shS.match(/height\s*:\s*([^;]+)/i)
+          const mP   = shS.match(/position\s*:\s*([^;]+)/i)
+          const mL   = shS.match(/left\s*:\s*([^;]+)/i)
+          const mT   = shS.match(/top\s*:\s*([^;]+)/i)
+          const isAbs = mP && mP[1].trim() === 'absolute'
+          const posS = isAbs
+            ? `position:absolute;${mL ? `left:${mL[1].trim()};` : ''}${mT ? `top:${mT[1].trim()};` : ''}`
+            : 'display:block;'
+          const dimS = `${mW ? `width:${mW[1].trim()};` : ''}${mH ? `height:${mH[1].trim()};` : ''}`
+          return `<div style="${posS}${dimS}overflow:hidden;">${textHtml}</div>`
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < allEls.length; i++) {
     if (allEls[i].localName === 'imagedata') {
       const rId =
