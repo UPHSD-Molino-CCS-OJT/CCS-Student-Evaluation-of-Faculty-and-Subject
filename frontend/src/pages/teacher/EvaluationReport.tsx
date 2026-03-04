@@ -112,8 +112,10 @@ const generateActionPlan = (qa: QuestionAverages): string[] => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OOXML → HTML converter
+// OOXML → HTML converter  (comprehensive — mirrors MS Word layout)
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Read a w:-namespaced (or plain) attribute from an element
 function wa(el: Element, localAttr: string): string {
   return (
     el.getAttributeNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', localAttr) ||
@@ -125,59 +127,388 @@ function wa(el: Element, localAttr: string): string {
   )
 }
 
+// Find first direct child with the given localName
+function gc(el: Element, name: string): Element | undefined {
+  return Array.from(el.children).find(c => c.localName === name)
+}
+
+// 20ths-of-a-point (a.k.a. half-twips for spacing) → pt
+const twipToPt = (v: number) => v / 20
+
+// Convert OOXML border element to a CSS border shorthand, e.g. "1px solid #000"
+function parseBorderEl(bEl: Element | undefined): string {
+  if (!bEl) return ''
+  const val = wa(bEl, 'val')
+  if (!val || val === 'none' || val === 'nil') return 'none'
+  const sz    = parseInt(wa(bEl, 'sz') || '4', 10)
+  const pxW   = Math.max(1, Math.round(sz / 8))
+  const color = wa(bEl, 'color')
+  const cssColor = (color && color !== 'auto') ? `#${color}` : '#000'
+  const styleMap: Record<string, string> = {
+    single: 'solid', thick: 'solid', double: 'double',
+    dashed: 'dashed', dotted: 'dotted', dashDot: 'dashed',
+    dashDotDot: 'dashed', wave: 'solid', thinThickSmallGap: 'solid',
+  }
+  return `${pxW}px ${styleMap[val] ?? 'solid'} ${cssColor}`
+}
+
+// Extract border styles from a container that has top/left/bottom/right/insideH/insideV children
+function getBordersStyle(container: Element | undefined): string {
+  if (!container) return ''
+  const top    = parseBorderEl(gc(container, 'top'))
+  const right  = parseBorderEl(gc(container, 'right') ?? gc(container, 'end'))
+  const bottom = parseBorderEl(gc(container, 'bottom'))
+  const left   = parseBorderEl(gc(container, 'left') ?? gc(container, 'start'))
+  let s = ''
+  if (top)    s += `border-top:${top};`
+  if (right)  s += `border-right:${right};`
+  if (bottom) s += `border-bottom:${bottom};`
+  if (left)   s += `border-left:${left};`
+  return s
+}
+
+// Resolve OOXML color attribute (hex, auto, theme) → CSS color string or ''
+function resolveColor(el: Element | undefined): string {
+  if (!el) return ''
+  const val = wa(el, 'val')
+  if (!val || val === 'auto') return ''
+  // themeColor → approximate
+  const themeMap: Record<string, string> = {
+    accent1: '#4472C4', accent2: '#ED7D31', accent3: '#A9D18E',
+    accent4: '#FFC000', accent5: '#5B9BD5', accent6: '#70AD47',
+    dark1: '#000000', dark2: '#44546A', light1: '#FFFFFF', light2: '#E7E6E6',
+    text1: '#000000', text2: '#44546A', background1: '#FFFFFF', background2: '#E7E6E6',
+    hyperlink: '#0563C1',
+  }
+  if (themeMap[val]) return themeMap[val]
+  return `#${val}`
+}
+
+// Highlight name → CSS color
+const HIGHLIGHT: Record<string, string> = {
+  yellow: '#FFFF00', green: '#00FF00', cyan: '#00FFFF', magenta: '#FF00FF',
+  blue: '#0000FF', red: '#FF0000', darkBlue: '#00008B', darkCyan: '#008B8B',
+  darkGreen: '#006400', darkMagenta: '#8B008B', darkRed: '#8B0000',
+  darkYellow: '#808000', darkGray: '#A9A9A9', lightGray: '#D3D3D3',
+  black: '#000000', white: '#FFFFFF',
+}
+
 function processChildren(parent: Element, imageMap: Record<string, string>): string {
   return Array.from(parent.children).map(c => convertNode(c, imageMap)).join('')
 }
 
 function convertNode(node: Element, imageMap: Record<string, string>): string {
   const n = node.localName
+
+  // ── Skip / transparent elements ──────────────────────────────────────────
+  if (n === 'bookmarkStart' || n === 'bookmarkEnd' || n === 'proofErr' ||
+      n === 'rPrChange' || n === 'pPrChange' || n === 'del' ||
+      n === 'fldChar' || n === 'instrText' || n === 'lastRenderedPageBreak' ||
+      n === 'sectPr' || n === 'permStart' || n === 'permEnd') return ''
+
+  // ── Recurse-only containers ───────────────────────────────────────────────
+  if (n === 'hyperlink' || n === 'smartTag' || n === 'ins' || n === 'bdo') {
+    return processChildren(node, imageMap)
+  }
+  // Structured document tag — render its content
+  if (n === 'sdt') {
+    const content = gc(node, 'sdtContent')
+    return content ? processChildren(content, imageMap) : ''
+  }
+
+  // ── TABLE ─────────────────────────────────────────────────────────────────
   if (n === 'tbl') {
-    const rows = Array.from(node.children).filter(c => c.localName === 'tr').map(tr => {
-      const cells = Array.from(tr.children).filter(c => c.localName === 'tc').map(tc => {
-        let wStyle = ''
-        const tcPr = Array.from(tc.children).find(c => c.localName === 'tcPr')
-        if (tcPr) {
-          const tcW = Array.from(tcPr.children).find(c => c.localName === 'tcW')
-          if (tcW) { const v = wa(tcW,'w'); const t = wa(tcW,'type'); if (v && t==='pct') wStyle=`width:${(parseInt(v)/5000*100).toFixed(1)}%;` }
+    const tblPr = gc(node, 'tblPr')
+    // Table-level border / alignment / spacing
+    const tblBdr  = tblPr ? gc(tblPr, 'tblBorders') : undefined
+    const tblBdrStyle = getBordersStyle(tblBdr)
+    const tblJc   = tblPr ? gc(tblPr, 'jc') : undefined
+    const tblShd  = tblPr ? gc(tblPr, 'shd') : undefined
+    const tblShdFill = tblShd ? (wa(tblShd, 'fill') !== 'auto' ? wa(tblShd, 'fill') : '') : ''
+    const tblAlign = tblJc ? (wa(tblJc, 'val') === 'right' ? 'margin-left:auto;' : wa(tblJc, 'val') === 'center' ? 'margin-left:auto;margin-right:auto;' : '') : ''
+
+    // Compute inside-border (used as default for cells)
+    const insideHBdr = parseBorderEl(tblBdr ? gc(tblBdr, 'insideH') : undefined)
+    const insideVBdr = parseBorderEl(tblBdr ? gc(tblBdr, 'insideV') : undefined)
+
+    // Full child scan to handle tblPr/tblGrid mixed in
+    const trEls = Array.from(node.children).filter(c => c.localName === 'tr')
+
+    const rowsHtml = trEls.map(tr => {
+      const trPr = gc(tr, 'trPr')
+      let rowStyle = ''
+      if (trPr) {
+        const trH = gc(trPr, 'trHeight')
+        if (trH) {
+          const hVal = wa(trH, 'val')
+          const hRule = wa(trH, 'hRule')
+          if (hVal) {
+            const hPt = twipToPt(parseInt(hVal, 10))
+            rowStyle += hRule === 'exact' ? `height:${hPt}pt;` : `min-height:${hPt}pt;`
+          }
         }
-        return `<td style="vertical-align:top;padding:0 3px;${wStyle}">${processChildren(tc, imageMap)}</td>`
+      }
+      const cells = Array.from(tr.children).filter(c => c.localName === 'tc').map(tc => {
+        const tcPr = gc(tc, 'tcPr')
+        let cellStyle = 'vertical-align:top;'
+        let colspan = 1
+
+        if (tcPr) {
+          // Width
+          const tcW = gc(tcPr, 'tcW')
+          if (tcW) {
+            const wv = wa(tcW, 'w'); const wt = wa(tcW, 'type')
+            if (wv && wt === 'pct')  cellStyle += `width:${(parseInt(wv) / 5000 * 100).toFixed(1)}%;`
+            else if (wv && wt === 'dxa') cellStyle += `width:${twipToPt(parseInt(wv))}pt;`
+          }
+          // Colspan (gridSpan)
+          const gs = gc(tcPr, 'gridSpan')
+          if (gs) { const g = parseInt(wa(gs, 'val') || '1', 10); if (g > 1) colspan = g }
+          // Vertical alignment
+          const vAlign = gc(tcPr, 'vAlign')
+          if (vAlign) {
+            const v = wa(vAlign, 'val')
+            cellStyle += v === 'center' ? 'vertical-align:middle;'
+              : v === 'bottom' ? 'vertical-align:bottom;'
+              : 'vertical-align:top;'
+          }
+          // Cell shading
+          const shd = gc(tcPr, 'shd')
+          if (shd) {
+            const fill = wa(shd, 'fill'); const color = wa(shd, 'color')
+            if (fill && fill !== 'auto') cellStyle += `background-color:#${fill};`
+            else if (color && color !== 'auto') cellStyle += `background-color:#${color};`
+          }
+          // Cell padding
+          const tcMar = gc(tcPr, 'tcMar')
+          if (tcMar) {
+            const sides: Array<[string, string]> = [['top','padding-top'],['right','padding-right'],['bottom','padding-bottom'],['left','padding-left']]
+            for (const [side, cssProp] of sides) {
+              const mEl = gc(tcMar, side)
+              if (mEl) { const v = wa(mEl,'w'); if (v) cellStyle += `${cssProp}:${twipToPt(parseInt(v))}pt;` }
+            }
+          } else {
+            // Fallback padding
+            cellStyle += 'padding:2px 4px;'
+          }
+          // Cell borders (override table-level)
+          const tcBdr = gc(tcPr, 'tcBorders')
+          if (tcBdr) {
+            cellStyle += getBordersStyle(tcBdr)
+          } else {
+            // Use table inside borders as default
+            if (insideHBdr && insideHBdr !== 'none') cellStyle += `border-top:${insideHBdr};border-bottom:${insideHBdr};`
+            if (insideVBdr && insideVBdr !== 'none') cellStyle += `border-left:${insideVBdr};border-right:${insideVBdr};`
+          }
+        } else {
+          cellStyle += 'padding:2px 4px;'
+          if (insideHBdr && insideHBdr !== 'none') cellStyle += `border-top:${insideHBdr};border-bottom:${insideHBdr};`
+          if (insideVBdr && insideVBdr !== 'none') cellStyle += `border-left:${insideVBdr};border-right:${insideVBdr};`
+        }
+        const colspanAttr = colspan > 1 ? ` colspan="${colspan}"` : ''
+        return `<td${colspanAttr} style="${cellStyle}">${processChildren(tc, imageMap)}</td>`
       }).join('')
-      return `<tr>${cells}</tr>`
+      return `<tr style="${rowStyle}">${cells}</tr>`
     }).join('')
-    return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${rows}</table>`
+
+    return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;${tblBdrStyle}${tblAlign}${tblShdFill ? `background-color:#${tblShdFill};` : ''}">${rowsHtml}</table>`
   }
+
+  // ── PARAGRAPH ─────────────────────────────────────────────────────────────
   if (n === 'p') {
+    const pPr = gc(node, 'pPr')
     let align = 'left'
-    const pPr = Array.from(node.children).find(c => c.localName === 'pPr')
+    let marginTop = '0', marginBottom = '0'
+    let lineHeight = '1.15'
+    let paddingLeft = '', textIndent = '', paddingRight = ''
+    let pStyle = '', pBgColor = ''
+    let pBorderStyle = ''
+    let numBullet = ''  // list prefix
+    let isRtl = false
+
     if (pPr) {
-      const jc = Array.from(pPr.children).find(c => c.localName === 'jc')
-      if (jc) { const v = wa(jc,'val'); if (v==='center') align='center'; else if (v==='right') align='right'; else if (v==='both'||v==='distribute') align='justify' }
+      // Alignment
+      const jc = gc(pPr, 'jc')
+      if (jc) {
+        const v = wa(jc, 'val')
+        if (v === 'center') align = 'center'
+        else if (v === 'right') align = 'right'
+        else if (v === 'both' || v === 'distribute') align = 'justify'
+      }
+      // RTL
+      const bidi = gc(pPr, 'bidi')
+      if (bidi) { const v = wa(bidi, 'val'); if (v !== '0' && v !== 'false') isRtl = true }
+
+      // Spacing before/after and line height
+      const spacing = gc(pPr, 'spacing')
+      if (spacing) {
+        const before = wa(spacing, 'before'); const after = wa(spacing, 'after')
+        const line = wa(spacing, 'line'); const lineRule = wa(spacing, 'lineRule')
+        if (before) marginTop = `${twipToPt(parseInt(before))}pt`
+        if (after)  marginBottom = `${twipToPt(parseInt(after))}pt`
+        if (line) {
+          const lv = parseInt(line)
+          if (lineRule === 'exact') lineHeight = `${twipToPt(lv)}pt`
+          else if (lineRule === 'atLeast') lineHeight = `${twipToPt(lv)}pt`
+          else lineHeight = (lv / 240).toFixed(3) // auto: fraction of normal
+        }
+      }
+
+      // Indentation
+      const ind = gc(pPr, 'ind')
+      if (ind) {
+        const left = wa(ind, 'left') || wa(ind, 'start')
+        const right = wa(ind, 'right') || wa(ind, 'end')
+        const firstLine = wa(ind, 'firstLine')
+        const hanging = wa(ind, 'hanging')
+        if (left)      paddingLeft = `${twipToPt(parseInt(left))}pt`
+        if (right)     paddingRight = `${twipToPt(parseInt(right))}pt`
+        if (firstLine) textIndent = `${twipToPt(parseInt(firstLine))}pt`
+        if (hanging)   { textIndent = `-${twipToPt(parseInt(hanging))}pt`; paddingLeft = `${twipToPt((parseInt(left||'0') || 0))}pt` }
+      }
+
+      // Paragraph shading
+      const shd = gc(pPr, 'shd')
+      if (shd) {
+        const fill = wa(shd, 'fill')
+        if (fill && fill !== 'auto') pBgColor = `#${fill}`
+      }
+
+      // Paragraph borders
+      const pBdr = gc(pPr, 'pBdr')
+      if (pBdr) pBorderStyle = getBordersStyle(pBdr)
+
+      // Numbered / bulleted list (basic: show bullet or number using numPr data-hint)
+      const numPr = gc(pPr, 'numPr')
+      if (numPr) {
+        const ilvl = gc(numPr, 'ilvl'); const numId = gc(numPr, 'numId')
+        const level = ilvl ? parseInt(wa(ilvl, 'val') || '0') : 0
+        if (numId && wa(numId, 'val') !== '0') {
+          const bullets = ['•', '◦', '▪', '–', '·']
+          numBullet = `<span style="display:inline-block;min-width:${(level+1)*13}px">${bullets[level % bullets.length]}</span>`
+        }
+      }
+
+      // Style ID hint (for future extension; currently not fully resolved)
+      const pStyleEl = gc(pPr, 'pStyle')
+      if (pStyleEl) pStyle = wa(pStyleEl, 'val')
     }
+
     const inner = processChildren(node, imageMap)
-    return `<p style="margin:0;line-height:1.35;text-align:${align}">${inner||'&nbsp;'}</p>`
+    const style = [
+      `margin-top:${marginTop}`,
+      `margin-bottom:${marginBottom}`,
+      `line-height:${lineHeight}`,
+      `text-align:${align}`,
+      paddingLeft  ? `padding-left:${paddingLeft}`  : '',
+      paddingRight ? `padding-right:${paddingRight}` : '',
+      textIndent   ? `text-indent:${textIndent}`    : '',
+      pBgColor     ? `background-color:${pBgColor}` : '',
+      pBorderStyle,
+      isRtl        ? 'direction:rtl'               : '',
+      // Heading style heuristics
+      pStyle === 'Heading1' ? 'font-size:16pt;font-weight:bold;' :
+      pStyle === 'Heading2' ? 'font-size:13pt;font-weight:bold;' :
+      pStyle === 'Heading3' ? 'font-size:12pt;font-weight:bold;' : '',
+    ].filter(Boolean).join(';')
+
+    return `<p style="${style}">${numBullet}${inner || '&nbsp;'}</p>`
   }
+
+  // ── RUN ───────────────────────────────────────────────────────────────────
   if (n === 'r') {
-    let bold=false, italic=false, color='', fontSize=''
-    const rPr = Array.from(node.children).find(c => c.localName === 'rPr')
+    const rPr = gc(node, 'rPr')
+    let bold = false, italic = false, underline = false, strikethrough = false
+    let color = '', fontSize = '', fontFamily = '', bgColor = ''
+    let vertAlign = '', letterSpacing = '', textTransform = '', fontVariant = ''
+
     if (rPr) {
-      bold   = Array.from(rPr.children).some(c => c.localName==='b')
-      italic = Array.from(rPr.children).some(c => c.localName==='i')
-      const ce = Array.from(rPr.children).find(c => c.localName==='color')
-      if (ce) { const v=wa(ce,'val'); if (v&&v!=='auto') color=`color:#${v};` }
-      const se = Array.from(rPr.children).find(c => c.localName==='sz'||c.localName==='szCs')
-      if (se) { const v=wa(se,'val'); if (v) fontSize=`font-size:${parseInt(v)/2}pt;` }
+      const bEl = gc(rPr, 'b'); if (bEl) { const v = wa(bEl, 'val'); bold   = (v !== '0' && v !== 'false') }
+      const iEl = gc(rPr, 'i'); if (iEl) { const v = wa(iEl, 'val'); italic = (v !== '0' && v !== 'false') }
+
+      // Underline
+      const uEl = gc(rPr, 'u')
+      if (uEl) { const v = wa(uEl, 'val'); underline = v !== 'none' && v !== '' }
+
+      // Strikethrough
+      const stEl = gc(rPr, 'strike') ?? gc(rPr, 'dstrike')
+      if (stEl) { const v = wa(stEl, 'val'); strikethrough = v !== '0' && v !== 'false' }
+
+      // Color
+      const ce = gc(rPr, 'color')
+      if (ce) { const c = resolveColor(ce); if (c) color = `color:${c};` }
+
+      // Font size (sz in half-points)
+      const se = gc(rPr, 'sz') ?? gc(rPr, 'szCs')
+      if (se) { const v = wa(se, 'val'); if (v) fontSize = `font-size:${parseInt(v) / 2}pt;` }
+
+      // Font family (rFonts: ascii, hAnsi, eastAsia, cs)
+      const ff = gc(rPr, 'rFonts')
+      if (ff) {
+        const f = wa(ff, 'ascii') || wa(ff, 'hAnsi') || wa(ff, 'cs') || wa(ff, 'eastAsia')
+        if (f) fontFamily = `font-family:'${f}',sans-serif;`
+      }
+
+      // Highlight
+      const hi = gc(rPr, 'highlight')
+      if (hi) { const v = wa(hi, 'val'); if (v && HIGHLIGHT[v]) bgColor = `background-color:${HIGHLIGHT[v]};` }
+
+      // Run shading
+      if (!bgColor) {
+        const shd = gc(rPr, 'shd')
+        if (shd) { const fill = wa(shd, 'fill'); if (fill && fill !== 'auto') bgColor = `background-color:#${fill};` }
+      }
+
+      // Superscript / subscript
+      const va = gc(rPr, 'vertAlign')
+      if (va) { const v = wa(va, 'val'); if (v === 'superscript') vertAlign = 'vertical-align:super;font-size:0.75em;'; else if (v === 'subscript') vertAlign = 'vertical-align:sub;font-size:0.75em;' }
+
+      // Letter spacing (spacing in twips)
+      const spc = gc(rPr, 'spacing')
+      if (spc) { const v = wa(spc, 'val'); if (v) letterSpacing = `letter-spacing:${twipToPt(parseInt(v))}pt;` }
+
+      // All caps / small caps
+      const caps = gc(rPr, 'caps')
+      if (caps) { const v = wa(caps, 'val'); if (v !== '0' && v !== 'false') textTransform = 'text-transform:uppercase;' }
+      const smCaps = gc(rPr, 'smallCaps')
+      if (smCaps) { const v = wa(smCaps, 'val'); if (v !== '0' && v !== 'false') fontVariant = 'font-variant:small-caps;' }
     }
-    const styles=`${color}${fontSize}${bold?'font-weight:bold;':''}${italic?'font-style:italic;':''}`
+
+    const decor = [underline && 'underline', strikethrough && 'line-through'].filter(Boolean).join(' ')
+    const styles = [
+      color, fontSize, fontFamily, bgColor, vertAlign, letterSpacing, textTransform, fontVariant,
+      bold        ? 'font-weight:bold;'   : '',
+      italic      ? 'font-style:italic;'  : '',
+      decor       ? `text-decoration:${decor};` : '',
+    ].filter(Boolean).join('')
+
+    // Collect run content — recurse children (t, br, cr, tab, drawing, pict, sym, etc.)
     const content = Array.from(node.children).map(c => convertNode(c, imageMap)).join('')
     if (!content) return ''
     return styles ? `<span style="${styles}">${content}</span>` : content
   }
+
+  // ── INLINE TEXT / SPECIAL ─────────────────────────────────────────────────
   if (n === 't')   return escapeHtml(node.textContent || '')
-  if (n === 'br')  return '<br/>'
-  if (n === 'tab') return '&nbsp;&nbsp;&nbsp;&nbsp;'
+  if (n === 'br' || n === 'cr') return '<br/>'
+  if (n === 'tab') return '<span style="display:inline-block;width:2em">&nbsp;</span>'
+
+  // Symbol (w:sym w:char="F0B7" w:font="Symbol")
+  if (n === 'sym') {
+    const charCode = parseInt(wa(node, 'char') || '0', 16)
+    const font = wa(node, 'font')
+    if (charCode) {
+      // Wingdings/Symbol → display as Unicode (best-effort)
+      return `<span style="font-family:'${font}',Symbol,sans-serif">${String.fromCharCode(charCode)}</span>`
+    }
+    return ''
+  }
+
+  // ── IMAGES ────────────────────────────────────────────────────────────────
   if (n === 'drawing') return processDrawing(node, imageMap)
   if (n === 'pict')    return processPict(node, imageMap)
-  if (n === 'hyperlink') return processChildren(node, imageMap)
+
+  // Default: recurse children for anything unrecognised
   return processChildren(node, imageMap)
 }
 
@@ -230,11 +561,11 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
 
 function processPict(node: Element, imageMap: Record<string, string>): string {
   const allEls = node.getElementsByTagName('*')
-  // VML shape carries size/position in its style attribute
   let shapeStyle = ''
   let shapeLeft = '', shapeTop = '', shapePos = ''
   for (let i = 0; i < allEls.length; i++) {
-    if (allEls[i].localName === 'shape' || allEls[i].localName === 'rect') {
+    const ln = allEls[i].localName
+    if (ln === 'shape' || ln === 'rect' || ln === 'oval' || ln === 'line') {
       shapeStyle = allEls[i].getAttribute('style') || ''
       const mPos  = shapeStyle.match(/position\s*:\s*([^;]+)/i)
       const mLeft = shapeStyle.match(/left\s*:\s*([^;]+)/i)
@@ -251,7 +582,6 @@ function processPict(node: Element, imageMap: Record<string, string>): string {
         allEls[i].getAttribute('r:id') ||
         ''
       if (rId && imageMap[rId]) {
-        // Extract width / height from VML shape style (values may be in pt, cm, in, px)
         const mW = shapeStyle.match(/width\s*:\s*([^;]+)/i)
         const mH = shapeStyle.match(/height\s*:\s*([^;]+)/i)
         const wVal = mW ? mW[1].trim() : ''
