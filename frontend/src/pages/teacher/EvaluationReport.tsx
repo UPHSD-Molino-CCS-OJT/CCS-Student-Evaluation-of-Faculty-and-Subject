@@ -613,7 +613,21 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
 
   // ── Render textbox content (DrawingML wps:wsp shape with text) ─────────
   if (txbxContentEls.length > 0 && !rId) {
-    return txbxContentEls.map(el => processChildren(el, imageMap)).join('')
+    const textHtml = txbxContentEls.map(el => processChildren(el, imageMap)).join('')
+    const w = cx ? Math.round(cx * EMU_PX) : 0
+    const h = cy ? Math.round(cy * EMU_PX) : 0
+    const sizeStyle = (w && h) ? `width:${w}px;height:${h}px;`
+      : w ? `width:${w}px;`
+      : h ? `height:${h}px;`
+      : ''
+    if (isAnchor && (posHOff || posVOff)) {
+      const left = Math.round(posHOff * EMU_PX)
+      const top  = Math.round(posVOff * EMU_PX)
+      return `<div style="position:absolute;left:${left}px;top:${top}px;${sizeStyle}overflow:hidden;">${textHtml}</div>`
+    }
+    return sizeStyle
+      ? `<div style="${sizeStyle}overflow:hidden;">${textHtml}</div>`
+      : textHtml
   }
 
   // ── Image ──────────────────────────────────────────────────────────────
@@ -1033,7 +1047,6 @@ const EvaluationReport: React.FC = () => {
   // The body top gap fills the space between the header zone bottom and the body start.
   const hDist = hasPageLayout ? (pageLayout.headerDistanceMm || 12.7) : 12.7
   const fDist = hasPageLayout ? (pageLayout.footerDistanceMm || 12.7) : 12.7
-  const bodyTopGapMm = hasPageLayout ? Math.max(0, pageLayout.marginTopMm - hDist) : 0
 
   // The page container itself has only left/right padding; top/bottom are handled per-section.
   const pageContainerStyle: React.CSSProperties = hasPageLayout ? {
@@ -1044,13 +1057,33 @@ const EvaluationReport: React.FC = () => {
   } : {}
 
   // Section-level styles
+  // The header section spans from page top (y=0) down to the body start (marginTopMm).
+  // paddingTop:hDist pushes in-flow content to the Word header distance; position:relative
+  // makes it the containing block for absolute-positioned shapes extracted from the DOCX.
+  const headerAreaHeightMm = hasPageLayout ? pageLayout.marginTopMm : 0
+  const headerContentHeightMm = hasPageLayout ? Math.max(0, pageLayout.marginTopMm - hDist) : 0
+
   const headerSectionStyle: React.CSSProperties = hasPageLayout
-    ? { paddingTop: `${hDist}mm`, marginLeft: `-${pageLayout.marginLeftMm}mm`, marginRight: `-${pageLayout.marginRightMm}mm`, paddingLeft: `${pageLayout.marginLeftMm}mm`, paddingRight: `${pageLayout.marginRightMm}mm` }
+    ? {
+        position: 'relative',
+        minHeight: `${headerAreaHeightMm}mm`,
+        paddingTop: `${hDist}mm`,
+        marginLeft:   `-${pageLayout.marginLeftMm}mm`,
+        marginRight:  `-${pageLayout.marginRightMm}mm`,
+        paddingLeft:  `${pageLayout.marginLeftMm}mm`,
+        paddingRight: `${pageLayout.marginRightMm}mm`,
+      }
     : {}
 
-  const bodySectionStyle: React.CSSProperties = hasPageLayout
-    ? { paddingTop: `${bodyTopGapMm}mm` }
-    : {}
+  // Inner wrapper for the custom-header HTML — gives absolutely-positioned shapes
+  // a correctly-sized containing block (header content zone height).
+  const headerInnerStyle: React.CSSProperties = hasPageLayout
+    ? { position: 'relative', minHeight: `${headerContentHeightMm}mm` }
+    : { position: 'relative' }
+
+  // Body starts right after the header section which already occupies marginTopMm;
+  // no extra top padding needed.
+  const bodySectionStyle: React.CSSProperties = {}
 
   const footerSectionStyle: React.CSSProperties = hasPageLayout
     ? { marginLeft: `-${pageLayout.marginLeftMm}mm`, marginRight: `-${pageLayout.marginRightMm}mm`, paddingLeft: `${pageLayout.marginLeftMm}mm`, paddingRight: `${pageLayout.marginRightMm}mm`, paddingBottom: `${fDist}mm` }
@@ -1249,7 +1282,7 @@ const EvaluationReport: React.FC = () => {
           {/* Header — sits at headerDistanceMm from page top */}
           <div style={headerSectionStyle}>
             {useCustomHeader
-              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+              ? <div style={headerInnerStyle} dangerouslySetInnerHTML={{ __html: headerHtml }} />
               : <>
                   <FallbackHeader />
                   <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
@@ -1363,7 +1396,7 @@ const EvaluationReport: React.FC = () => {
           {/* Header (repeated) — sits at headerDistanceMm from page top */}
           <div style={headerSectionStyle}>
             {useCustomHeader
-              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+              ? <div style={headerInnerStyle} dangerouslySetInnerHTML={{ __html: headerHtml }} />
               : <>
                   <FallbackHeader />
                   <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
