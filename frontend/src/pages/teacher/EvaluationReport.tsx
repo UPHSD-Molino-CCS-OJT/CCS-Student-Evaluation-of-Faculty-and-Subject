@@ -518,263 +518,325 @@ const EvaluationReport: React.FC = () => {
   const useCustomFooter = footerHtml.trim().length > 0
 
   const hasPageLayout = pageLayout.pageWidthMm > 0 && pageLayout.pageHeightMm > 0
-  const pageLayoutStyle: React.CSSProperties = hasPageLayout ? {
-    width:     `${pageLayout.pageWidthMm}mm`,
-    minHeight: `${pageLayout.pageHeightMm}mm`,
-    ...(pageLayout.marginTopMm    ? { paddingTop:    `${pageLayout.marginTopMm}mm`    } : {}),
-    ...(pageLayout.marginRightMm  ? { paddingRight:  `${pageLayout.marginRightMm}mm`  } : {}),
-    ...(pageLayout.marginBottomMm ? { paddingBottom: `${pageLayout.marginBottomMm}mm` } : {}),
-    ...(pageLayout.marginLeftMm   ? { paddingLeft:   `${pageLayout.marginLeftMm}mm`   } : {}),
+
+  // Shared page style — overrides .report-page CSS-class defaults when a docx is loaded
+  const pagePaddingStyle: React.CSSProperties = hasPageLayout ? {
+    paddingTop:    `${pageLayout.marginTopMm}mm`,
+    paddingRight:  `${pageLayout.marginRightMm}mm`,
+    paddingBottom: `${pageLayout.marginBottomMm}mm`,
+    paddingLeft:   `${pageLayout.marginLeftMm}mm`,
   } : {}
+
+  const pageWidthStyle: React.CSSProperties = hasPageLayout
+    ? { width: `${pageLayout.pageWidthMm}mm`, minHeight: `${pageLayout.pageHeightMm}mm`, ...pagePaddingStyle }
+    : {}
 
   return (
     <>
-      {/* ── Print-only global styles ─────────────────────────────────── */}
+      {/* ── Global styles ────────────────────────────────────────────── */}
       <style>{`
+        /* ── Screen: Word-like workspace ── */
+        @media screen {
+          .word-workspace {
+            background: #525659;
+            min-height: calc(100vh - 7rem);
+            padding: 28px 0 56px;
+            overflow-y: auto;
+          }
+          .report-page {
+            background: #fff;
+            ${!hasPageLayout
+              ? 'width: 210mm; min-height: 297mm; padding: 18mm 16mm;'
+              : ''}
+            margin: 0 auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,.35), 0 6px 18px rgba(0,0,0,.35);
+            font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+            font-size: 10pt;
+            color: #000;
+            position: relative;
+            box-sizing: border-box;
+          }
+          .page-gap {
+            height: 20px;
+          }
+          .page-label {
+            text-align: center;
+            color: #c8c8c8;
+            font-size: 11px;
+            letter-spacing: .5px;
+            padding: 6px 0 4px;
+            user-select: none;
+          }
+        }
+
+        /* ── Print ── */
         @media print {
           .no-print { display: none !important; }
-          body { margin: 0; background: white; }
+          body { margin: 0 !important; background: white !important; }
+          .word-workspace { background: white !important; padding: 0 !important; }
+          .page-gap, .page-label { display: none !important; }
           .report-page {
             box-shadow: none !important;
             border: none !important;
             margin: 0 !important;
-            ${!hasPageLayout ? 'padding: 18mm 16mm !important; width: 210mm !important; min-height: 297mm;' : ''}
+            ${!hasPageLayout ? 'padding: 0 !important; width: 100% !important;' : 'padding: 0 !important; width: 100% !important;'}
+            page-break-after: always;
+            break-after: page;
+            font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+            font-size: 10pt;
+            color: #000;
+            box-sizing: border-box;
           }
-          .page-break { page-break-before: always; }
+          .report-page:last-of-type {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
           input { border: none !important; outline: none !important; background: transparent !important; }
-          ${hasPageLayout ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${pageLayout.marginTopMm || 18}mm ${pageLayout.marginRightMm || 16}mm ${pageLayout.marginBottomMm || 18}mm ${pageLayout.marginLeftMm || 16}mm; }` : '@page { size: A4 portrait; }'}
-        }
-        @media screen {
-          .report-page {
-            background: white;
-            ${!hasPageLayout ? 'width: 210mm; min-height: 297mm; padding: 18mm 16mm;' : ''}
-            margin: 0 auto;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-          }
+          ${hasPageLayout
+            ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${pageLayout.marginTopMm || 18}mm ${pageLayout.marginRightMm || 16}mm ${pageLayout.marginBottomMm || 18}mm ${pageLayout.marginLeftMm || 16}mm; }`
+            : '@page { size: A4 portrait; margin: 18mm 16mm; }'}
         }
       `}</style>
 
-      {/* ── Screen toolbar (hidden on print) ─────────────────────────── */}
-      <div className="no-print bg-gray-50 min-h-screen">
+      {/* ── Toolbar (screen only) ────────────────────────────────────── */}
+      <div className="no-print">
         <TeacherNavbar />
-        <div className="container mx-auto px-4 py-4 space-y-2">
-          {/* Row 1: navigation + print */}
-          <div className="flex items-center justify-between">
+        <div className="bg-white border-b border-gray-200 shadow-sm px-4 py-2.5 space-y-2">
+          {/* Row 1: navigation + conforme + print */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <button
               onClick={() => navigate(`/teacher/course/${courseId}`)}
-              className="flex items-center text-green-600 hover:text-green-700 font-semibold"
+              className="flex items-center text-green-600 hover:text-green-700 font-semibold text-sm"
             >
-              <ArrowLeft size={20} className="mr-2" /> Back to Course Detail
+              <ArrowLeft size={18} className="mr-1.5" /> Back to Course Detail
             </button>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Conforme name:</label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conforme</label>
                 <input
                   type="text"
                   value={conformeName}
                   onChange={e => setConformeName(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm w-56"
-                  placeholder="Enter name for Conforme line"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-52 focus:outline-none focus:border-blue-400"
+                  placeholder="Name on Conforme line"
                 />
               </div>
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg shadow transition"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-1.5 rounded shadow-sm transition text-sm"
               >
-                <Printer size={18} /> Print / Save as PDF
+                <Printer size={15} /> Print / Save PDF
               </button>
             </div>
           </div>
 
-          {/* Row 2: Word template loader */}
-          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm">
-            <FileText size={18} className="text-blue-600 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-700">Header / Footer template:</span>
+          {/* Row 2: template loader */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <FileText size={15} className="text-gray-400 flex-shrink-0" />
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Template</span>
             {docxName ? (
-              <span className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+              <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
                 <span className="truncate max-w-xs">{docxName}</span>
-                <button onClick={clearTemplate} title="Clear template" className="text-gray-400 hover:text-red-500 transition-colors">
-                  <X size={14} />
+                <button onClick={clearTemplate} title="Remove template" className="text-gray-400 hover:text-red-500 ml-0.5">
+                  <X size={12} />
                 </button>
               </span>
             ) : (
-              <span className="text-sm text-gray-400 italic">No template loaded — using default</span>
+              <span className="text-xs text-gray-400 italic">No template — using built-in header</span>
             )}
-            <input ref={fileInputRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleDocxUpload} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              onChange={handleDocxUpload}
+            />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={docxParsing}
-              className="ml-1 flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-500 rounded px-3 py-1 transition disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-500 rounded px-2.5 py-1 transition disabled:opacity-50"
             >
-              {docxParsing ? <><Loader size={14} className="animate-spin" /> Parsing…</> : <><Upload size={14} /> Upload .docx</>}
+              {docxParsing
+                ? <><Loader size={12} className="animate-spin" /> Parsing…</>
+                : <><Upload size={12} /> Upload .docx</>}
             </button>
-            {docxError && <span className="text-sm text-red-600">{docxError}</span>}
+            {hasPageLayout && (
+              <span className="text-xs text-gray-400 border border-gray-200 rounded px-2 py-0.5 bg-gray-50">
+                {pageLayout.pageWidthMm} × {pageLayout.pageHeightMm} mm
+              </span>
+            )}
+            {docxError && <span className="text-xs text-red-600">{docxError}</span>}
           </div>
         </div>
+      </div>
 
-        {/* ── REPORT DOCUMENT ─────────────────────────────────────────── */}
-        <div className="pb-16 px-4 pt-2">
-          <div className="report-page" style={pageLayoutStyle}>
-            {/* ── Header (custom from .docx or built-in fallback) ────── */}
-            {useCustomHeader
-              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
-              : <FallbackHeader />
-            }
+      {/* ── Word workspace ───────────────────────────────────────────── */}
+      <div className="word-workspace">
 
-            <hr style={{ borderTop: '1.5px solid #333', margin: '4px 0 8px' }} />
+        {/* ═══ PAGE 1 — Header + Criteria table ═══════════════════════ */}
+        <div className="page-label no-print">Page 1</div>
+        <div className="report-page" style={pageWidthStyle}>
 
-            {/* ── Meta info row ──────────────────────────────────────── */}
-            <table style={{ width: '100%', marginBottom: '10px', fontSize: '9pt', borderCollapse: 'collapse' }}>
-              <tbody>
-                <tr>
-                  <td style={{ width: '30%' }}>
-                    <span style={{ fontWeight: 'bold' }}>NAME : </span>
-                  </td>
-                  <td style={{ width: '35%', textAlign: 'center' }}>
-                    <span style={{ fontWeight: 'bold' }}>PERIOD : </span>
-                    {course.semester.toUpperCase().replace('SEMESTER', 'SEM')} {course.school_year}
-                  </td>
-                  <td style={{ width: '35%', textAlign: 'right' }}>
-                    <span style={{ fontWeight: 'bold' }}>SUBJECT/S : </span>
-                    {course.course_code}
-                  </td>
-                </tr>
-                <tr>
-                  <td />
-                  <td />
-                  <td style={{ textAlign: 'right', fontSize: '8.5pt' }}>
-                    <span style={{ fontWeight: 'bold' }}>EVALUATORS : </span>
-                    {course.evaluated_students} STUDENTS
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          {/* Header */}
+          {useCustomHeader
+            ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+            : <FallbackHeader />
+          }
 
-            {/* ── Section title ─────────────────────────────────────── */}
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '11pt', marginBottom: '8px', letterSpacing: '1px' }}>
-              STUDENT EVALUATION
+          <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
+
+          {/* Meta info row */}
+          <table style={{ width: '100%', marginBottom: '10px', fontSize: '9pt', borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '30%' }}>
+                  <span style={{ fontWeight: 'bold' }}>NAME : </span>
+                </td>
+                <td style={{ width: '35%', textAlign: 'center' }}>
+                  <span style={{ fontWeight: 'bold' }}>PERIOD : </span>
+                  {course.semester.toUpperCase().replace('SEMESTER', 'SEM')} {course.school_year}
+                </td>
+                <td style={{ width: '35%', textAlign: 'right' }}>
+                  <span style={{ fontWeight: 'bold' }}>SUBJECT/S : </span>
+                  {course.course_code}
+                </td>
+              </tr>
+              <tr>
+                <td />
+                <td />
+                <td style={{ textAlign: 'right', fontSize: '8.5pt' }}>
+                  <span style={{ fontWeight: 'bold' }}>EVALUATORS : </span>
+                  {course.evaluated_students} STUDENTS
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Section title */}
+          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '11pt', marginBottom: '10px', letterSpacing: '1px' }}>
+            STUDENT EVALUATION
+          </div>
+
+          {/* Evaluation table */}
+          {!hasEvals ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#666', fontSize: '10pt' }}>
+              No evaluations have been submitted for this course yet.
             </div>
-
-            {/* ── Evaluation table ──────────────────────────────────── */}
-            {!hasEvals ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#666', fontSize: '10pt' }}>
-                No evaluations have been submitted for this course yet.
-              </div>
-            ) : (
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '8.5pt',
-                border: '1px solid #333'
-              }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f0f0f0' }}>
-                    <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'left', width: '58%', fontWeight: 'bold' }}>
-                      CRITERIA
-                    </th>
-                    <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '14%', fontWeight: 'bold', lineHeight: '1.3' }}>
-                      QUESTION AVERAGE
-                    </th>
-                    <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '28%', fontWeight: 'bold' }}>
-                      REMARK
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CRITERIA.map((c, idx) => {
-                    const score = qa[c.key] ?? 0
-                    const remark = getRemark(score)
-                    return (
-                      <tr key={c.key} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                        <td style={{ border: '1px solid #ddd', padding: '4px 7px' }}>{c.label}</td>
-                        <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'center', fontWeight: 'bold' }}>
-                          {score.toFixed(2)}
-                        </td>
-                        <td style={{ border: '1px solid #ddd', padding: '4px 7px', textAlign: 'center' }}>
-                          {remark}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {/* Average row */}
-                  <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold' }}>
-                    <td style={{ border: '1px solid #333', padding: '5px 7px' }}>AVERAGE</td>
-                    <td style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center' }}>
-                      {statistics.average_rating.toFixed(2)}
-                    </td>
-                    <td style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center' }}>
-                      {getRemark(statistics.average_rating)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
-
-            {/* ── Page 2 ────────────────────────────────────────────── */}
-            <div className="page-break" />
-
-            {/* Word footer rendered at top of page 2 */}
-            {useCustomFooter && (
-              <>
-                <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
-                <hr style={{ borderTop: '1px solid #ccc', margin: '4px 0 8px' }} />
-              </>
-            )}
-
-            {/* Comments */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333', marginTop: '12px' }}>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f0f0f0' }}>
-                  <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'left', fontWeight: 'bold' }}>
-                    COMMENTS
+                <tr style={{ backgroundColor: '#e8e8e8' }}>
+                  <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'left', width: '58%', fontWeight: 'bold' }}>
+                    CRITERIA
+                  </th>
+                  <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '14%', fontWeight: 'bold', lineHeight: '1.3' }}>
+                    QUESTION AVERAGE
+                  </th>
+                  <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'center', width: '28%', fontWeight: 'bold' }}>
+                    REMARK
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {comments.length === 0 ? (
-                  <tr>
-                    <td style={{ border: '1px solid #ddd', padding: '5px 7px', color: '#888', fontStyle: 'italic' }}>
-                      No comments submitted.
-                    </td>
-                  </tr>
-                ) : (
-                  comments.map((c, i) => (
-                    <tr key={i}>
-                      <td style={{ border: '1px solid #ddd', padding: '4px 7px' }}>{c.comment}</td>
+                {CRITERIA.map((c, idx) => {
+                  const score = qa[c.key] ?? 0
+                  const remark = getRemark(score)
+                  return (
+                    <tr key={c.key} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f7f7f7' }}>
+                      <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{c.label}</td>
+                      <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center', fontWeight: 'bold' }}>
+                        {score.toFixed(2)}
+                      </td>
+                      <td style={{ border: '1px solid #ccc', padding: '4px 7px', textAlign: 'center' }}>
+                        {remark}
+                      </td>
                     </tr>
-                  ))
-                )}
+                  )
+                })}
+                {/* Average row */}
+                <tr style={{ backgroundColor: '#e8e8e8', fontWeight: 'bold' }}>
+                  <td style={{ border: '1px solid #333', padding: '6px 7px' }}>AVERAGE</td>
+                  <td style={{ border: '1px solid #333', padding: '6px 7px', textAlign: 'center' }}>
+                    {statistics.average_rating.toFixed(2)}
+                  </td>
+                  <td style={{ border: '1px solid #333', padding: '6px 7px', textAlign: 'center' }}>
+                    {getRemark(statistics.average_rating)}
+                  </td>
+                </tr>
               </tbody>
             </table>
+          )}
+        </div>
 
-            {/* Action Plan */}
-            {hasEvals && actionPlan.length > 0 && (
-              <div style={{ marginTop: '24px', fontSize: '9pt' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Teachers Action Plan :</div>
-                <ol style={{ paddingLeft: '20px', lineHeight: '1.8', margin: 0 }}>
-                  {actionPlan.map((item, i) => (
-                    <li key={i} style={{ marginBottom: '4px' }}>{item}</li>
-                  ))}
-                </ol>
-              </div>
-            )}
+        {/* ── Gap between pages (screen only) ─────────────────────── */}
+        <div className="page-gap" />
 
-            {/* Conforme / Sign / Date */}
-            <div style={{ marginTop: '36px', fontSize: '9pt' }}>
-              <div style={{ marginBottom: '6px' }}>
-                <span style={{ fontWeight: 'bold' }}>Conforme : </span>
-              </div>
-              <div style={{ marginTop: '28px' }}>
-                <span style={{ fontWeight: 'bold' }}>Sign / Date </span>
-                <span style={{ display: 'inline-block', width: '200px', borderBottom: '1px solid #333', marginLeft: '8px', verticalAlign: 'bottom' }} />
-              </div>
-              <div style={{ marginTop: '6px', fontSize: '8.5pt', paddingLeft: '72px' }}>
-                {conformeName}
-              </div>
+        {/* ═══ PAGE 2 — Footer banner + Comments + Action Plan ════════ */}
+        <div className="page-label no-print">Page 2</div>
+        <div className="report-page" style={pageWidthStyle}>
+
+          {/* Footer banner (from docx) at top of page 2 */}
+          {useCustomFooter && (
+            <>
+              <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
+              <hr style={{ borderTop: '1px solid #bbb', margin: '4px 0 10px' }} />
+            </>
+          )}
+
+          {/* Comments table */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#e8e8e8' }}>
+                <th style={{ border: '1px solid #333', padding: '5px 7px', textAlign: 'left', fontWeight: 'bold' }}>
+                  COMMENTS
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {comments.length === 0 ? (
+                <tr>
+                  <td style={{ border: '1px solid #ccc', padding: '6px 7px', color: '#888', fontStyle: 'italic' }}>
+                    No comments submitted.
+                  </td>
+                </tr>
+              ) : (
+                comments.map((c, i) => (
+                  <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#fff' : '#f7f7f7' }}>
+                    <td style={{ border: '1px solid #ccc', padding: '4px 7px' }}>{c.comment}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {/* Action Plan */}
+          {hasEvals && actionPlan.length > 0 && (
+            <div style={{ marginTop: '20px', fontSize: '9pt' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Teachers Action Plan :</div>
+              <ol style={{ paddingLeft: '20px', lineHeight: '2', margin: 0 }}>
+                {actionPlan.map((item, i) => (
+                  <li key={i} style={{ marginBottom: '2px' }}>{item}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Conforme / Sign / Date */}
+          <div style={{ marginTop: '40px', fontSize: '9pt' }}>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ fontWeight: 'bold' }}>Conforme : </span>
+            </div>
+            <div style={{ marginTop: '32px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+              <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Sign / Date</span>
+              <span style={{ flex: '0 0 200px', borderBottom: '1px solid #333', display: 'inline-block' }} />
+            </div>
+            <div style={{ marginTop: '4px', fontSize: '8.5pt', paddingLeft: '74px' }}>
+              {conformeName}
             </div>
           </div>
         </div>
-      </div>
+
+      </div>{/* end word-workspace */}
     </>
   )
 }
