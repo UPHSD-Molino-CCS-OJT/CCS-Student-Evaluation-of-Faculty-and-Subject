@@ -164,12 +164,66 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   // Create sample courses
   console.log('📖 Creating sample courses...');
   const courses = await Course.create([
-    // BSCS-DS courses
-    { name: safeEncrypt('Data Structures and Algorithms'), code: safeEncrypt('CS201'), program_id: programs[0]._id },
-    { name: safeEncrypt('Database Management Systems'), code: safeEncrypt('CS202'), program_id: programs[0]._id },
-    { name: safeEncrypt('Machine Learning'), code: safeEncrypt('CS301'), program_id: programs[0]._id },
-    { name: safeEncrypt('Statistical Analysis'), code: safeEncrypt('CS302'), program_id: programs[0]._id },
-    { name: safeEncrypt('Big Data Analytics'), code: safeEncrypt('CS401'), program_id: programs[0]._id },
+    // BSCS-DS courses (2022-2023 Curriculum)
+    // First Year, First Semester
+    { name: safeEncrypt('Discrete Structure 1'), code: safeEncrypt('BSCS 1101'), program_id: programs[0]._id },
+    { name: safeEncrypt('Introduction to Computing - Lec'), code: safeEncrypt('BSCSIT 1101'), program_id: programs[0]._id },
+    { name: safeEncrypt('Introduction to Computing - Lab'), code: safeEncrypt('BSCSIT 1101L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Fundamentals of Programming - Lec'), code: safeEncrypt('BSCSIT 1102'), program_id: programs[0]._id },
+    { name: safeEncrypt('Fundamentals of Programming - Lab'), code: safeEncrypt('BSCSIT 1102L'), program_id: programs[0]._id },
+    // First Year, Second Semester
+    { name: safeEncrypt('Discrete Structure 2'), code: safeEncrypt('BSCS 1202'), program_id: programs[0]._id },
+    { name: safeEncrypt('Programming 2 - Lec'), code: safeEncrypt('BSCSIT 1203'), program_id: programs[0]._id },
+    { name: safeEncrypt('Programming 2 - Lab'), code: safeEncrypt('BSCSIT 1203L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Linear Algebra'), code: safeEncrypt('MATH 1100'), program_id: programs[0]._id },
+    // Second Year, First Semester
+    { name: safeEncrypt('Computer Organization with Assembly Language - Lec'), code: safeEncrypt('BSCS 2103'), program_id: programs[0]._id },
+    { name: safeEncrypt('Computer Organization with Assembly Language - Lab'), code: safeEncrypt('BSCS 2103L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Structures - Lec'), code: safeEncrypt('BSCSIT 2104'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Structures - Lab'), code: safeEncrypt('BSCSIT 2104L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Networking and Communication 1 - Lec'), code: safeEncrypt('BSCSIT 2105'), program_id: programs[0]._id },
+    { name: safeEncrypt('Networking and Communication 1 - Lab'), code: safeEncrypt('BSCSIT 2105L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Social and Professional Issues'), code: safeEncrypt('BSCSIT 2106'), program_id: programs[0]._id },
+    // Second Year, Second Semester
+    { name: safeEncrypt('Calculus'), code: safeEncrypt('BSCS 2204'), program_id: programs[0]._id },
+    { name: safeEncrypt('Introduction to Data Science'), code: safeEncrypt('BSCS 2205'), program_id: programs[0]._id },
+    { name: safeEncrypt('Design, Analysis and Algorithm Technologies - Lec'), code: safeEncrypt('BSCS 2206'), program_id: programs[0]._id },
+    { name: safeEncrypt('Design, Analysis and Algorithm Technologies - Lab'), code: safeEncrypt('BSCS 2206L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Human Computer Interaction 1 - Lec'), code: safeEncrypt('BSCS 2207'), program_id: programs[0]._id },
+    { name: safeEncrypt('Human Computer Interaction 1 - Lab'), code: safeEncrypt('BSCS 2207L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Database System 1 (Information Management) - Lec'), code: safeEncrypt('BSCSIT 2207'), program_id: programs[0]._id },
+    { name: safeEncrypt('Database System 1 (Information Management) - Lab'), code: safeEncrypt('BSCSIT 2207L'), program_id: programs[0]._id },
+    // Third Year, First Semester
+    { name: safeEncrypt('Automata Theory and Formal Languages'), code: safeEncrypt('BSCS 3108'), program_id: programs[0]._id },
+    { name: safeEncrypt('Operating System Configuration and Use - Lec'), code: safeEncrypt('BSCS 3109'), program_id: programs[0]._id },
+    { name: safeEncrypt('Operating System Configuration and Use - Lab'), code: safeEncrypt('BSCS 3109L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Information Assurance and Security - Lec'), code: safeEncrypt('BSCS 3110'), program_id: programs[0]._id },
+    { name: safeEncrypt('Information Assurance and Security - Lab'), code: safeEncrypt('BSCS 3110L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Mining - Lec'), code: safeEncrypt('BSCS 3111'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Mining - Lab'), code: safeEncrypt('BSCS 3111L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Artificial Intelligence'), code: safeEncrypt('BSCS 3112'), program_id: programs[0]._id },
+    // Third Year, Second Semester
+    { name: safeEncrypt('Software Engineering - Lec'), code: safeEncrypt('BSCS 3213'), program_id: programs[0]._id },
+    { name: safeEncrypt('Software Engineering - Lab'), code: safeEncrypt('BSCS 3213L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Visualization - Lec'), code: safeEncrypt('BSCS 3214'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Visualization - Lab'), code: safeEncrypt('BSCS 3214L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Parallel and Distributed Computing'), code: safeEncrypt('BSCS 3215'), program_id: programs[0]._id },
+    { name: safeEncrypt('Business Intelligence'), code: safeEncrypt('BSCS 3216'), program_id: programs[0]._id },
+    { name: safeEncrypt('Human Computer Interaction 2 - Lec'), code: safeEncrypt('BSCS 3217'), program_id: programs[0]._id },
+    { name: safeEncrypt('Human Computer Interaction 2 - Lab'), code: safeEncrypt('BSCS 3217L'), program_id: programs[0]._id },
+    // Third Year, Summer
+    { name: safeEncrypt('Thesis 1'), code: safeEncrypt('BSCS 3318'), program_id: programs[0]._id },
+    { name: safeEncrypt('System Fundamentals - Lec'), code: safeEncrypt('BSCS 3319'), program_id: programs[0]._id },
+    { name: safeEncrypt('System Fundamentals - Lab'), code: safeEncrypt('BSCS 3319L'), program_id: programs[0]._id },
+    // Fourth Year, First Semester
+    { name: safeEncrypt('Thesis 2'), code: safeEncrypt('BSCS 4120'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Warehousing - Lec'), code: safeEncrypt('BSCS 4121'), program_id: programs[0]._id },
+    { name: safeEncrypt('Data Warehousing - Lab'), code: safeEncrypt('BSCS 4121L'), program_id: programs[0]._id },
+    { name: safeEncrypt('Web Systems and Technologies - Lec'), code: safeEncrypt('BSCS 4122'), program_id: programs[0]._id },
+    { name: safeEncrypt('Web Systems and Technologies - Lab'), code: safeEncrypt('BSCS 4122L'), program_id: programs[0]._id },
+    // Fourth Year, Second Semester
+    { name: safeEncrypt('Practicum'), code: safeEncrypt('BSCS 4223'), program_id: programs[0]._id },
+    { name: safeEncrypt('Application Development and Emerging Technologies'), code: safeEncrypt('BSCSIT 4208'), program_id: programs[0]._id },
     // BSIT-GD courses (2022-2023 Curriculum)
     // First Year, First Semester
     { name: safeEncrypt('Introduction to Computing - Lec'), code: safeEncrypt('BSCSIT 1101'), program_id: programs[1]._id },
