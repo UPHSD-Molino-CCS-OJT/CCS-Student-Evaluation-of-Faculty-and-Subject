@@ -1,8 +1,7 @@
 import { Router, Response } from 'express';
 import Student from '../../models/Student';
 import Enrollment from '../../models/Enrollment';
-import Course from '../../models/Course';
-import Teacher from '../../models/Teacher';
+import Section from '../../models/Section';
 import { IRequest } from '../../types';
 import { safeDecrypt, safeEncrypt } from '../../utils/encryption-helpers';
 
@@ -103,7 +102,7 @@ router.get('/', async (req: IRequest, res: Response): Promise<void> => {
     }
 });
 
-// Get available courses and teachers for enrollment form
+// Get available sections grouped by course (for enrollment form)
 router.get('/available', async (req: IRequest, res: Response): Promise<void> => {
     try {
         if (!req.session.studentId) {
@@ -117,38 +116,62 @@ router.get('/available', async (req: IRequest, res: Response): Promise<void> => 
             return;
         }
 
-        // Courses filtered by student's program
-        const coursesRaw = await Course.find({ program_id: student.program_id }).populate('program_id');
-        const courses = coursesRaw.map(c => {
-            const obj = c.toObject();
-            return {
-                _id: obj._id,
-                name: safeDecrypt(obj.name),
-                code: safeDecrypt(obj.code),
-                program_id: obj.program_id
-            };
-        }).sort((a, b) => a.name.localeCompare(b.name));
+        // Fetch active sections whose course belongs to the student's program
+        const sectionsRaw = await Section.find({ is_active: true })
+            .populate({ path: 'course_id', populate: { path: 'program_id' } })
+            .populate('teacher_id')
+            .lean();
 
-        // All teachers
-        const teachersRaw = await Teacher.find();
-        const teachers = teachersRaw.map(t => {
-            const obj = t.toObject();
-            return {
-                _id: obj._id,
-                full_name: safeDecrypt(obj.full_name),
-                employee_id: safeDecrypt(obj.employee_id),
-                department: safeDecrypt(obj.department)
-            };
-        }).filter(t => t.full_name).sort((a, b) => a.full_name.localeCompare(b.full_name));
+        // Filter by student program and decrypt
+        const sections = sectionsRaw
+            .filter(s => {
+                const course = s.course_id as any;
+                if (!course || !course.program_id) return false;
+                return course.program_id._id.toString() === student.program_id.toString();
+            })
+            .map(s => {
+                const course = s.course_id as any;
+                const teacher = s.teacher_id as any;
+                return {
+                    _id: s._id,
+                    section_code: safeDecrypt(s.section_code),
+                    school_year: safeDecrypt(s.school_year),
+                    semester: safeDecrypt(s.semester),
+                    course: {
+                        _id: course._id,
+                        name: safeDecrypt(course.name),
+                        code: safeDecrypt(course.code)
+                    },
+                    teacher: {
+                        _id: teacher._id,
+                        full_name: safeDecrypt(teacher.full_name),
+                        department: safeDecrypt(teacher.department)
+                    }
+                };
+            });
 
-        res.json({ success: true, courses, teachers });
+        // Group by course id
+        const grouped: Record<string, { course: any; sections: any[] }> = {};
+        for (const s of sections) {
+            const key = s.course._id.toString();
+            if (!grouped[key]) {
+                grouped[key] = { course: s.course, sections: [] };
+            }
+            grouped[key].sections.push(s);
+        }
+
+        const result = Object.values(grouped).sort((a, b) =>
+            a.course.name.localeCompare(b.course.name)
+        );
+
+        res.json({ success: true, courseGroups: result });
     } catch (error) {
-        console.error('Error loading available courses:', error);
-        res.status(500).json({ success: false, message: 'Error loading available courses' });
+        console.error('Error loading available sections:', error);
+        res.status(500).json({ success: false, message: 'Error loading available sections' });
     }
 });
 
-// Enroll student in a course
+// Enroll student using a pre-configured section
 router.post('/enroll', async (req: IRequest, res: Response): Promise<void> => {
     try {
         if (!req.session.studentId) {
@@ -156,30 +179,43 @@ router.post('/enroll', async (req: IRequest, res: Response): Promise<void> => {
             return;
         }
 
-        const { course_id, teacher_id, section_code, school_year, semester } = req.body;
+        const { section_id } = req.body;
 
-        if (!course_id || !teacher_id || !section_code || !school_year || !semester) {
-            res.status(400).json({ success: false, message: 'All fields are required' });
+        if (!section_id) {
+            res.status(400).json({ success: false, message: 'section_id is required' });
             return;
         }
 
-        // Check for duplicate enrollment in the same course & semester
-        const existingEnrollments = await Enrollment.find({ student_id: req.session.studentId, course_id });
-        for (const e of existingEnrollments) {
-            const eYear = safeDecrypt(e.school_year);
-            const eSem = safeDecrypt(e.semester);
-            if (eYear === school_year && eSem === semester) {
-                res.status(409).json({ success: false, message: 'You are already enrolled in this course for the selected semester' });
+        const section = await Section.findById(section_id);
+        if (!section || !section.is_active) {
+            res.status(404).json({ success: false, message: 'Section not found or inactive' });
+            return;
+        }
+
+        const schoolYear = safeDecrypt(section.school_year);
+        const semester = safeDecrypt(section.semester);
+
+        // Prevent duplicate enrollment in same course + semester
+        const existing = await Enrollment.find({
+            student_id: req.session.studentId,
+            course_id: section.course_id
+        });
+        for (const e of existing) {
+            if (safeDecrypt(e.school_year) === schoolYear && safeDecrypt(e.semester) === semester) {
+                res.status(409).json({
+                    success: false,
+                    message: 'You are already enrolled in this course for the selected semester'
+                });
                 return;
             }
         }
 
         const enrollment = await Enrollment.create({
             student_id: req.session.studentId,
-            course_id,
-            teacher_id,
-            section_code: safeEncrypt(section_code),
-            school_year: safeEncrypt(school_year),
+            course_id: section.course_id,
+            teacher_id: section.teacher_id,
+            section_code: safeEncrypt(safeDecrypt(section.section_code)),
+            school_year: safeEncrypt(schoolYear),
             semester: safeEncrypt(semester)
         });
 
