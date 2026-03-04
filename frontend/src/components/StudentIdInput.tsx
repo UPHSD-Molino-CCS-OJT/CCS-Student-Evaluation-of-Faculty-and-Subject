@@ -104,7 +104,7 @@ const StudentIdInput: React.FC<StudentIdInputProps> = ({ value, onChange, disabl
 
   // Responsive cell classes: compact on xs, larger on sm+
   const baseCell =
-    'w-7 h-10 text-base sm:w-10 sm:h-12 sm:text-lg ' +
+    'w-8 h-10 text-base sm:w-9 sm:h-12 sm:text-lg ' +
     'text-center font-mono border-2 rounded-lg focus:outline-none transition-colors'
   const normalCell = hasError
     ? `${baseCell} border-red-400 bg-red-50 focus:border-red-600`
