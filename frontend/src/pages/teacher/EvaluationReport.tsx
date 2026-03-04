@@ -515,12 +515,33 @@ function convertNode(node: Element, imageMap: Record<string, string>): string {
 // 1 inch = 914400 EMU = 96 CSS-px (at 96 dpi)
 const EMU_PX = 96 / 914400
 
+// Parse a VML / CSS length string ("469.35pt", "6.5in", "100%", "200px") → px number (0 = unknown / %)
+function vmlLenToPx(s: string): number {
+  if (!s) return 0
+  const m = s.match(/([\d.]+)\s*(pt|in|cm|mm|px|%)?/i)
+  if (!m) return 0
+  const v = parseFloat(m[1])
+  switch ((m[2] || 'pt').toLowerCase()) {
+    case 'pt' : return v * 96 / 72
+    case 'in' : return v * 96
+    case 'cm' : return v * 96 / 2.54
+    case 'mm' : return v * 96 / 25.4
+    case 'px' : return v
+    default   : return 0  // % — let CSS handle it
+  }
+}
+
 function processDrawing(node: Element, imageMap: Record<string, string>): string {
   const allEls = node.getElementsByTagName('*')
   let rId = ''
   let cx = 0, cy = 0
   let posHOff = 0, posVOff = 0
   let isAnchor = false
+
+  // DrawingML line / connector shape detection
+  let isLineShape = false
+  let lineColorHex = '000000'
+  let lineWidthEmu = 12700  // 1 pt default
 
   for (let i = 0; i < allEls.length; i++) {
     const el = allEls[i]
@@ -542,6 +563,40 @@ function processDrawing(node: Element, imageMap: Record<string, string>): string
         el.getAttribute('r:embed') ||
         ''
     }
+    // Detect preset geometry that represents a line / straight connector
+    if (ln === 'prstGeom') {
+      const prst = el.getAttribute('prst') || ''
+      if (/^(line|straightConnector\d*|bentConnector\d*|curvedConnector\d*)$/i.test(prst)) isLineShape = true
+    }
+    // cxnSp = connection shape (always a line-like element)
+    if (ln === 'cxnSp') isLineShape = true
+    // Outline width (EMUs; 12700 EMU = 1 pt)
+    if (ln === 'ln') {
+      const w = parseInt(el.getAttribute('w') || '0', 10)
+      if (w) lineWidthEmu = w
+    }
+    // Solid fill colour on the outline
+    if (ln === 'srgbClr') {
+      const val = el.getAttribute('val') || ''
+      if (val && el.parentElement?.localName === 'solidFill') lineColorHex = val
+    }
+    if (ln === 'sysClr') {
+      const lastClr = el.getAttribute('lastClr') || ''
+      if (lastClr && el.parentElement?.localName === 'solidFill') lineColorHex = lastClr
+    }
+  }
+
+  // ── Render a DrawingML line shape ──────────────────────────────────────
+  if (isLineShape && !rId) {
+    const widthPx = cx ? Math.round(cx * EMU_PX) : 0
+    const strokePx = Math.max(1, Math.round(lineWidthEmu / 12700))
+    const wStyle   = widthPx ? `width:${widthPx}px;` : 'width:100%;'
+    if (isAnchor && (posHOff || posVOff)) {
+      const left = Math.round(posHOff * EMU_PX)
+      const top  = Math.round(posVOff * EMU_PX)
+      return `<div style="position:absolute;left:${left}px;top:${top}px;${wStyle}border-top:${strokePx}px solid #${lineColorHex};"></div>`
+    }
+    return `<div style="display:block;${wStyle}border-top:${strokePx}px solid #${lineColorHex};margin:2px 0;"></div>`
   }
 
   if (!rId || !imageMap[rId]) return ''
@@ -563,10 +618,76 @@ function processPict(node: Element, imageMap: Record<string, string>): string {
   const allEls = node.getElementsByTagName('*')
   let shapeStyle = ''
   let shapeLeft = '', shapeTop = '', shapePos = ''
+
+  // ── VML line shapes (v:line, or v:shape acting as a line) ─────────────
   for (let i = 0; i < allEls.length; i++) {
-    const ln = allEls[i].localName
-    if (ln === 'shape' || ln === 'rect' || ln === 'oval' || ln === 'line') {
-      shapeStyle = allEls[i].getAttribute('style') || ''
+    const el  = allEls[i]
+    const ln  = el.localName
+
+    if (ln === 'line') {
+      // v:line from="0,Ypt" to="Xpt,Ypt"
+      const toAttr   = el.getAttribute('to')   || ''
+      const fromAttr = el.getAttribute('from') || ''
+      // Horizontal extent = to.x − from.x
+      const toX   = vmlLenToPx((toAttr.split(',')[0]   || '').trim())
+      const fromX = vmlLenToPx((fromAttr.split(',')[0] || '').trim())
+      const widthPx = Math.max(0, toX - fromX)
+
+      // Stroke colour & weight
+      let strokeColor = el.getAttribute('strokecolor') || '#000000'
+      if (!strokeColor.startsWith('#')) strokeColor = `#${strokeColor}`
+      const strokeWeight = el.getAttribute('strokeweight') || '1pt'
+      // Also check child v:stroke
+      for (let j = 0; j < allEls.length; j++) {
+        if (allEls[j].localName === 'stroke') {
+          const c = allEls[j].getAttribute('color'); if (c) strokeColor = c.startsWith('#') ? c : `#${c}`
+          const w = allEls[j].getAttribute('weight'); if (w) { /* override weight below */ }
+        }
+      }
+      const strokePx = Math.max(1, Math.round(vmlLenToPx(strokeWeight) || 1))
+
+      // Position flags
+      const elStyle  = el.getAttribute('style') || ''
+      const mPos     = elStyle.match(/position\s*:\s*([^;]+)/i)
+      const mLeft    = elStyle.match(/left\s*:\s*([^;]+)/i)
+      const mTop     = elStyle.match(/top\s*:\s*([^;]+)/i)
+      const isAbs    = mPos && mPos[1].trim() === 'absolute'
+      const leftVal  = mLeft ? vmlLenToPx(mLeft[1].trim()) : 0
+      const topVal   = mTop  ? vmlLenToPx(mTop[1].trim())  : 0
+
+      const wStyle = widthPx ? `width:${widthPx}px;` : 'width:100%;'
+      if (isAbs && (leftVal || topVal)) {
+        return `<div style="position:absolute;left:${leftVal}px;top:${topVal}px;${wStyle}border-top:${strokePx}px solid ${strokeColor};"></div>`
+      }
+      return `<div style="display:block;${wStyle}border-top:${strokePx}px solid ${strokeColor};margin:2px 0;"></div>`
+    }
+
+    // v:shape that acts as a line: type="#_x0000_t32" or height 0 in style
+    if (ln === 'shape') {
+      const typeAttr = el.getAttribute('type') || ''
+      const sStyle   = el.getAttribute('style') || ''
+      const mH       = sStyle.match(/height\s*:\s*([\d.]+)(pt|px|in|cm|mm)?/i)
+      const heightPx = mH ? vmlLenToPx(`${mH[1]}${mH[2] || 'pt'}`) : -1
+      const isLineTy = typeAttr.includes('t32') || typeAttr.includes('line')
+      if (isLineTy || heightPx === 0) {
+        const mW2  = sStyle.match(/width\s*:\s*([^;]+)/i)
+        const widthPx2 = mW2 ? vmlLenToPx(mW2[1].trim()) : 0
+        let sColor = el.getAttribute('strokecolor') || '#000000'
+        if (!sColor.startsWith('#')) sColor = `#${sColor}`
+        const sWeight = el.getAttribute('strokeweight') || '1pt'
+        const sPx = Math.max(1, Math.round(vmlLenToPx(sWeight) || 1))
+        const wStyle2 = widthPx2 ? `width:${widthPx2}px;` : 'width:100%;'
+        return `<div style="display:block;${wStyle2}border-top:${sPx}px solid ${sColor};margin:2px 0;"></div>`
+      }
+    }
+  }
+
+  // ── Image shapes ─────────────────────────────────────────────────────
+  for (let i = 0; i < allEls.length; i++) {
+    const el = allEls[i]
+    const ln = el.localName
+    if (ln === 'shape' || ln === 'rect' || ln === 'oval') {
+      shapeStyle = el.getAttribute('style') || ''
       const mPos  = shapeStyle.match(/position\s*:\s*([^;]+)/i)
       const mLeft = shapeStyle.match(/left\s*:\s*([^;]+)/i)
       const mTop  = shapeStyle.match(/top\s*:\s*([^;]+)/i)
@@ -1083,11 +1204,12 @@ const EvaluationReport: React.FC = () => {
           <div style={headerSectionStyle}>
             {useCustomHeader
               ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
-              : <FallbackHeader />
+              : <>
+                  <FallbackHeader />
+                  <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
+                </>
             }
           </div>
-
-          <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
 
           {/* ── Main content — starts at marginTopMm from page top ── */}
           <div className="report-page-body" style={bodySectionStyle}>
@@ -1179,7 +1301,6 @@ const EvaluationReport: React.FC = () => {
           {/* Footer (bottom of page 1) */}
           {useCustomFooter && (
             <div className="report-page-footer" style={footerSectionStyle}>
-              <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
               <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
             </div>
           )}
@@ -1197,11 +1318,12 @@ const EvaluationReport: React.FC = () => {
           <div style={headerSectionStyle}>
             {useCustomHeader
               ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
-              : <FallbackHeader />
+              : <>
+                  <FallbackHeader />
+                  <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
+                </>
             }
           </div>
-
-          <hr style={{ borderTop: '1.5px solid #222', margin: '4px 0 10px' }} />
 
           {/* ── Main content — starts at marginTopMm from page top ── */}
           <div className="report-page-body" style={bodySectionStyle}>
@@ -1263,7 +1385,6 @@ const EvaluationReport: React.FC = () => {
           {/* Footer (bottom of page 2) */}
           {useCustomFooter && (
             <div className="report-page-footer" style={footerSectionStyle}>
-              <hr style={{ borderTop: '1px solid #bbb', margin: '10px 0 4px' }} />
               <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
             </div>
           )}
