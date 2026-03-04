@@ -273,7 +273,30 @@ function processPict(node: Element, imageMap: Record<string, string>): string {
 const IMAGE_EXTS = ['png','jpg','jpeg','gif','bmp','webp','svg','emf','wmf']
 const MIME: Record<string,string> = { png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',bmp:'image/bmp',webp:'image/webp',svg:'image/svg+xml',emf:'image/x-emf',wmf:'image/x-wmf' }
 
-async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; footerHtml: string }> {
+// 1 twip = 1/1440 inch; rounded to 1 decimal mm
+const TWIP_MM = 25.4 / 1440
+const twipToMm = (v: number) => Math.round(v * TWIP_MM * 10) / 10
+
+function readWVal(el: Element, attr: string): number {
+  const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+  const raw =
+    el.getAttributeNS(WNS, attr) ||
+    el.getAttribute(`w:${attr}`) ||
+    el.getAttribute(attr) ||
+    '0'
+  return parseInt(raw, 10) || 0
+}
+
+interface DocxPageLayout {
+  pageWidthMm:   number
+  pageHeightMm:  number
+  marginTopMm:   number
+  marginRightMm: number
+  marginBottomMm:number
+  marginLeftMm:  number
+}
+
+async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; footerHtml: string } & DocxPageLayout> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer())
 
   // Extract media as base64 data URLs
@@ -328,7 +351,36 @@ async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; foot
     const p = Object.keys(zip.files).filter(p=>/^word\/footer\d+\.xml$/i.test(p)).sort()[0]
     if (p) { const fn=p.split('/').pop()!; footerHtml=await partToHtml(p,`word/_rels/${fn}.rels`) }
   }
-  return { headerHtml, footerHtml }
+  // ── Page layout from document.xml ──────────────────────────────────────
+  let pageWidthMm = 0, pageHeightMm = 0
+  let marginTopMm = 0, marginRightMm = 0, marginBottomMm = 0, marginLeftMm = 0
+  const docFile = zip.file('word/document.xml')
+  if (docFile) {
+    const docDom = new DOMParser().parseFromString(await docFile.async('text'), 'application/xml')
+    const allDocEls = docDom.getElementsByTagName('*')
+    for (let i = 0; i < allDocEls.length; i++) {
+      const ln = allDocEls[i].localName
+      if (ln === 'pgSz') {
+        const w = readWVal(allDocEls[i], 'w')
+        const h = readWVal(allDocEls[i], 'h')
+        if (w) pageWidthMm  = twipToMm(w)
+        if (h) pageHeightMm = twipToMm(h)
+      }
+      if (ln === 'pgMar') {
+        const t = readWVal(allDocEls[i], 'top')
+        const r = readWVal(allDocEls[i], 'right')
+        const b = readWVal(allDocEls[i], 'bottom')
+        const l = readWVal(allDocEls[i], 'left')
+        if (t) marginTopMm    = twipToMm(t)
+        if (r) marginRightMm  = twipToMm(r)
+        if (b) marginBottomMm = twipToMm(b)
+        if (l) marginLeftMm   = twipToMm(l)
+        break // first sectPr wins
+      }
+    }
+  }
+
+  return { headerHtml, footerHtml, pageWidthMm, pageHeightMm, marginTopMm, marginRightMm, marginBottomMm, marginLeftMm }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,6 +410,7 @@ const FallbackHeader: React.FC = () => (
 const STORAGE_HEADER = 'evalReport_headerHtml'
 const STORAGE_FOOTER = 'evalReport_footerHtml'
 const STORAGE_FNAME  = 'evalReport_docxName'
+const STORAGE_PAGE   = 'evalReport_pageLayout'
 
 const EvaluationReport: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>()
@@ -371,6 +424,10 @@ const EvaluationReport: React.FC = () => {
   const [headerHtml, setHeaderHtml] = useState<string>(() => localStorage.getItem(STORAGE_HEADER) ?? '')
   const [footerHtml, setFooterHtml] = useState<string>(() => localStorage.getItem(STORAGE_FOOTER) ?? '')
   const [docxName, setDocxName]     = useState<string>(() => localStorage.getItem(STORAGE_FNAME) ?? '')
+  const [pageLayout, setPageLayout] = useState<DocxPageLayout>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_PAGE) ?? 'null') ?? { pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 } }
+    catch { return { pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 } }
+  })
   const [docxParsing, setDocxParsing] = useState(false)
   const [docxError, setDocxError]     = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -399,11 +456,12 @@ const EvaluationReport: React.FC = () => {
     if (!file.name.toLowerCase().endsWith('.docx')) { setDocxError('Please upload a .docx file.'); return }
     setDocxParsing(true); setDocxError('')
     try {
-      const { headerHtml: h, footerHtml: f } = await parseDocxTemplate(file)
-      setHeaderHtml(h); setFooterHtml(f); setDocxName(file.name)
+      const { headerHtml: h, footerHtml: f, ...layout } = await parseDocxTemplate(file)
+      setHeaderHtml(h); setFooterHtml(f); setDocxName(file.name); setPageLayout(layout)
       localStorage.setItem(STORAGE_HEADER, h)
       localStorage.setItem(STORAGE_FOOTER, f)
       localStorage.setItem(STORAGE_FNAME, file.name)
+      localStorage.setItem(STORAGE_PAGE, JSON.stringify(layout))
     } catch (err) {
       console.error('Failed to parse .docx:', err)
       setDocxError('Failed to parse the Word document. Make sure it is a valid .docx file.')
@@ -412,9 +470,11 @@ const EvaluationReport: React.FC = () => {
 
   const clearTemplate = () => {
     setHeaderHtml(''); setFooterHtml(''); setDocxName('')
+    setPageLayout({ pageWidthMm:0, pageHeightMm:0, marginTopMm:0, marginRightMm:0, marginBottomMm:0, marginLeftMm:0 })
     localStorage.removeItem(STORAGE_HEADER)
     localStorage.removeItem(STORAGE_FOOTER)
     localStorage.removeItem(STORAGE_FNAME)
+    localStorage.removeItem(STORAGE_PAGE)
   }
 
   const handlePrint = () => window.print()
@@ -457,6 +517,16 @@ const EvaluationReport: React.FC = () => {
   const useCustomHeader = headerHtml.trim().length > 0
   const useCustomFooter = footerHtml.trim().length > 0
 
+  const hasPageLayout = pageLayout.pageWidthMm > 0 && pageLayout.pageHeightMm > 0
+  const pageLayoutStyle: React.CSSProperties = hasPageLayout ? {
+    width:     `${pageLayout.pageWidthMm}mm`,
+    minHeight: `${pageLayout.pageHeightMm}mm`,
+    ...(pageLayout.marginTopMm    ? { paddingTop:    `${pageLayout.marginTopMm}mm`    } : {}),
+    ...(pageLayout.marginRightMm  ? { paddingRight:  `${pageLayout.marginRightMm}mm`  } : {}),
+    ...(pageLayout.marginBottomMm ? { paddingBottom: `${pageLayout.marginBottomMm}mm` } : {}),
+    ...(pageLayout.marginLeftMm   ? { paddingLeft:   `${pageLayout.marginLeftMm}mm`   } : {}),
+  } : {}
+
   return (
     <>
       {/* ── Print-only global styles ─────────────────────────────────── */}
@@ -468,20 +538,17 @@ const EvaluationReport: React.FC = () => {
             box-shadow: none !important;
             border: none !important;
             margin: 0 !important;
-            padding: 18mm 16mm !important;
-            width: 210mm !important;
-            min-height: 297mm;
+            ${!hasPageLayout ? 'padding: 18mm 16mm !important; width: 210mm !important; min-height: 297mm;' : ''}
           }
           .page-break { page-break-before: always; }
           input { border: none !important; outline: none !important; background: transparent !important; }
+          ${hasPageLayout ? `@page { size: ${pageLayout.pageWidthMm}mm ${pageLayout.pageHeightMm}mm; margin: ${pageLayout.marginTopMm || 18}mm ${pageLayout.marginRightMm || 16}mm ${pageLayout.marginBottomMm || 18}mm ${pageLayout.marginLeftMm || 16}mm; }` : '@page { size: A4 portrait; }'}
         }
         @media screen {
           .report-page {
             background: white;
-            width: 210mm;
-            min-height: 297mm;
+            ${!hasPageLayout ? 'width: 210mm; min-height: 297mm; padding: 18mm 16mm;' : ''}
             margin: 0 auto;
-            padding: 18mm 16mm;
             box-shadow: 0 4px 24px rgba(0,0,0,0.12);
           }
         }
@@ -547,7 +614,7 @@ const EvaluationReport: React.FC = () => {
 
         {/* ── REPORT DOCUMENT ─────────────────────────────────────────── */}
         <div className="pb-16 px-4 pt-2">
-          <div className="report-page">
+          <div className="report-page" style={pageLayoutStyle}>
             {/* ── Header (custom from .docx or built-in fallback) ────── */}
             {useCustomHeader
               ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
