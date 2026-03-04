@@ -183,11 +183,16 @@ const TeacherCourseDetail: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                {data.course.course_code} - {data.course.course_name}
-              </h1>
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-800">
+                  {data.course.course_code} - {data.course.course_name}
+                </h1>
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 border border-green-200">
+                  {data.course.section_code}
+                </span>
+              </div>
               <p className="text-gray-600 mb-4">
-                Section: {data.course.section_code} • {data.course.school_year} • {data.course.semester}
+                {data.course.school_year} • {data.course.semester}
               </p>
               
               {/* Stats Row */}

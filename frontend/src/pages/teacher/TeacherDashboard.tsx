@@ -189,11 +189,16 @@ const TeacherDashboard: React.FC = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-800 mb-1">
-                        {course.course_code} - {course.course_name}
-                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold text-gray-800">
+                          {course.course_code} - {course.course_name}
+                        </h3>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                          {course.section_code}
+                        </span>
+                      </div>
                       <p className="text-gray-600 text-sm mb-3">
-                        Section: {course.section_code} • {course.school_year} • {course.semester}
+                        {course.school_year} • {course.semester}
                       </p>
                       
                       {/* Stats Row */}
