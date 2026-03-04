@@ -15,7 +15,7 @@ const Navbar: React.FC<NavbarProps> = ({ showAdminButton = true }) => {
           <div className="flex items-center space-x-3">
             <GraduationCap size={32} />
             <div>
-              <h1 className="text-xl font-bold">UPHSD</h1>
+              <h1 className="text-xl font-bold">UPHSD Molino CCS</h1>
               <p className="text-xs text-blue-200">Student Faculty Evaluation</p>
             </div>
           </div>
