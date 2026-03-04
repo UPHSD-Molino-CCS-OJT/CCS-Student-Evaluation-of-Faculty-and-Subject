@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, Menu, X, LogOut, TrendingUp, FileText, Book, Presentation, Shield, BookOpen, Calendar } from 'lucide-react'
+import { GraduationCap, Menu, X, LogOut, TrendingUp, FileText, Book, Presentation, Shield, BookOpen, Calendar, Layers } from 'lucide-react'
 
 interface NavLinkProps {
   to: string;
@@ -58,6 +58,7 @@ const AdminNavbar: React.FC = () => {
             <NavLink to="/admin/programs" icon="fa-book" text="Programs" />
             <NavLink to="/admin/teachers" icon="fa-chalkboard-teacher" text="Teachers" />
             <NavLink to="/admin/courses" icon="fa-graduation-cap" text="Courses" />
+            <NavLink to="/admin/sections" icon="fa-layers" text="Sections" />
             <NavLink to="/admin/students" icon="fa-user-graduate" text="Students" />
             <NavLink to="/admin/privacy-audit" icon="fa-shield-alt" text="Privacy" />
             <button
@@ -79,6 +80,7 @@ const AdminNavbar: React.FC = () => {
             <MobileNavLink to="/admin/programs" icon="fa-book" text="Programs" />
             <MobileNavLink to="/admin/teachers" icon="fa-chalkboard-teacher" text="Teachers" />
             <MobileNavLink to="/admin/courses" icon="fa-graduation-cap" text="Courses" />
+            <MobileNavLink to="/admin/sections" icon="fa-layers" text="Sections" />
             <MobileNavLink to="/admin/students" icon="fa-user-graduate" text="Students" />
             <MobileNavLink to="/admin/privacy-audit" icon="fa-shield-alt" text="Privacy Audit" />
             <button
@@ -103,6 +105,7 @@ const NavLink: React.FC<NavLinkProps> = ({ to, icon, text }) => {
     'fa-book': <Book size={20} />,
     'fa-chalkboard-teacher': <Presentation size={20} />,
     'fa-graduation-cap': <BookOpen size={20} />,
+    'fa-layers': <Layers size={20} />,
     'fa-user-graduate': <GraduationCap size={20} />,
     'fa-shield-alt': <Shield size={20} />
   }
@@ -125,8 +128,7 @@ const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, icon, text }) => {
     'fa-file-alt': <FileText size={20} />,
     'fa-book': <Book size={20} />,
     'fa-chalkboard-teacher': <Presentation size={20} />,
-    'fa-graduation-cap': <BookOpen size={20} />,
-    'fa-user-graduate': <GraduationCap size={20} />,
+    'fa-graduation-cap': <BookOpen size={20} />,    'fa-layers': <Layers size={20} />,    'fa-user-graduate': <GraduationCap size={20} />,
     'fa-shield-alt': <Shield size={20} />
   }
   
