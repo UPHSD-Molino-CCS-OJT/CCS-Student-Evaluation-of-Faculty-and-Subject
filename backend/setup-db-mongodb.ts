@@ -559,15 +559,29 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const enrollments = await Enrollment.create(enrollmentsData);
   console.log(`✓ Created ${enrollments.length} enrollments`);
 
-  // Create default evaluation period
-  console.log('📅 Creating default evaluation period...');
-  await EvaluationPeriod.create({
-    academic_year: '2025-2026',
-    semester: '1st Semester',
-    is_active: true,
-    description: 'First semester evaluation period for AY 2025-2026'
-  });
-  console.log('✓ Evaluation period created (2025-2026, 1st Semester - Active)');
+  // Create evaluation periods for all three terms
+  console.log('📅 Creating evaluation periods...');
+  await EvaluationPeriod.create([
+    {
+      academic_year: '2025-2026',
+      semester: '1st Semester',
+      is_active: true,
+      description: 'First semester evaluation period for AY 2025-2026'
+    },
+    {
+      academic_year: '2025-2026',
+      semester: '2nd Semester',
+      is_active: false,
+      description: 'Second semester evaluation period for AY 2025-2026'
+    },
+    {
+      academic_year: '2025-2026',
+      semester: 'Summer',
+      is_active: false,
+      description: 'Summer evaluation period for AY 2025-2026'
+    }
+  ]);
+  console.log('✓ Evaluation periods created (2025-2026: 1st Semester [Active], 2nd Semester, Summer)');
 
   // Summary
   console.log('\n✅ Database initialized successfully!');
@@ -579,7 +593,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log(`  • ${sections.length} sections (pre-configured for enrollment)`);
   console.log(`  • ${students.length} students`);
   console.log(`  • ${enrollments.length} enrollments`);
-  console.log(`  • 1 evaluation period (2025-2026, 1st Semester - Active)\n`);
+  console.log(`  • 3 evaluation periods (2025-2026: 1st Semester [Active], 2nd Semester, Summer)\n`);
 }
 
 // ==================== STANDALONE SCRIPT MODE ====================
