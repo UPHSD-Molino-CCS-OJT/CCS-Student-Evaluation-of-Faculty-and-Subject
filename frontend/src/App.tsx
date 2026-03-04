@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import StudentLogin from './pages/student/StudentLogin'
 import StudentSubjects from './pages/student/StudentSubjects'
 import StudentEvaluate from './pages/student/StudentEvaluate'
+import StudentEnroll from './pages/student/StudentEnroll'
 import StaffLogin from './pages/staff/StaffLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminEvaluations from './pages/admin/AdminEvaluations'
@@ -56,6 +57,14 @@ const App: React.FC = () => {
           element={
             <StudentProtectedRoute>
               <StudentEvaluate />
+            </StudentProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/student/enroll" 
+          element={
+            <StudentProtectedRoute>
+              <StudentEnroll />
             </StudentProtectedRoute>
           } 
         />
