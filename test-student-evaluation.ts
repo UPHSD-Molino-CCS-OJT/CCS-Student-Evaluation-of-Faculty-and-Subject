@@ -116,7 +116,7 @@ class StudentEvaluationAutomation {
   /**
    * Get list of unevaluated subjects
    */
-  async getUnevaluatedSubjects(): Promise<Array<{ enrollmentId: string; courseName: string; teacherName: string }>> {
+  async getUnevaluatedSubjects(): Promise<Array<{ enrollmentId: string; courseCode: string; courseName: string; teacherName: string; sectionCode: string }>> {
     if (!this.page) throw new Error('Browser not initialized');
 
     console.log('📚 Fetching unevaluated subjects...');
@@ -141,10 +141,20 @@ class StudentEvaluationAutomation {
           
           // Find parent card
           const card = link.closest('.bg-white.rounded-lg.shadow-md');
-          const courseName = card?.querySelector('h3')?.textContent?.trim() || 'Unknown Course';
-          const teacherName = card?.querySelector('.text-gray-600')?.textContent?.replace('Teacher:', '').trim() || 'Unknown Teacher';
 
-          return { enrollmentId, courseName, teacherName };
+          // Course code is in h3 inside blue header; course name is in .text-blue-100
+          const courseCode = card?.querySelector('h3')?.textContent?.trim() || 'Unknown Code';
+          const courseName = card?.querySelector('.text-blue-100')?.textContent?.trim() || courseCode;
+
+          // Instructor and Section labels are in .text-gray-500 paragraphs;
+          // their values are in the next sibling .font-semibold.text-gray-800 paragraphs
+          const boldParas = Array.from(card?.querySelectorAll('.font-semibold.text-gray-800') ?? []);
+          // boldParas[0] = Instructor name (with icon), boldParas[1] = Section code (with icon)
+          // textContent includes the icon's aria-label/text so trim carefully
+          const teacherName = boldParas[0]?.textContent?.trim() || 'Unknown Teacher';
+          const sectionCode = boldParas[1]?.textContent?.trim() || '';
+
+          return { enrollmentId, courseCode, courseName, teacherName, sectionCode };
         });
       });
 
@@ -324,11 +334,12 @@ class StudentEvaluationAutomation {
   /**
    * Evaluate a single subject
    */
-  async evaluateSubject(enrollmentId: string, courseName: string, teacherName: string): Promise<boolean> {
+  async evaluateSubject(enrollmentId: string, courseCode: string, courseName: string, teacherName: string, sectionCode: string): Promise<boolean> {
     if (!this.page) throw new Error('Browser not initialized');
 
-    console.log(`📊 Evaluating: ${courseName}`);
+    console.log(`📊 Evaluating: ${courseCode} — ${courseName}`);
     console.log(`   Teacher: ${teacherName}`);
+    console.log(`   Section: ${sectionCode || '(none)'}`);
     console.log(`   Enrollment ID: ${enrollmentId}`);
 
     try {
@@ -366,12 +377,12 @@ class StudentEvaluationAutomation {
 
       return true;
     } catch (error) {
-      console.error(`✗ Failed to evaluate ${courseName}:`, (error as Error).message);
+      console.error(`✗ Failed to evaluate ${courseCode} — ${courseName}:`, (error as Error).message);
       
       // Take screenshot on failure
       try {
         const timestamp = new Date().getTime();
-        const filename = `error-${courseName.replace(/[^a-z0-9]/gi, '_')}-${timestamp}.png`;
+        const filename = `error-${courseCode.replace(/[^a-z0-9]/gi, '_')}-${timestamp}.png`;
         await this.page.screenshot({ path: filename, fullPage: true });
         console.error(`  📸 Screenshot saved: ${filename}`);
       } catch {
@@ -420,8 +431,10 @@ class StudentEvaluationAutomation {
       for (const subject of subjects) {
         const success = await this.evaluateSubject(
           subject.enrollmentId,
+          subject.courseCode,
           subject.courseName,
-          subject.teacherName
+          subject.teacherName,
+          subject.sectionCode
         );
 
         if (success) {
@@ -505,7 +518,20 @@ function parseArgs(): Partial<EvaluationConfig> & { limit?: number } {
 }
 
 /**
- * Fetch students from the database via API
+ * Generate student number using the same formula as setup-db-mongodb.ts
+ * Format: XX-XXXX-XXX (e.g. 00-0000-000, 00-0000-001, ...)
+ */
+function makeStudentNumber(idx: number): string {
+  const third  = String(idx % 1000).padStart(3, '0');
+  const second = String(Math.floor(idx / 1000) % 10000).padStart(4, '0');
+  const first  = String(Math.floor(idx / 10000000) % 100).padStart(2, '0');
+  return `${first}-${second}-${third}`;
+}
+
+/**
+ * Fetch students from the database via API.
+ * The backend returns them sorted numerically starting from 00-0000-000.
+ * A limit can be passed to restrict how many students are tested.
  */
 async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Array<{ number: string }>> {
   try {
@@ -527,9 +553,15 @@ async function fetchStudentsFromAPI(baseUrl: string, limit?: number): Promise<Ar
     const data = await response.json();
     
     if (data && Array.isArray(data)) {
-      return data.map((student: any) => ({
+      // API already sorts numerically; students come back as 00-0000-000 → last
+      const students = data.map((student: any) => ({
         number: student.student_number
       }));
+
+      // Extra client-side sort for safety (lexicographic on zero-padded strings)
+      students.sort((a, b) => a.number.localeCompare(b.number));
+
+      return students;
     }
     
     return [];
