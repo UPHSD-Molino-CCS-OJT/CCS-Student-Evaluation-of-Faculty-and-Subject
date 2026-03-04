@@ -44,13 +44,21 @@ const sessionConfig: session.SessionOptions = {
     }
 };
 
-// Use MongoDB store for sessions
+// Use MongoDB store for sessions.
+// mongoOptions gives the session store its own small dedicated connection pool
+// so it doesn't compete with the main Mongoose business-logic pool under load.
+// Pool sized to max parallel browsers (10) + headroom for normal traffic.
 if (process.env.MONGODB_URI) {
     try {
         sessionConfig.store = MongoStore.create({
             mongoUrl: process.env.MONGODB_URI,
-            touchAfter: 24 * 3600,
-            autoRemove: 'native'
+            touchAfter: 24 * 3600, // Lazy re-save: only persist when session data changes
+            autoRemove: 'native',
+            ttl: 24 * 60 * 60,     // Session TTL: 24 h
+            mongoOptions: {
+                maxPoolSize: 20,
+                serverSelectionTimeoutMS: 30000
+            }
         });
         console.log('✓ MongoDB session store configured');
     } catch (error) {
