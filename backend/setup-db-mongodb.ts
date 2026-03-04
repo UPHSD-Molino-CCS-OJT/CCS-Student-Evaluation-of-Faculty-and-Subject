@@ -12,6 +12,7 @@ import Student from './models/Student';
 import Enrollment from './models/Enrollment';
 import Evaluation from './models/Evaluation';
 import EvaluationPeriod from './models/EvaluationPeriod';
+import Section from './models/Section';
 
 // Import encryption helpers
 import { safeEncrypt, safeDecrypt } from './utils/encryption-helpers';
@@ -76,7 +77,8 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
       Student.deleteMany({}),
       Enrollment.deleteMany({}),
       Evaluation.deleteMany({}),
-      EvaluationPeriod.deleteMany({})
+      EvaluationPeriod.deleteMany({}),
+      Section.deleteMany({})
     ]);
     console.log('✓ Collections cleared\n');
   }
@@ -177,6 +179,49 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   ]);
   console.log(`✓ Created ${courses.length} courses`);
 
+  // Create sample sections (pre-configured course offerings for student enrollment)
+  console.log('🗂️  Creating sample sections...');
+  const sectionsData = [];
+  const schoolYear = '2025-2026';
+  const semester = '1st Semester';
+
+  // For each course, create 1-3 sections with varying teachers and section codes
+  for (let i = 0; i < courses.length; i++) {
+    const course = courses[i];
+    const isCS = i < 5; // first 5 are BSCS-DS courses
+    const prefix = isCS ? 'CS' : 'IT';
+    const courseTeachers = isCS
+      ? [teachers[0], teachers[2], teachers[4]] // CS dept teachers
+      : [teachers[1], teachers[3], teachers[4]]; // IT dept teachers
+
+    // Courses 0 and 5 get 3 sections, others get 2 to demonstrate multi-section selection
+    const numSections = (i === 0 || i === 5) ? 3 : 2;
+
+    for (let s = 0; s < numSections; s++) {
+      const sectionLetter = String.fromCharCode(65 + s); // A, B, C
+      const yearDigit = (i % 4) + 1; // 1-4 year level hint
+      sectionsData.push({
+        course_id: course._id,
+        teacher_id: courseTeachers[s % courseTeachers.length]._id,
+        section_code: safeEncrypt(`${prefix}-${yearDigit}${sectionLetter}`),
+        school_year: safeEncrypt(schoolYear),
+        semester: safeEncrypt(semester),
+        is_active: true
+      });
+    }
+  }
+
+  const sections = await Section.create(sectionsData);
+  console.log(`✓ Created ${sections.length} sections (across ${courses.length} courses)`);
+
+  // Build a lookup: course _id → array of section documents
+  const sectionsByCourse: Record<string, typeof sections> = {};
+  for (const sec of sections) {
+    const key = sec.course_id.toString();
+    if (!sectionsByCourse[key]) sectionsByCourse[key] = [];
+    sectionsByCourse[key].push(sec);
+  }
+
   // Create sample students (50 students with randomized data)
   console.log('👨‍🎓 Creating sample students...');
   const yearLevels = ['1st', '2nd', '3rd', '4th'] as const;
@@ -220,32 +265,31 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const enrollmentsData = [];
   
   for (const student of students) {
-    // Get student's program ID as ObjectId
     const studentProgramId = student.program_id;
     
     // Get courses for this program
-    const programCourses = courses.filter(c => {
-      const courseProgramId = c.program_id;
-      return courseProgramId.toString() === studentProgramId.toString();
-    });
+    const programCourses = courses.filter(c =>
+      c.program_id.toString() === studentProgramId.toString()
+    );
     
     // Randomly select 2-4 courses for this student
-    const numCourses = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4
-    const shuffledCourses = programCourses.sort(() => Math.random() - 0.5);
+    const numCourses = 2 + Math.floor(Math.random() * 3);
+    const shuffledCourses = [...programCourses].sort(() => Math.random() - 0.5);
     const selectedCourses = shuffledCourses.slice(0, Math.min(numCourses, programCourses.length));
     
-    // Create enrollment for each selected course
     for (const course of selectedCourses) {
-      // Randomly assign a teacher
-      const randomTeacher = teachers[Math.floor(Math.random() * teachers.length)];
-      
+      // Pick a random pre-configured section for this course
+      const courseSections = sectionsByCourse[course._id.toString()] || [];
+      if (courseSections.length === 0) continue;
+      const sec = courseSections[Math.floor(Math.random() * courseSections.length)];
+
       enrollmentsData.push({
         student_id: student._id,
-        course_id: course._id,
-        teacher_id: randomTeacher._id,
-        section_code: student.section, // already encrypted from student creation
-        school_year: safeEncrypt('2025-2026'),
-        semester: safeEncrypt('1st Semester'),
+        course_id: sec.course_id,
+        teacher_id: sec.teacher_id,
+        section_code: sec.section_code, // already encrypted
+        school_year: sec.school_year,   // already encrypted
+        semester: sec.semester,          // already encrypted
         has_evaluated: false
       });
     }
@@ -271,6 +315,7 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   console.log(`  • ${programs.length} programs`);
   console.log(`  • ${teachers.length} teachers (password: teacher123 for all)`);
   console.log(`  • ${courses.length} courses`);
+  console.log(`  • ${sections.length} sections (pre-configured for enrollment)`);
   console.log(`  • ${students.length} students`);
   console.log(`  • ${enrollments.length} enrollments`);
   console.log(`  • 1 evaluation period (2025-2026, 1st Semester - Active)\n`);
