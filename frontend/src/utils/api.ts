@@ -87,6 +87,14 @@ export const studentApi = {
   // Get enrollment details
   getEnrollment: (enrollmentId: string): Promise<AxiosResponse<{ success: boolean; enrollment?: Enrollment; message?: string }>> =>
     api.get(`/api/student/enrollment/${enrollmentId}`),
+
+  // Get available courses and teachers for enrollment
+  getAvailableCoursesForEnrollment: (): Promise<AxiosResponse<{ success: boolean; courses?: any[]; teachers?: any[] }>> =>
+    api.get('/api/student/subjects/available'),
+
+  // Enroll in a course
+  enroll: (data: { course_id: string; teacher_id: string; section_code: string; school_year: string; semester: string }): Promise<AxiosResponse<{ success: boolean; enrollment?: { _id: string }; message?: string }>> =>
+    api.post('/api/student/subjects/enroll', data),
   
   // Submit evaluation
   submitEvaluation: (data: Record<string, any>): Promise<AxiosResponse<{ success: boolean; message: string }>> =>
