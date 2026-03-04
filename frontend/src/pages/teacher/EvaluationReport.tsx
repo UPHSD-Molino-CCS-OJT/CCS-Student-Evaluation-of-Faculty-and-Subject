@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { Loader, ArrowLeft, Printer } from 'lucide-react'
+import JSZip from 'jszip'
+import { Loader, ArrowLeft, Printer, FileText, Upload, X } from 'lucide-react'
 import TeacherNavbar from '../../components/TeacherNavbar'
 
 interface QuestionAverages {
@@ -68,13 +69,12 @@ const getRemark = (rating: number): string => {
   return 'NEEDS IMPROVEMENT'
 }
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 // Auto-generate action plan from lowest-scoring areas
 const generateActionPlan = (qa: QuestionAverages): string[] => {
   if (Object.keys(qa).length === 0) return []
-
-  const sorted = CRITERIA
-    .map(c => ({ label: c.label, score: qa[c.key] ?? 0 }))
-    .sort((a, b) => a.score - b.score)
 
   const avg = Object.values(qa).reduce((a, b) => a + b, 0) / Object.values(qa).length
 
@@ -111,13 +111,269 @@ const generateActionPlan = (qa: QuestionAverages): string[] => {
   return [...new Set(plans)].slice(0, 3)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// OOXML → HTML converter
+// ─────────────────────────────────────────────────────────────────────────────
+function wa(el: Element, localAttr: string): string {
+  return (
+    el.getAttributeNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', localAttr) ||
+    el.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', localAttr) ||
+    el.getAttribute(`w:${localAttr}`) ||
+    el.getAttribute(`r:${localAttr}`) ||
+    el.getAttribute(localAttr) ||
+    ''
+  )
+}
+
+function processChildren(parent: Element, imageMap: Record<string, string>): string {
+  return Array.from(parent.children).map(c => convertNode(c, imageMap)).join('')
+}
+
+function convertNode(node: Element, imageMap: Record<string, string>): string {
+  const n = node.localName
+  if (n === 'tbl') {
+    const rows = Array.from(node.children).filter(c => c.localName === 'tr').map(tr => {
+      const cells = Array.from(tr.children).filter(c => c.localName === 'tc').map(tc => {
+        let wStyle = ''
+        const tcPr = Array.from(tc.children).find(c => c.localName === 'tcPr')
+        if (tcPr) {
+          const tcW = Array.from(tcPr.children).find(c => c.localName === 'tcW')
+          if (tcW) { const v = wa(tcW,'w'); const t = wa(tcW,'type'); if (v && t==='pct') wStyle=`width:${(parseInt(v)/5000*100).toFixed(1)}%;` }
+        }
+        return `<td style="vertical-align:top;padding:0 3px;${wStyle}">${processChildren(tc, imageMap)}</td>`
+      }).join('')
+      return `<tr>${cells}</tr>`
+    }).join('')
+    return `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${rows}</table>`
+  }
+  if (n === 'p') {
+    let align = 'left'
+    const pPr = Array.from(node.children).find(c => c.localName === 'pPr')
+    if (pPr) {
+      const jc = Array.from(pPr.children).find(c => c.localName === 'jc')
+      if (jc) { const v = wa(jc,'val'); if (v==='center') align='center'; else if (v==='right') align='right'; else if (v==='both'||v==='distribute') align='justify' }
+    }
+    const inner = processChildren(node, imageMap)
+    return `<p style="margin:0;line-height:1.35;text-align:${align}">${inner||'&nbsp;'}</p>`
+  }
+  if (n === 'r') {
+    let bold=false, italic=false, color='', fontSize=''
+    const rPr = Array.from(node.children).find(c => c.localName === 'rPr')
+    if (rPr) {
+      bold   = Array.from(rPr.children).some(c => c.localName==='b')
+      italic = Array.from(rPr.children).some(c => c.localName==='i')
+      const ce = Array.from(rPr.children).find(c => c.localName==='color')
+      if (ce) { const v=wa(ce,'val'); if (v&&v!=='auto') color=`color:#${v};` }
+      const se = Array.from(rPr.children).find(c => c.localName==='sz'||c.localName==='szCs')
+      if (se) { const v=wa(se,'val'); if (v) fontSize=`font-size:${parseInt(v)/2}pt;` }
+    }
+    const styles=`${color}${fontSize}${bold?'font-weight:bold;':''}${italic?'font-style:italic;':''}`
+    const content = Array.from(node.children).map(c => convertNode(c, imageMap)).join('')
+    if (!content) return ''
+    return styles ? `<span style="${styles}">${content}</span>` : content
+  }
+  if (n === 't')   return escapeHtml(node.textContent || '')
+  if (n === 'br')  return '<br/>'
+  if (n === 'tab') return '&nbsp;&nbsp;&nbsp;&nbsp;'
+  if (n === 'drawing') return processDrawing(node, imageMap)
+  if (n === 'pict')    return processPict(node, imageMap)
+  if (n === 'hyperlink') return processChildren(node, imageMap)
+  return processChildren(node, imageMap)
+}
+
+// 1 inch = 914400 EMU = 96 CSS-px (at 96 dpi)
+const EMU_PX = 96 / 914400
+
+function processDrawing(node: Element, imageMap: Record<string, string>): string {
+  const allEls = node.getElementsByTagName('*')
+  let rId = ''
+  let cx = 0, cy = 0
+  let posHOff = 0, posVOff = 0
+  let isAnchor = false
+
+  for (let i = 0; i < allEls.length; i++) {
+    const el = allEls[i]
+    const ln = el.localName
+    if (ln === 'anchor') isAnchor = true
+    if (ln === 'extent') {
+      cx = parseInt(el.getAttribute('cx') || '0', 10) || 0
+      cy = parseInt(el.getAttribute('cy') || '0', 10) || 0
+    }
+    if (ln === 'posOffset') {
+      const parent = el.parentElement?.localName
+      const val = parseInt(el.textContent || '0', 10) || 0
+      if (parent === 'positionH') posHOff = val
+      if (parent === 'positionV') posVOff = val
+    }
+    if (ln === 'blip') {
+      rId =
+        el.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'embed') ||
+        el.getAttribute('r:embed') ||
+        ''
+    }
+  }
+
+  if (!rId || !imageMap[rId]) return ''
+
+  const w = cx ? Math.round(cx * EMU_PX) : 0
+  const h = cy ? Math.round(cy * EMU_PX) : 0
+  const sizeStyle = w && h ? `width:${w}px;height:${h}px;` : w ? `width:${w}px;` : h ? `height:${h}px;` : 'max-width:100%;'
+
+  if (isAnchor && (posHOff || posVOff)) {
+    const left = Math.round(posHOff * EMU_PX)
+    const top  = Math.round(posVOff * EMU_PX)
+    return `<img src="${imageMap[rId]}" style="position:absolute;left:${left}px;top:${top}px;${sizeStyle}"/>`
+  }
+
+  return `<img src="${imageMap[rId]}" style="${sizeStyle}display:inline-block;vertical-align:middle"/>`
+}
+
+function processPict(node: Element, imageMap: Record<string, string>): string {
+  const allEls = node.getElementsByTagName('*')
+  // VML shape carries size/position in its style attribute
+  let shapeStyle = ''
+  let shapeLeft = '', shapeTop = '', shapePos = ''
+  for (let i = 0; i < allEls.length; i++) {
+    if (allEls[i].localName === 'shape' || allEls[i].localName === 'rect') {
+      shapeStyle = allEls[i].getAttribute('style') || ''
+      const mPos  = shapeStyle.match(/position\s*:\s*([^;]+)/i)
+      const mLeft = shapeStyle.match(/left\s*:\s*([^;]+)/i)
+      const mTop  = shapeStyle.match(/top\s*:\s*([^;]+)/i)
+      if (mPos)  shapePos  = mPos[1].trim()
+      if (mLeft) shapeLeft = mLeft[1].trim()
+      if (mTop)  shapeTop  = mTop[1].trim()
+    }
+  }
+  for (let i = 0; i < allEls.length; i++) {
+    if (allEls[i].localName === 'imagedata') {
+      const rId =
+        allEls[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id') ||
+        allEls[i].getAttribute('r:id') ||
+        ''
+      if (rId && imageMap[rId]) {
+        // Extract width / height from VML shape style (values may be in pt, cm, in, px)
+        const mW = shapeStyle.match(/width\s*:\s*([^;]+)/i)
+        const mH = shapeStyle.match(/height\s*:\s*([^;]+)/i)
+        const wVal = mW ? mW[1].trim() : ''
+        const hVal = mH ? mH[1].trim() : ''
+        const sizeStyle = (wVal || hVal)
+          ? `${wVal ? `width:${wVal};` : ''}${hVal ? `height:${hVal};` : ''}`
+          : 'max-width:100%;'
+        const posStyle =
+          shapePos === 'absolute' && (shapeLeft || shapeTop)
+            ? `position:absolute;${shapeLeft ? `left:${shapeLeft};` : ''}${shapeTop ? `top:${shapeTop};` : ''}`
+            : 'display:inline-block;vertical-align:middle;'
+        return `<img src="${imageMap[rId]}" style="${posStyle}${sizeStyle}"/>`
+      }
+    }
+  }
+  return ''
+}
+
+const IMAGE_EXTS = ['png','jpg','jpeg','gif','bmp','webp','svg','emf','wmf']
+const MIME: Record<string,string> = { png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',bmp:'image/bmp',webp:'image/webp',svg:'image/svg+xml',emf:'image/x-emf',wmf:'image/x-wmf' }
+
+async function parseDocxTemplate(file: File): Promise<{ headerHtml: string; footerHtml: string }> {
+  const zip = await JSZip.loadAsync(await file.arrayBuffer())
+
+  // Extract media as base64 data URLs
+  const mediaDataUrls: Record<string,string> = {}
+  await Promise.all(
+    Object.keys(zip.files)
+      .filter(p => p.startsWith('word/media/') && !zip.files[p].dir)
+      .map(async path => {
+        const ext = (path.split('.').pop()||'').toLowerCase()
+        if (!IMAGE_EXTS.includes(ext)) return
+        const data = await zip.files[path].async('base64')
+        mediaDataUrls[path.split('/').pop()!] = `data:${MIME[ext]??'application/octet-stream'};base64,${data}`
+      })
+  )
+
+  async function parseRels(relsPath: string): Promise<Record<string,string>> {
+    const rf = zip.file(relsPath); if (!rf) return {}
+    const doc = new DOMParser().parseFromString(await rf.async('text'), 'text/xml')
+    const map: Record<string,string> = {}
+    Array.from(doc.getElementsByTagName('Relationship')).forEach(r => {
+      const id = r.getAttribute('Id')||''; const fn = (r.getAttribute('Target')||'').split('/').pop()||''
+      if (id && fn && mediaDataUrls[fn]) map[id] = mediaDataUrls[fn]
+    })
+    return map
+  }
+
+  async function partToHtml(xmlPath: string, relsPath: string): Promise<string> {
+    const xf = zip.file(xmlPath); if (!xf) return ''
+    const imageMap = await parseRels(relsPath)
+    const doc = new DOMParser().parseFromString(await xf.async('text'), 'application/xml')
+    return processChildren(doc.documentElement, imageMap)
+  }
+
+  const docRelsFile = zip.file('word/_rels/document.xml.rels')
+  let headerHtml = '', footerHtml = ''
+  const HTYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header'
+  const FTYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer'
+
+  if (docRelsFile) {
+    const rels = Array.from(new DOMParser().parseFromString(await docRelsFile.async('text'),'text/xml').getElementsByTagName('Relationship'))
+    const pick = (arr: Element[]) => arr.find(r=>r.getAttribute('Id')==='rId1') ?? arr[0]
+    const hRels = rels.filter(r=>r.getAttribute('Type')===HTYPE)
+    const fRels = rels.filter(r=>r.getAttribute('Type')===FTYPE)
+    if (hRels.length) { const t=pick(hRels).getAttribute('Target')||''; const p=t.startsWith('word/')?t:`word/${t}`; const fn=p.split('/').pop()!; headerHtml=await partToHtml(p,`word/_rels/${fn}.rels`) }
+    if (fRels.length) { const t=pick(fRels).getAttribute('Target')||''; const p=t.startsWith('word/')?t:`word/${t}`; const fn=p.split('/').pop()!; footerHtml=await partToHtml(p,`word/_rels/${fn}.rels`) }
+  }
+  if (!headerHtml) {
+    const p = Object.keys(zip.files).filter(p=>/^word\/header\d+\.xml$/i.test(p)).sort()[0]
+    if (p) { const fn=p.split('/').pop()!; headerHtml=await partToHtml(p,`word/_rels/${fn}.rels`) }
+  }
+  if (!footerHtml) {
+    const p = Object.keys(zip.files).filter(p=>/^word\/footer\d+\.xml$/i.test(p)).sort()[0]
+    if (p) { const fn=p.split('/').pop()!; footerHtml=await partToHtml(p,`word/_rels/${fn}.rels`) }
+  }
+  return { headerHtml, footerHtml }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hardcoded fallback header
+// ─────────────────────────────────────────────────────────────────────────────
+const FallbackHeader: React.FC = () => (
+  <table style={{ width:'100%', marginBottom:'6px', borderCollapse:'collapse' }}>
+    <tbody><tr>
+      <td style={{ width:'60%', verticalAlign:'top', paddingRight:'8px' }}>
+        <div style={{ fontSize:'8pt', fontWeight:'bold', color:'#7b0000', letterSpacing:'0.5px' }}>
+          UNIVERSITY OF<br/><span style={{ fontSize:'11pt' }}>PERPETUAL HELP</span>
+        </div>
+        <div style={{ fontSize:'7.5pt', fontWeight:'bold', letterSpacing:'0.3px' }}>SYSTEM DALTA - MOLINO CAMPUS</div>
+        <div style={{ fontSize:'6.5pt', color:'#333', marginTop:'2px', lineHeight:'1.4' }}>
+          Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines<br/>
+          www.perpetualdalta.edu.ph; (046) 477-0602; (02) 8584-4377
+        </div>
+      </td>
+      <td style={{ width:'40%', verticalAlign:'top', textAlign:'right' }}>
+        <div style={{ fontSize:'7pt', fontWeight:'bold', letterSpacing:'0.5px', lineHeight:'1.4' }}>C E R T I F I E D<br/>ISO 9001<br/>ISO 21001</div>
+        <div style={{ fontSize:'8pt', fontWeight:'bold', marginTop:'4px' }}>College of Computer<br/>Studies</div>
+      </td>
+    </tr></tbody>
+  </table>
+)
+
+const STORAGE_HEADER = 'evalReport_headerHtml'
+const STORAGE_FOOTER = 'evalReport_footerHtml'
+const STORAGE_FNAME  = 'evalReport_docxName'
+
 const EvaluationReport: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [data, setData] = useState<CourseDetailData | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
+  const [data, setData]         = useState<CourseDetailData | null>(null)
   const [conformeName, setConformeName] = useState('')
+
+  // Template state (persisted in localStorage)
+  const [headerHtml, setHeaderHtml] = useState<string>(() => localStorage.getItem(STORAGE_HEADER) ?? '')
+  const [footerHtml, setFooterHtml] = useState<string>(() => localStorage.getItem(STORAGE_FOOTER) ?? '')
+  const [docxName, setDocxName]     = useState<string>(() => localStorage.getItem(STORAGE_FNAME) ?? '')
+  const [docxParsing, setDocxParsing] = useState(false)
+  const [docxError, setDocxError]     = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     axios
@@ -135,6 +391,31 @@ const EvaluationReport: React.FC = () => {
       })
       .finally(() => setLoading(false))
   }, [courseId])
+
+  const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith('.docx')) { setDocxError('Please upload a .docx file.'); return }
+    setDocxParsing(true); setDocxError('')
+    try {
+      const { headerHtml: h, footerHtml: f } = await parseDocxTemplate(file)
+      setHeaderHtml(h); setFooterHtml(f); setDocxName(file.name)
+      localStorage.setItem(STORAGE_HEADER, h)
+      localStorage.setItem(STORAGE_FOOTER, f)
+      localStorage.setItem(STORAGE_FNAME, file.name)
+    } catch (err) {
+      console.error('Failed to parse .docx:', err)
+      setDocxError('Failed to parse the Word document. Make sure it is a valid .docx file.')
+    } finally { setDocxParsing(false) }
+  }
+
+  const clearTemplate = () => {
+    setHeaderHtml(''); setFooterHtml(''); setDocxName('')
+    localStorage.removeItem(STORAGE_HEADER)
+    localStorage.removeItem(STORAGE_FOOTER)
+    localStorage.removeItem(STORAGE_FNAME)
+  }
 
   const handlePrint = () => window.print()
 
@@ -169,10 +450,12 @@ const EvaluationReport: React.FC = () => {
     )
   }
 
-  const { course, teacher, statistics, comments } = data
+  const { course, teacher: _teacher, statistics, comments } = data
   const qa = statistics.question_averages
   const actionPlan = generateActionPlan(qa)
   const hasEvals = course.evaluated_students > 0
+  const useCustomHeader = headerHtml.trim().length > 0
+  const useCustomFooter = footerHtml.trim().length > 0
 
   return (
     <>
@@ -207,66 +490,69 @@ const EvaluationReport: React.FC = () => {
       {/* ── Screen toolbar (hidden on print) ─────────────────────────── */}
       <div className="no-print bg-gray-50 min-h-screen">
         <TeacherNavbar />
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            onClick={() => navigate(`/teacher/course/${courseId}`)}
-            className="flex items-center text-green-600 hover:text-green-700 font-semibold"
-          >
-            <ArrowLeft size={20} className="mr-2" /> Back to Course Detail
-          </button>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Conforme name:</label>
-              <input
-                type="text"
-                value={conformeName}
-                onChange={e => setConformeName(e.target.value)}
-                className="border border-gray-300 rounded px-2 py-1 text-sm w-56"
-                placeholder="Enter name for Conforme line"
-              />
-            </div>
+        <div className="container mx-auto px-4 py-4 space-y-2">
+          {/* Row 1: navigation + print */}
+          <div className="flex items-center justify-between">
             <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg shadow transition"
+              onClick={() => navigate(`/teacher/course/${courseId}`)}
+              className="flex items-center text-green-600 hover:text-green-700 font-semibold"
             >
-              <Printer size={18} /> Print / Save as PDF
+              <ArrowLeft size={20} className="mr-2" /> Back to Course Detail
             </button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Conforme name:</label>
+                <input
+                  type="text"
+                  value={conformeName}
+                  onChange={e => setConformeName(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-56"
+                  placeholder="Enter name for Conforme line"
+                />
+              </div>
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg shadow transition"
+              >
+                <Printer size={18} /> Print / Save as PDF
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Word template loader */}
+          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2.5 shadow-sm">
+            <FileText size={18} className="text-blue-600 flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-700">Header / Footer template:</span>
+            {docxName ? (
+              <span className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                <span className="truncate max-w-xs">{docxName}</span>
+                <button onClick={clearTemplate} title="Clear template" className="text-gray-400 hover:text-red-500 transition-colors">
+                  <X size={14} />
+                </button>
+              </span>
+            ) : (
+              <span className="text-sm text-gray-400 italic">No template loaded — using default</span>
+            )}
+            <input ref={fileInputRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleDocxUpload} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={docxParsing}
+              className="ml-1 flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-300 hover:border-blue-500 rounded px-3 py-1 transition disabled:opacity-50"
+            >
+              {docxParsing ? <><Loader size={14} className="animate-spin" /> Parsing…</> : <><Upload size={14} /> Upload .docx</>}
+            </button>
+            {docxError && <span className="text-sm text-red-600">{docxError}</span>}
           </div>
         </div>
 
         {/* ── REPORT DOCUMENT ─────────────────────────────────────────── */}
-        <div className="pb-16 px-4">
+        <div className="pb-16 px-4 pt-2">
           <div className="report-page">
-            {/* ── Document Header ───────────────────────────────────── */}
-            <table style={{ width: '100%', marginBottom: '6px', borderCollapse: 'collapse' }}>
-              <tbody>
-                <tr>
-                  <td style={{ width: '60%', verticalAlign: 'top', paddingRight: '8px' }}>
-                    <div style={{ fontSize: '8pt', fontWeight: 'bold', color: '#7b0000', letterSpacing: '0.5px' }}>
-                      UNIVERSITY OF<br />
-                      <span style={{ fontSize: '11pt' }}>PERPETUAL HELP</span>
-                    </div>
-                    <div style={{ fontSize: '7.5pt', fontWeight: 'bold', letterSpacing: '0.3px' }}>
-                      SYSTEM DALTA - MOLINO CAMPUS
-                    </div>
-                    <div style={{ fontSize: '6.5pt', color: '#333', marginTop: '2px', lineHeight: '1.4' }}>
-                      Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines<br />
-                      www.perpetualdalta.edu.ph; (046) 477-0602; (02) 8584-4377
-                    </div>
-                  </td>
-                  <td style={{ width: '40%', verticalAlign: 'top', textAlign: 'right' }}>
-                    <div style={{ fontSize: '7pt', fontWeight: 'bold', letterSpacing: '0.5px', lineHeight: '1.4' }}>
-                      C E R T I F I E D<br />
-                      ISO 9001<br />
-                      ISO 21001
-                    </div>
-                    <div style={{ fontSize: '8pt', fontWeight: 'bold', marginTop: '4px' }}>
-                      College of Computer<br />Studies
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {/* ── Header (custom from .docx or built-in fallback) ────── */}
+            {useCustomHeader
+              ? <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: headerHtml }} />
+              : <FallbackHeader />
+            }
 
             <hr style={{ borderTop: '1.5px solid #333', margin: '4px 0 8px' }} />
 
@@ -357,8 +643,16 @@ const EvaluationReport: React.FC = () => {
               </table>
             )}
 
-            {/* ── Page 2: Comments + Action Plan ────────────────────── */}
+            {/* ── Page 2 ────────────────────────────────────────────── */}
             <div className="page-break" />
+
+            {/* Word footer rendered at top of page 2 */}
+            {useCustomFooter && (
+              <>
+                <div style={{ position: 'relative' }} dangerouslySetInnerHTML={{ __html: footerHtml }} />
+                <hr style={{ borderTop: '1px solid #ccc', margin: '4px 0 8px' }} />
+              </>
+            )}
 
             {/* Comments */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5pt', border: '1px solid #333', marginTop: '12px' }}>
