@@ -185,11 +185,12 @@ export async function createSampleData(clearExistingData: boolean = true): Promi
   const programCodes = ['BSCS-DS', 'BSIT-GD']; // plaintext codes matching programs array order
 
   for (let i = 1; i <= 50; i++) {
-    // Generate random student number in format 00-0000-000
-    const batch = 20 + Math.floor(Math.random() * 5); // 20-24
-    const sequence1 = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    const sequence2 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-    const studentNumber = `${batch}-${sequence1}-${sequence2}`;
+    // Generate sequential student number in format 00-0000-000, incrementing from right to left
+    const idx = i - 1;
+    const third = String(idx % 1000).padStart(3, '0');
+    const second = String(Math.floor(idx / 1000) % 10000).padStart(4, '0');
+    const first = String(Math.floor(idx / 10000000) % 100).padStart(2, '0');
+    const studentNumber = `${first}-${second}-${third}`;
     
     // Randomly assign to a program
     const programIndex = Math.floor(Math.random() * programs.length);
