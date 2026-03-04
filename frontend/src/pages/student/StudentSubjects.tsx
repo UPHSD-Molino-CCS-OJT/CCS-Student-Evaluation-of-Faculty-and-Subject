@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Inbox, Presentation, CheckCircle, Clock, Check, Pencil, LogOut } from 'lucide-react'
+import { GraduationCap, AlertCircle, Inbox, Presentation, Check, Pencil, LogOut } from 'lucide-react'
 import Navbar from '../../components/Navbar'
 import { SubjectListSkeleton } from '../../components/Skeleton'
 import { Enrollment, Student } from '../../types'
@@ -169,19 +169,6 @@ const StudentSubjects: React.FC = () => {
                       {enrollment.teacher?.full_name}
                     </p>
                   </div>
-
-                  {/* Status Badge */}
-                  {enrollment.has_evaluated ? (
-                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg text-center mb-4">
-                      <CheckCircle className="mr-2 inline" size={20} />
-                      <span className="font-semibold">Completed</span>
-                    </div>
-                  ) : (
-                    <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-center mb-4">
-                      <Clock className="mr-2 inline" size={20} />
-                      <span className="font-semibold">Pending</span>
-                    </div>
-                  )}
 
                   {/* Action Button */}
                   <Link
