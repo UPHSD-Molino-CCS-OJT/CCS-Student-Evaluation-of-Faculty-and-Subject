@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import { GraduationCap, AlertCircle, Info, Loader, LogIn } from 'lucide-react'
+import { GraduationCap, AlertCircle, Loader, LogIn } from 'lucide-react'
 import Navbar from '../../components/Navbar'
+import StudentIdInput from '../../components/StudentIdInput'
 
 const StudentLogin: React.FC = () => {
   const [studentNumber, setStudentNumber] = useState<string>('')
@@ -73,22 +74,19 @@ const StudentLogin: React.FC = () => {
             {/* Form */}
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label htmlFor="student_number" className="block text-gray-700 font-semibold mb-2">
+                <label className="block text-gray-700 font-semibold mb-3">
                   School ID <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  id="student_number"
-                  name="student_number"
-                  value={studentNumber}
-                  onChange={(e) => setStudentNumber(e.target.value)}
-                  placeholder="00-0000-000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-                <p className="mt-2 text-sm text-gray-500 flex items-center">
-                  <Info className="mr-1" size={16} />
-                  Format: 00-0000-000
+                <div className="flex justify-center">
+                  <StudentIdInput
+                    value={studentNumber}
+                    onChange={setStudentNumber}
+                    disabled={loading}
+                    hasError={!!error}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-center text-gray-400 tracking-widest font-mono">
+                  00 — 0000 — 000
                 </p>
               </div>
 
