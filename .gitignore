@@ -1,6 +1,13 @@
 # Dependencies
 node_modules/
-# package-lock.json should be committed for Vercel
+# package-lock.json should be committed for Railway
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+frontend/dist/
+backend/dist/
 
 # Environment variables
 .env
@@ -26,8 +33,13 @@ Thumbs.db
 *.swo
 *~
 
-# Vercel
+# Deployment platforms
 .vercel
+.railway
+
+# Uploads (should be in Railway Volumes, not git)
+uploads/
+/data/
 
 # Temporary files
 *.tmp
