@@ -1,0 +1,53 @@
+import cron from 'node-cron';
+import mongoose from 'mongoose';
+
+/**
+ * Privacy-Preserving Scheduled Tasks
+ * Handles automatic privacy protection operations
+ */
+
+class PrivacyScheduler {
+    
+    /**
+     * Initialize all privacy-related scheduled tasks
+     */
+    static initializeScheduledTasks(): void {
+        console.log('🔒 Initializing privacy protection scheduled tasks...');
+        
+        // Clean up old session data (runs every 6 hours)
+        this.scheduleSessionCleanup();
+        
+        console.log('✓ Privacy protection tasks scheduled');
+    }
+
+    /**
+     * Schedule cleanup of old session data
+     * Removes session data older than 7 days
+     */
+    static scheduleSessionCleanup(): void {
+        // Run every 6 hours
+        cron.schedule('0 */6 * * *', async () => {
+            try {
+                console.log('🧹 Running session cleanup...');
+                
+                const sessionCollection = mongoose.connection.collection('sessions');
+                
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                
+                const result = await sessionCollection.deleteMany({
+                    expires: { $lt: weekAgo }
+                });
+                
+                if (result.deletedCount > 0) {
+                    console.log(`✓ Cleaned up ${result.deletedCount} old session(s)`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error during session cleanup:', error);
+            }
+        });
+    }
+}
+
+export default PrivacyScheduler;
