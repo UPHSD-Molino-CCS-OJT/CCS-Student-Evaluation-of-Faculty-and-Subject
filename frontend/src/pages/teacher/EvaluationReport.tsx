@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import JSZip from 'jszip'
-import { Loader, ArrowLeft, Printer, FileText, Upload, X } from 'lucide-react'
+import { Loader, ArrowLeft, Printer, FileText, Upload, X, FileSignature, Check } from 'lucide-react'
 import TeacherNavbar from '../../components/TeacherNavbar'
 
 interface QuestionAverages {
@@ -932,6 +932,12 @@ const STORAGE_HEADER = 'evalReport_headerHtml'
 const STORAGE_FOOTER = 'evalReport_footerHtml'
 const STORAGE_FNAME  = 'evalReport_docxName'
 const STORAGE_PAGE   = 'evalReport_pageLayout'
+const STORAGE_SIGNATURE_CONFIG = 'evalReport_signatureConfig'
+
+interface SignatureConfig {
+  enabled: boolean
+  placement: 'bottom-right' | 'bottom-center' | 'bottom-left'
+}
 
 const EvaluationReport: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>()
@@ -940,6 +946,18 @@ const EvaluationReport: React.FC = () => {
   const [error, setError]       = useState('')
   const [data, setData]         = useState<CourseDetailData | null>(null)
   const [conformeName, setConformeName] = useState('')
+
+  // Signature state
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null)
+  const [signatureLoading, setSignatureLoading] = useState(false)
+  const [signatureConfig, setSignatureConfig] = useState<SignatureConfig>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_SIGNATURE_CONFIG)
+      return stored ? JSON.parse(stored) : { enabled: false, placement: 'bottom-right' }
+    } catch {
+      return { enabled: false, placement: 'bottom-right' }
+    }
+  })
 
   // Template state (persisted in localStorage)
   const [headerHtml, setHeaderHtml] = useState<string>(() => localStorage.getItem(STORAGE_HEADER) ?? '')
@@ -970,6 +988,39 @@ const EvaluationReport: React.FC = () => {
       })
       .finally(() => setLoading(false))
   }, [courseId])
+
+  // Fetch teacher's signature metadata
+  useEffect(() => {
+    const fetchSignature = async () => {
+      try {
+        setSignatureLoading(true)
+        const response = await axios.get('/api/teacher/profile/signature/metadata', {
+          withCredentials: true,
+        })
+
+        if (response.data.success && response.data.hasSignature && response.data.signature) {
+          const filename = response.data.signature.filename
+          setSignatureUrl(`/api/uploads/signatures/${filename}`)
+        } else {
+          setSignatureUrl(null)
+        }
+      } catch (err) {
+        console.error('Failed to fetch signature:', err)
+        setSignatureUrl(null)
+      } finally {
+        setSignatureLoading(false)
+      }
+    }
+
+    fetchSignature()
+  }, [])
+
+  // Update signature config in localStorage when it changes
+  const updateSignatureConfig = (updates: Partial<SignatureConfig>) => {
+    const newConfig = { ...signatureConfig, ...updates }
+    setSignatureConfig(newConfig)
+    localStorage.setItem(STORAGE_SIGNATURE_CONFIG, JSON.stringify(newConfig))
+  }
 
   const handleDocxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -1269,6 +1320,49 @@ const EvaluationReport: React.FC = () => {
             )}
             {docxError && <span className="text-xs text-red-600">{docxError}</span>}
           </div>
+
+          {/* Row 3: signature configurator */}
+          {signatureUrl && (
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <FileSignature size={15} className="text-gray-400 flex-shrink-0" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">E-Signature</span>
+              
+              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={signatureConfig.enabled}
+                  onChange={(e) => updateSignatureConfig({ enabled: e.target.checked })}
+                  className="rounded"
+                />
+                <span className="text-gray-700">Include signature on report</span>
+              </label>
+
+              {signatureConfig.enabled && (
+                <>
+                  <select
+                    value={signatureConfig.placement}
+                    onChange={(e) => updateSignatureConfig({ placement: e.target.value as SignatureConfig['placement'] })}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-400"
+                  >
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="bottom-center">Bottom Center</option>
+                    <option value="bottom-left">Bottom Left</option>
+                  </select>
+
+                  <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                    <Check size={12} />
+                    <span>Signature will appear on report</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {signatureLoading && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Loader size={12} className="animate-spin" />
+              <span>Loading signature...</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1446,10 +1540,35 @@ const EvaluationReport: React.FC = () => {
           )}
 
           {/* Conforme / Sign / Date */}
-          <div style={{ marginTop: '40px', fontSize: '9pt' }}>
+          <div style={{ marginTop: '40px', fontSize: '9pt', position: 'relative' }}>
             <div style={{ marginBottom: '4px' }}>
               <span style={{ fontWeight: 'bold' }}>Conforme : </span>
             </div>
+
+            {/* E-Signature (if enabled) */}
+            {signatureConfig.enabled && signatureUrl && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '35px',
+                  ...(signatureConfig.placement === 'bottom-right' && { right: '40px' }),
+                  ...(signatureConfig.placement === 'bottom-center' && { left: '50%', transform: 'translateX(-50%)' }),
+                  ...(signatureConfig.placement === 'bottom-left' && { left: '40px' }),
+                  zIndex: 1,
+                }}
+              >
+                <img
+                  src={signatureUrl}
+                  alt="Faculty Signature"
+                  style={{ maxWidth: '150px', maxHeight: '60px', display: 'block' }}
+                  onLoad={() => {
+                    // Ensure image is loaded before printing
+                    console.log('Signature image loaded')
+                  }}
+                />
+              </div>
+            )}
+
             <div style={{ marginTop: '32px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
               <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Sign / Date</span>
               <span style={{ flex: '0 0 200px', borderBottom: '1px solid #333', display: 'inline-block' }} />

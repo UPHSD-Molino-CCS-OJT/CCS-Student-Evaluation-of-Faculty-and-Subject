@@ -34,6 +34,8 @@ export interface ITeacher extends Document {
   email?: EncryptedData | string;
   department?: EncryptedData | string;
   status: EncryptedData | string;
+  signature_filename?: EncryptedData | string; // E-signature filename (encrypted)
+  signature_uploaded_at?: Date; // When signature was uploaded
   last_login?: Date;
   createdAt: Date;
   updatedAt: Date;

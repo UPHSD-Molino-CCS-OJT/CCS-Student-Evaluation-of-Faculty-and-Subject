@@ -13,6 +13,7 @@
     "setup-db": "ts-node --project ../tsconfig.json setup-db-mongodb.ts"
   },
   "dependencies": {
+    "@types/multer": "^2.1.0",
     "accepts": "^1.3.8",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
@@ -24,8 +25,10 @@
     "express-session": "^1.18.0",
     "ipaddr.js": "^2.1.0",
     "mongoose": "^8.0.3",
+    "multer": "^2.1.1",
     "negotiator": "^0.6.3",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

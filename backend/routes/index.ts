@@ -21,6 +21,7 @@ import staffAuthRoutes from './staff/auth';
 
 // Teacher routes
 import teacherDashboardRoutes from './teacher/dashboard';
+import teacherProfileRoutes from './teacher/profile';
 
 const router: Router = Router();
 
@@ -46,6 +47,8 @@ router.use('/student/submit-evaluation', studentEvaluationRoutes);
 
 // ==================== TEACHER ROUTES ====================
 router.use('/teacher', teacherDashboardRoutes);
+router.use('/teacher', teacherProfileRoutes);
+router.use('/api/uploads', teacherProfileRoutes); // For signature file serving
 
 // ==================== STAFF ROUTES (UNIFIED) ====================
 router.use('/staff', staffAuthRoutes);

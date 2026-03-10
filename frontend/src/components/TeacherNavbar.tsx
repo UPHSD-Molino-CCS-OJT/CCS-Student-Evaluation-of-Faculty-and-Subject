@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Users, LogOut, BarChart3 } from 'lucide-react'
+import { Users, LogOut, BarChart3, UserCircle } from 'lucide-react'
 import axios from 'axios'
 import { useModal } from './ModalContext'
 
@@ -55,6 +55,14 @@ const TeacherNavbar: React.FC = () => {
             >
               <BarChart3 size={20} />
               <span className="font-medium">Dashboard</span>
+            </Link>
+
+            <Link 
+              to="/teacher/profile" 
+              className="flex items-center space-x-2 hover:bg-green-700 px-3 py-2 rounded-lg transition-colors"
+            >
+              <UserCircle size={20} />
+              <span className="font-medium">Profile</span>
             </Link>
 
             <button

@@ -30,6 +30,12 @@ const teacherSchema = new Schema<ITeacher>({
     type: Schema.Types.Mixed, // Encrypted field
     default: 'active'
   },
+  signature_filename: {
+    type: Schema.Types.Mixed // Encrypted field
+  },
+  signature_uploaded_at: {
+    type: Date
+  },
   last_login: {
     type: Date
   }
