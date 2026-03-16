@@ -66,6 +66,12 @@ class FortifyServiceProvider extends ServiceProvider
 
             return $user;
         });
+
+        // Confirm-password routes should validate the current user's hash directly,
+        // since this app authenticates by either student ID or email via the `login` field.
+        Fortify::confirmPasswordsUsing(function (User $user, ?string $password): bool {
+            return is_string($password) && Hash::check($password, $user->password);
+        });
     }
 
     /**
