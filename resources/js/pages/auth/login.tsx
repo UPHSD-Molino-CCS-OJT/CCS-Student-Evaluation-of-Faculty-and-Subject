@@ -25,10 +25,10 @@ export default function Login({
 }: Props) {
     return (
         <AuthLayout
-            title="Log in to your account"
-            description="Enter your student ID or email and password below to log in"
+            title="Staff Login"
+            description="Faculty and dean users can sign in with email and password"
         >
-            <Head title="Log in" />
+            <Head title="Staff login" />
 
             <Form
                 {...store.form()}
@@ -39,7 +39,7 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="login">Student ID or Email</Label>
+                                <Label htmlFor="login">Email address</Label>
                                 <Input
                                     id="login"
                                     type="text"
@@ -48,7 +48,7 @@ export default function Login({
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="username"
-                                    placeholder="1-2345-678 or email@example.com"
+                                    placeholder="email@example.com"
                                 />
                                 <InputError message={errors.login} />
                             </div>
@@ -96,6 +96,13 @@ export default function Login({
                                 {processing && <Spinner />}
                                 Log in
                             </Button>
+                        </div>
+
+                        <div className="text-center text-sm text-muted-foreground">
+                            Student?{' '}
+                            <TextLink href="/student/login" tabIndex={5}>
+                                Go to student login
+                            </TextLink>
                         </div>
 
                         {canRegister && (

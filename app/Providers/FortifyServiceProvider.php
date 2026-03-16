@@ -50,14 +50,9 @@ class FortifyServiceProvider extends ServiceProvider
             ]);
 
             $login = trim($request->string('login')->toString());
-            $isStudentId = (bool) preg_match('/^\d{1,2}-\d{4}-\d{3}$/', $login);
-
             $user = User::query()
-                ->when(
-                    $isStudentId,
-                    fn ($query) => $query->where('student_id', $login),
-                    fn ($query) => $query->where('email', mb_strtolower($login)),
-                )
+                ->whereIn('role', ['faculty', 'dean'])
+                ->where('email', mb_strtolower($login))
                 ->first();
 
             if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
