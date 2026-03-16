@@ -4,14 +4,23 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\FacultyEvaluationReportController;
 use App\Http\Controllers\StudentEvaluationController;
+use App\Http\Controllers\Auth\StudentAuthenticatedSessionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function (Request $request) {
     return $request->user()
         ? redirect()->route('dashboard')
-        : redirect()->route('login');
+        : redirect()->route('student.login');
 })->name('home');
+
+Route::middleware('guest')->group(function () {
+    Route::get('student/login', [StudentAuthenticatedSessionController::class, 'create'])
+        ->name('student.login');
+
+    Route::post('student/login', [StudentAuthenticatedSessionController::class, 'store'])
+        ->name('student.login.store');
+});
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardRedirectController::class)->name('dashboard');
