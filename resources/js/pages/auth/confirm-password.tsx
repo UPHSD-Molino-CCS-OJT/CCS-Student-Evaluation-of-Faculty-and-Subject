@@ -11,7 +11,7 @@ export default function ConfirmPassword() {
     return (
         <AuthLayout
             title="Confirm your password"
-            description="This is a secure area of the application. Please confirm your password before continuing."
+            description="This is a secure area of the application. Enter your current account password to continue."
         >
             <Head title="Confirm password" />
 
@@ -19,14 +19,18 @@ export default function ConfirmPassword() {
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password">Current password</Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder="Enter your current password"
                                 autoComplete="current-password"
                                 autoFocus
                             />
+
+                            <p className="text-xs text-muted-foreground">
+                                Use your account password, not your login identifier.
+                            </p>
 
                             <InputError message={errors.password} />
                         </div>
