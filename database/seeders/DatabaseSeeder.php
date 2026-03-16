@@ -20,12 +20,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $sampleStudentId = '1-2345-678';
+
         $student = User::factory()->create([
             'name' => 'Sample Student',
             'email' => 'student@example.com',
-            'student_id' => '1-2345-678',
+            'student_id' => $sampleStudentId,
             'role' => 'student',
-            'password' => Hash::make('password'),
+            'password' => Hash::make($sampleStudentId),
         ]);
 
         $facultyOne = User::factory()->create([
