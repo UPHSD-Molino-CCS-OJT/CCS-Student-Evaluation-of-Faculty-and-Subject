@@ -4,12 +4,14 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\FacultyEvaluationReportController;
 use App\Http\Controllers\StudentEvaluationController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', function (Request $request) {
+    return $request->user()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+})->name('home');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardRedirectController::class)->name('dashboard');
