@@ -28,10 +28,10 @@ export function AppSidebar() {
             ];
         }
 
-        if (auth.user.role === 'dean') {
+        if (['dean', 'staff', 'system_admin'].includes(auth.user.role)) {
             return [
                 {
-                    title: 'Dean Summary',
+                    title: 'Evaluation Summary',
                     href: '/dean/summaries',
                     icon: BarChart3,
                 },
