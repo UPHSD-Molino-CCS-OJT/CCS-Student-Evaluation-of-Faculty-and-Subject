@@ -5,6 +5,7 @@ use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\DeanEnrollmentController;
 use App\Http\Controllers\DeanProgramCoursesController;
 use App\Http\Controllers\DeanStudentsController;
+use App\Http\Controllers\DeanFacultyManagementController;
 use App\Http\Controllers\EvaluationSettingController;
 use App\Http\Controllers\FacultyEvaluationReportController;
 use App\Http\Controllers\SubjectImportController;
@@ -61,6 +62,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('dean/enrollments', [DeanEnrollmentController::class, 'store'])
             ->name('dean.enrollments.store');
+
+        Route::get('dean/faculty-management', [DeanFacultyManagementController::class, 'index'])
+            ->name('dean.faculty-management.index');
+
+        Route::post('dean/faculty-management', [DeanFacultyManagementController::class, 'store'])
+            ->name('dean.faculty-management.store');
 
         Route::get('dean/subjects/import-template', [SubjectImportController::class, 'downloadTemplate'])
             ->name('dean.subjects.import-template');
