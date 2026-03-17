@@ -66,9 +66,9 @@ export default function StudentLogin() {
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="student_id_0">Student ID</Label>
-                                <div className="flex flex-wrap items-center justify-center gap-2">
+                                <div className="flex items-center justify-center gap-1 overflow-x-auto whitespace-nowrap pb-1">
                                     {studentIdDigits.map((digit, index) => (
-                                        <div key={index} className="flex items-center gap-2">
+                                        <div key={index} className="flex items-center gap-1">
                                             <Input
                                                 id={`student_id_${index}`}
                                                 ref={(element) => {
@@ -82,7 +82,7 @@ export default function StudentLogin() {
                                                 autoComplete={index === 0 ? 'username' : 'off'}
                                                 tabIndex={index + 1}
                                                 maxLength={1}
-                                                className="h-11 w-11 text-center text-base"
+                                                className="h-10 w-10 shrink-0 text-center text-base"
                                                 value={digit}
                                                 onChange={(event) => handleDigitChange(index, event.target.value)}
                                                 onKeyDown={(event) => {
