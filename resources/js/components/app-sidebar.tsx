@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, BookOpenText, ClipboardCheck } from 'lucide-react';
+import { BarChart3, BookOpenText, ClipboardCheck, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -39,6 +39,11 @@ export function AppSidebar() {
                     title: 'Courses per Program',
                     href: '/dean/program-courses',
                     icon: BookOpenText,
+                },
+                {
+                    title: 'Students',
+                    href: '/dean/students',
+                    icon: Users,
                 },
             ];
         }
