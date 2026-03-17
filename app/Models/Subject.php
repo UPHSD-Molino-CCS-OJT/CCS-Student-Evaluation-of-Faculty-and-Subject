@@ -16,6 +16,9 @@ class Subject extends Model
     protected $fillable = [
         'code',
         'title',
+        'semester_offered',
+        'program',
+        'curriculum_version',
     ];
 
     public function classSections(): HasMany
