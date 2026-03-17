@@ -69,6 +69,56 @@ composer run dev
 
 Then open `http://127.0.0.1:8000`.
 
+## Railway Deployment
+
+Use two Railway services for production:
+
+- `web` service (serves HTTP traffic)
+- `worker` service (processes queued jobs)
+
+### 1) Create the `web` service
+
+- Source: this repository
+- Build command:
+
+```bash
+composer install --no-interaction --prefer-dist --optimize-autoloader && npm ci && npm run build
+```
+
+- Start command:
+
+```bash
+php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+```
+
+### 2) Add required environment variables
+
+Set these in Railway service variables:
+
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_KEY` (generate once using `php artisan key:generate --show`)
+- `APP_URL` (your Railway public URL)
+- `DB_CONNECTION=mysql`
+- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Railway MySQL)
+- `SESSION_DRIVER=database`
+- `CACHE_STORE=database`
+- `QUEUE_CONNECTION=database` (or `sync` if you do not run a worker service)
+
+### 3) Create the `worker` service (recommended)
+
+- Same repo and build command as `web`
+- Start command:
+
+```bash
+php artisan queue:work --tries=1 --timeout=0
+```
+
+### 4) First deploy notes
+
+- `npm run build` now generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
+- If deployment cache is stale, trigger a clear rebuild in Railway and redeploy.
+
 ## Seeded Demo Accounts
 
 See `database/seeders/DatabaseSeeder.php` for current values. Default accounts include:

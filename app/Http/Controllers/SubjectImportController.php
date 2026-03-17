@@ -36,12 +36,14 @@ class SubjectImportController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
 
             foreach ($columns as $index => $column) {
-                $sheet->setCellValue([$index + 1, 1], $column);
+                $cell = Coordinate::stringFromColumnIndex($index + 1).'1';
+                $sheet->setCellValue($cell, $column);
             }
 
             foreach ($sampleRows as $rowIndex => $rowValues) {
                 foreach ($rowValues as $columnIndex => $value) {
-                    $sheet->setCellValue([$columnIndex + 1, $rowIndex + 2], $value);
+                    $cell = Coordinate::stringFromColumnIndex($columnIndex + 1).($rowIndex + 2);
+                    $sheet->setCellValue($cell, $value);
                 }
             }
 
