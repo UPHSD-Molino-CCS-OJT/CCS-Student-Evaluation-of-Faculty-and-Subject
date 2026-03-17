@@ -1,4 +1,5 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -26,6 +27,7 @@ type Row = {
 type Props = {
     questions: Question[];
     rows: Row[];
+    evaluationOpen: boolean;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -35,7 +37,18 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function DeanSummaries({ questions, rows }: Props) {
+export default function DeanSummaries({ questions, rows, evaluationOpen }: Props) {
+    const page = usePage();
+    const status = (page.props as { flash?: { status?: string } }).flash?.status;
+
+    const toggleEvaluation = (nextState: boolean) => {
+        router.patch(
+            '/evaluation-settings',
+            { is_open: nextState },
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Summary" />
@@ -46,6 +59,19 @@ export default function DeanSummaries({ questions, rows }: Props) {
                     <p className="mt-1 text-sm text-muted-foreground">
                         This page summarizes class-level evaluation metrics across the college.
                     </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <Button
+                            type="button"
+                            variant={evaluationOpen ? 'default' : 'secondary'}
+                            onClick={() => toggleEvaluation(!evaluationOpen)}
+                        >
+                            {evaluationOpen ? 'Stop Evaluation' : 'Start Evaluation'}
+                        </Button>
+                        <p className="text-sm text-muted-foreground">
+                            Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
+                        </p>
+                    </div>
+                    {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
                 {rows.map((row) => {
