@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
+use App\Http\Controllers\DeanEnrollmentController;
 use App\Http\Controllers\DeanProgramCoursesController;
 use App\Http\Controllers\DeanStudentsController;
 use App\Http\Controllers\EvaluationSettingController;
@@ -54,6 +55,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('dean/students', [DeanStudentsController::class, 'index'])
             ->name('dean.students.index');
+
+        Route::get('dean/enrollments', [DeanEnrollmentController::class, 'index'])
+            ->name('dean.enrollments.index');
+
+        Route::post('dean/enrollments', [DeanEnrollmentController::class, 'store'])
+            ->name('dean.enrollments.store');
 
         Route::get('dean/subjects/import-template', [SubjectImportController::class, 'downloadTemplate'])
             ->name('dean.subjects.import-template');
