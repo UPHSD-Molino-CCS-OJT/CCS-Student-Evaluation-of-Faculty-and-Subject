@@ -4,12 +4,15 @@ import type { BreadcrumbItem } from '@/types';
 
 type ProgramGroup = {
     program: string;
-    subjects: Array<{
-        id: number;
-        code: string;
-        title: string;
-        semesterOffered?: string | null;
-        curriculumVersion?: string | null;
+    courseCount: number;
+    curriculums: Array<{
+        curriculum: string;
+        subjects: Array<{
+            id: number;
+            code: string;
+            title: string;
+            semesterOffered?: string | null;
+        }>;
     }>;
 };
 
@@ -47,30 +50,43 @@ export default function ProgramCoursesIndex({ programs }: Props) {
                     <section key={group.program} className="overflow-hidden rounded-xl border">
                         <div className="border-b bg-muted/30 px-4 py-3">
                             <h2 className="font-semibold">{group.program}</h2>
-                            <p className="text-sm text-muted-foreground">{group.subjects.length} course(s)</p>
+                            <p className="text-sm text-muted-foreground">
+                                {group.courseCount} course(s) across {group.curriculums.length} curriculum year(s)
+                            </p>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-border text-sm">
-                                <thead className="bg-muted/30 text-left">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Code</th>
-                                        <th className="px-4 py-3 font-medium">Course Name</th>
-                                        <th className="px-4 py-3 font-medium">Semester Offered</th>
-                                        <th className="px-4 py-3 font-medium">Curriculum Year</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {group.subjects.map((subject) => (
-                                        <tr key={subject.id}>
-                                            <td className="px-4 py-3 font-medium">{subject.code}</td>
-                                            <td className="px-4 py-3">{subject.title}</td>
-                                            <td className="px-4 py-3">{subject.semesterOffered ?? '-'}</td>
-                                            <td className="px-4 py-3">{subject.curriculumVersion ?? '-'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="space-y-4 p-4">
+                            {group.curriculums.map((curriculumGroup) => (
+                                <div key={`${group.program}-${curriculumGroup.curriculum}`} className="rounded-lg border">
+                                    <div className="border-b bg-muted/20 px-4 py-3">
+                                        <h3 className="font-medium">Curriculum: {curriculumGroup.curriculum}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {curriculumGroup.subjects.length} course(s)
+                                        </p>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-border text-sm">
+                                            <thead className="bg-muted/30 text-left">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium">Code</th>
+                                                    <th className="px-4 py-3 font-medium">Course Name</th>
+                                                    <th className="px-4 py-3 font-medium">Semester Offered</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {curriculumGroup.subjects.map((subject) => (
+                                                    <tr key={subject.id}>
+                                                        <td className="px-4 py-3 font-medium">{subject.code}</td>
+                                                        <td className="px-4 py-3">{subject.title}</td>
+                                                        <td className="px-4 py-3">{subject.semesterOffered ?? '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </section>
                 ))}
