@@ -113,3 +113,29 @@ CSV;
 
     $response->assertForbidden();
 });
+
+test('import supports summer semester values', function () {
+    $user = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $csv = <<<CSV
+semester_offered,subject_code,course_name,program,curriculum_version
+summer,CCS398,Practicum,BSCS,2023-2024
+CSV;
+
+    $file = UploadedFile::fake()->createWithContent('subjects.csv', $csv);
+
+    $this->actingAs($user)->post(route('dean.subjects.import'), [
+        'file' => $file,
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('subjects', [
+        'code' => 'CCS398',
+        'title' => 'Practicum',
+        'semester_offered' => 'Summer Semester',
+        'program' => 'BSCS',
+        'curriculum_version' => '2023-2024',
+    ]);
+});
