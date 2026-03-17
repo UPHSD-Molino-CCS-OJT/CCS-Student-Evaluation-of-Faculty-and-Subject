@@ -41,7 +41,9 @@ jobs:
         run: npm i
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        env:
+          COMPOSER_ALLOW_SUPERUSER: 1
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-gd
 
       - name: Copy Environment File
         run: cp .env.example .env

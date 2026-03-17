@@ -107,6 +107,11 @@ composer install
 - In non-interactive root/container environments, set `COMPOSER_ALLOW_SUPERUSER=1` when running Composer commands.
 - `phpoffice/phpspreadsheet` expects PHP `gd`. Install/enable `ext-gd` for production-like environments.
 - This repository includes a Composer platform override for `ext-gd` so locked dependencies can still install in constrained CI images.
+- For build daemons, use:
+
+```bash
+COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-req=ext-gd
+```
 
 ## Useful Commands
 
