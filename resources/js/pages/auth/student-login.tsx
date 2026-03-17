@@ -9,67 +9,48 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 
 export default function StudentLogin() {
-    const [studentIdParts, setStudentIdParts] = useState({
-        first: '',
-        second: '',
-        third: '',
-    });
+    const [studentIdDigits, setStudentIdDigits] = useState<string[]>(Array.from({ length: 9 }, () => ''));
+    const inputRefs = useRef<Array<HTMLInputElement | null>>(Array.from({ length: 9 }, () => null));
 
-    const firstInputRef = useRef<HTMLInputElement>(null);
-    const secondInputRef = useRef<HTMLInputElement>(null);
-    const thirdInputRef = useRef<HTMLInputElement>(null);
+    const firstPart = [studentIdDigits[0], studentIdDigits[1]].join('');
+    const secondPart = [studentIdDigits[2], studentIdDigits[3], studentIdDigits[4], studentIdDigits[5]].join('');
+    const thirdPart = [studentIdDigits[6], studentIdDigits[7], studentIdDigits[8]].join('');
+    const studentIdValue = `${firstPart}-${secondPart}-${thirdPart}`;
 
-    const studentIdValue = `${studentIdParts.first}-${studentIdParts.second}-${studentIdParts.third}`;
+    const handleDigitChange = (index: number, value: string) => {
+        const nextDigit = value.replace(/\D/g, '').slice(-1);
 
-    const handlePartChange = (part: 'first' | 'second' | 'third', value: string) => {
-        const maxLengths = {
-            first: 2,
-            second: 4,
-            third: 3,
-        };
+        setStudentIdDigits((previous) => {
+            const next = [...previous];
+            next[index] = nextDigit;
+            return next;
+        });
 
-        const nextValue = value.replace(/\D/g, '').slice(0, maxLengths[part]);
-
-        setStudentIdParts((previous) => ({
-            ...previous,
-            [part]: nextValue,
-        }));
-
-        if (part === 'first' && nextValue.length === maxLengths.first) {
-            secondInputRef.current?.focus();
-        }
-
-        if (part === 'second' && nextValue.length === maxLengths.second) {
-            thirdInputRef.current?.focus();
+        if (nextDigit && index < 8) {
+            inputRefs.current[index + 1]?.focus();
         }
     };
 
-    const handleBackspace = (part: 'second' | 'third', value: string) => {
-        if (value.length > 0) {
+    const handleBackspace = (index: number) => {
+        if (studentIdDigits[index] || index === 0) {
             return;
         }
 
-        if (part === 'second') {
-            firstInputRef.current?.focus();
-        }
-
-        if (part === 'third') {
-            secondInputRef.current?.focus();
-        }
+        inputRefs.current[index - 1]?.focus();
     };
 
     const handlePaste = (text: string) => {
-        const digits = text.replace(/\D/g, '');
+        const digits = text.replace(/\D/g, '').slice(0, 9);
 
         if (digits.length === 0) {
             return;
         }
 
-        setStudentIdParts({
-            first: digits.slice(0, 2),
-            second: digits.slice(2, 6),
-            third: digits.slice(6, 9),
-        });
+        const nextDigits = Array.from({ length: 9 }, (_, index) => digits[index] ?? '');
+        setStudentIdDigits(nextDigits);
+
+        const nextFocusIndex = Math.min(digits.length, 8);
+        inputRefs.current[nextFocusIndex]?.focus();
     };
 
     return (
@@ -84,72 +65,43 @@ export default function StudentLogin() {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="student_id_first">Student ID</Label>
-                                <div className="flex items-center justify-center gap-2">
-                                    <Input
-                                        id="student_id_first"
-                                        ref={firstInputRef}
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        required
-                                        autoFocus
-                                        tabIndex={1}
-                                        autoComplete="username"
-                                        placeholder="00"
-                                        maxLength={2}
-                                        className="w-16 text-center"
-                                        value={studentIdParts.first}
-                                        onChange={(event) => handlePartChange('first', event.target.value)}
-                                        onPaste={(event) => {
-                                            event.preventDefault();
-                                            handlePaste(event.clipboardData.getData('text'));
-                                        }}
-                                    />
-                                    <span className="text-muted-foreground">-</span>
-                                    <Input
-                                        id="student_id_second"
-                                        ref={secondInputRef}
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        required
-                                        tabIndex={2}
-                                        placeholder="0000"
-                                        maxLength={4}
-                                        className="w-20 text-center"
-                                        value={studentIdParts.second}
-                                        onChange={(event) => handlePartChange('second', event.target.value)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Backspace') {
-                                                handleBackspace('second', studentIdParts.second);
-                                            }
-                                        }}
-                                    />
-                                    <span className="text-muted-foreground">-</span>
-                                    <Input
-                                        id="student_id_third"
-                                        ref={thirdInputRef}
-                                        type="text"
-                                        inputMode="numeric"
-                                        pattern="[0-9]*"
-                                        required
-                                        tabIndex={3}
-                                        placeholder="000"
-                                        maxLength={3}
-                                        className="w-16 text-center"
-                                        value={studentIdParts.third}
-                                        onChange={(event) => handlePartChange('third', event.target.value)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === 'Backspace') {
-                                                handleBackspace('third', studentIdParts.third);
-                                            }
-                                        }}
-                                    />
+                                <Label htmlFor="student_id_0">Student ID</Label>
+                                <div className="flex flex-wrap items-center justify-center gap-2">
+                                    {studentIdDigits.map((digit, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <Input
+                                                id={`student_id_${index}`}
+                                                ref={(element) => {
+                                                    inputRefs.current[index] = element;
+                                                }}
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                required
+                                                autoFocus={index === 0}
+                                                autoComplete={index === 0 ? 'username' : 'off'}
+                                                tabIndex={index + 1}
+                                                maxLength={1}
+                                                className="h-11 w-11 text-center text-base"
+                                                value={digit}
+                                                onChange={(event) => handleDigitChange(index, event.target.value)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Backspace') {
+                                                        handleBackspace(index);
+                                                    }
+                                                }}
+                                                onPaste={(event) => {
+                                                    event.preventDefault();
+                                                    handlePaste(event.clipboardData.getData('text'));
+                                                }}
+                                            />
+                                            {(index === 1 || index === 5) && <span className="text-muted-foreground">-</span>}
+                                        </div>
+                                    ))}
                                 </div>
                                 <input type="hidden" name="student_id" value={studentIdValue} />
                                 <p className="text-xs text-muted-foreground">
-                                    Format: 1-2345-678 or 00-0000-000
+                                    Enter 9 digits. Format: 1-2345-678 or 12-3456-789
                                 </p>
                                 <InputError message={errors.student_id} />
                             </div>
@@ -157,7 +109,7 @@ export default function StudentLogin() {
                             <Button
                                 type="submit"
                                 className="mt-4 w-full"
-                                tabIndex={4}
+                                tabIndex={10}
                                 disabled={processing}
                                 data-test="student-login-button"
                             >
