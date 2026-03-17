@@ -82,7 +82,7 @@ Use two Railway services for production:
 - Build command:
 
 ```bash
-composer install --no-interaction --prefer-dist --optimize-autoloader && npm ci && npm run build
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && npm ci && npm run build
 ```
 
 - Start command:
@@ -156,11 +156,12 @@ composer install
 
 - In non-interactive root/container environments, set `COMPOSER_ALLOW_SUPERUSER=1` when running Composer commands.
 - `phpoffice/phpspreadsheet` expects PHP `gd`. Install/enable `ext-gd` for production-like environments.
-- This repository includes a Composer platform override for `ext-gd` so locked dependencies can still install in constrained CI images.
+- `phpoffice/phpspreadsheet` also expects PHP `zip` for full XLSX support.
+- This repository includes Composer platform overrides for `ext-gd` and `ext-zip` so locked dependencies can still install in constrained CI images.
 - For build daemons, use:
 
 ```bash
-COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-req=ext-gd
+COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip
 ```
 
 ## Useful Commands

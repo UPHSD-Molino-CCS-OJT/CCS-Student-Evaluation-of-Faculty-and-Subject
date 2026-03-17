@@ -109,7 +109,8 @@
         "sort-packages": true,
         "platform": {
             "php": "8.2.30",
-            "ext-gd": "2.3.3"
+            "ext-gd": "2.3.3",
+            "ext-zip": "1.22.3"
         },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
