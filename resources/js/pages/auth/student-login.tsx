@@ -85,7 +85,7 @@ export default function StudentLogin() {
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="student_id_first">Student ID</Label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center gap-2">
                                     <Input
                                         id="student_id_first"
                                         ref={firstInputRef}
