@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, BookOpenText, ClipboardCheck, FileCheck, Users } from 'lucide-react';
+import { BarChart3, BookOpenText, ClipboardCheck, FileCheck, Users, UserCog } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -49,6 +49,11 @@ export function AppSidebar() {
                     title: 'Enrollments',
                     href: '/dean/enrollments',
                     icon: FileCheck,
+                },
+                {
+                    title: 'Faculty Management',
+                    href: '/dean/faculty-management',
+                    icon: UserCog,
                 },
             ];
         }
