@@ -16,6 +16,34 @@ test('students can authenticate using student id', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('students can authenticate when first group omits leading zero', function () {
+    $student = User::factory()->create([
+        'student_id' => '01-2345-678',
+        'role' => 'student',
+    ]);
+
+    $response = $this->post(route('student.login.store'), [
+        'student_id' => '1-2345-678',
+    ]);
+
+    $this->assertAuthenticatedAs($student);
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('students can authenticate when first group includes leading zero', function () {
+    $student = User::factory()->create([
+        'student_id' => '1-2345-678',
+        'role' => 'student',
+    ]);
+
+    $response = $this->post(route('student.login.store'), [
+        'student_id' => '01-2345-678',
+    ]);
+
+    $this->assertAuthenticatedAs($student);
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
 test('students cannot authenticate with invalid student id', function () {
     User::factory()->create([
         'student_id' => '1-2345-678',
