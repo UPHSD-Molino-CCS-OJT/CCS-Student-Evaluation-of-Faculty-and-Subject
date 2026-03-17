@@ -30,6 +30,8 @@ A Laravel 12 + Inertia React web application for student evaluation of faculty a
 - `student`
 - `faculty`
 - `dean`
+- `staff`
+- `system_admin`
 
 ## Local Setup
 
@@ -79,6 +81,12 @@ See `database/seeders/DatabaseSeeder.php` for current values. Default accounts i
   - Password: `password`
 - Dean:
   - Email: `dean@example.com`
+  - Password: `password`
+- Staff:
+  - Email: `staff@example.com`
+  - Password: `password`
+- System Admin:
+  - Email: `sysadmin@example.com`
   - Password: `password`
 
 ## Important Notes
