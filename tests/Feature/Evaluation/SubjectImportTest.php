@@ -28,8 +28,8 @@ test('dean, staff, and system admin can import subjects from csv', function (str
 
     $csv = <<<CSV
 semester_offered,subject_code,course_name,program,curriculum_version
-1st Semester,CCS101,Introduction to Computing,BSCS,2023-2024 Curriculum
-2nd Semester,CCS210,Data Structures and Algorithms,BSCS,2023-2024 Curriculum
+1st Semester,CCS101,Introduction to Computing,BSCS,2023-2024
+2nd Semester,CCS210,Data Structures and Algorithms,BSCS,2023-2024
 CSV;
 
     $file = UploadedFile::fake()->createWithContent('subjects.csv', $csv);
@@ -46,7 +46,7 @@ CSV;
         'title' => 'Introduction to Computing',
         'semester_offered' => '1st Semester',
         'program' => 'BSCS',
-        'curriculum_version' => '2023-2024 Curriculum',
+        'curriculum_version' => '2023-2024',
     ]);
 
     $this->assertDatabaseHas('subjects', [
@@ -54,7 +54,7 @@ CSV;
         'title' => 'Data Structures and Algorithms',
         'semester_offered' => '2nd Semester',
         'program' => 'BSCS',
-        'curriculum_version' => '2023-2024 Curriculum',
+        'curriculum_version' => '2023-2024',
     ]);
 })->with(['dean', 'staff', 'system_admin']);
 
@@ -69,7 +69,7 @@ test('import updates existing subject record for same code semester program and 
         'title' => 'Old Course Name',
         'semester_offered' => '1st Semester',
         'program' => 'BSCS',
-        'curriculum_version' => '2023-2024 Curriculum',
+        'curriculum_version' => '2023-2024',
     ]);
 
     $csv = <<<CSV
@@ -88,7 +88,7 @@ CSV;
         'title' => 'Introduction to Computing',
         'semester_offered' => '1st Semester',
         'program' => 'BSCS',
-        'curriculum_version' => '2023-2024 Curriculum',
+        'curriculum_version' => '2023-2024',
     ]);
 
     expect(Subject::query()->where('code', 'CCS101')->count())->toBe(1);
@@ -102,7 +102,7 @@ test('faculty cannot import subjects', function () {
 
     $csv = <<<CSV
 semester_offered,subject_code,course_name,program,curriculum_version
-1st Semester,CCS101,Introduction to Computing,BSCS,2023-2024 Curriculum
+1st Semester,CCS101,Introduction to Computing,BSCS,2023-2024
 CSV;
 
     $file = UploadedFile::fake()->createWithContent('subjects.csv', $csv);

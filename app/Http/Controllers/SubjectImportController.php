@@ -26,8 +26,8 @@ class SubjectImportController extends Controller
         ];
 
         $sampleRows = [
-            ['1st Semester', 'CCS101', 'Introduction to Computing', 'BSCS', '2023-2024 Curriculum'],
-            ['2nd Semester', 'CCS210', 'Data Structures and Algorithms', 'BSCS', '2023-2024 Curriculum'],
+            ['1st Semester', 'CCS101', 'Introduction to Computing', 'BSCS', '2023-2024'],
+            ['2nd Semester', 'CCS210', 'Data Structures and Algorithms', 'BSCS', '2023-2024'],
         ];
 
         return response()->streamDownload(function () use ($columns, $sampleRows): void {
@@ -92,6 +92,9 @@ class SubjectImportController extends Controller
                 $value = (string) $worksheet->getCell([$headerMap[$column], $row])->getFormattedValue();
                 $item[$column] = trim($value);
             }
+
+            $item['curriculum_version'] = preg_replace('/\s*curriculum\s*/i', '', $item['curriculum_version']) ?? '';
+            $item['curriculum_version'] = trim($item['curriculum_version']);
 
             if (collect($item)->every(static fn (string $value): bool => $value === '')) {
                 continue;

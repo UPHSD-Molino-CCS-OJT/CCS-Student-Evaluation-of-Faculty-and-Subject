@@ -96,7 +96,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                     <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
                         <p className="text-sm text-muted-foreground">
                             Import subjects by semester offered, subject code, course name, program, and curriculum
-                            version.
+                            year (example: 2023-2024).
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
                             <a href="/dean/subjects/import-template" className="inline-flex">
