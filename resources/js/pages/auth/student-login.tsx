@@ -129,7 +129,7 @@ export default function StudentLogin() {
                         </div>
 
                         <div className="text-center text-sm text-muted-foreground">
-                            Faculty or Dean? <TextLink href="/login">Go to staff login</TextLink>
+                            Faculty, dean, staff, or system admin? <TextLink href="/login">Go to staff login</TextLink>
                         </div>
                     </>
                 )}
