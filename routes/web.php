@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\EvaluationSettingController;
 use App\Http\Controllers\FacultyEvaluationReportController;
+use App\Http\Controllers\SubjectImportController;
 use App\Http\Controllers\StudentEvaluationController;
 use App\Http\Controllers\Auth\StudentAuthenticatedSessionController;
 use Illuminate\Http\Request;
@@ -45,6 +46,12 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:dean,system_admin,staff')->group(function () {
         Route::get('dean/summaries', [DeanEvaluationSummaryController::class, 'index'])
             ->name('dean.summaries.index');
+
+        Route::get('dean/subjects/import-template', [SubjectImportController::class, 'downloadTemplate'])
+            ->name('dean.subjects.import-template');
+
+        Route::post('dean/subjects/import', [SubjectImportController::class, 'store'])
+            ->name('dean.subjects.import');
 
         Route::patch('evaluation-settings', [EvaluationSettingController::class, 'update'])
             ->name('evaluation-settings.update');
