@@ -54,6 +54,22 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
+        User::factory()->create([
+            'name' => 'CCS Staff',
+            'email' => 'staff@example.com',
+            'student_id' => null,
+            'role' => 'staff',
+            'password' => Hash::make('password'),
+        ]);
+
+        User::factory()->create([
+            'name' => 'System Admin',
+            'email' => 'sysadmin@example.com',
+            'student_id' => null,
+            'role' => 'system_admin',
+            'password' => Hash::make('password'),
+        ]);
+
         $subjectOne = Subject::create([
             'code' => 'CCS101',
             'title' => 'Introduction to Computing',
