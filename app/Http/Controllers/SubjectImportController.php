@@ -28,7 +28,7 @@ class SubjectImportController extends Controller
         $sampleRows = [
             ['1st Semester', 'CCS101', 'Introduction to Computing', 'BSCS', '2023-2024'],
             ['2nd Semester', 'CCS210', 'Data Structures and Algorithms', 'BSCS', '2023-2024'],
-            ['Summer Semester', 'CCS398', 'Practicum', 'BSCS', '2023-2024'],
+            ['Summer', 'CCS398', 'Practicum', 'BSCS', '2023-2024'],
         ];
 
         return response()->streamDownload(function () use ($columns, $sampleRows): void {
@@ -98,7 +98,7 @@ class SubjectImportController extends Controller
 
             if ($item['semester_offered'] === null) {
                 return back()->withErrors([
-                    'file' => "Row {$row} has an invalid 'semester_offered'. Use 1st Semester, 2nd Semester, or Summer Semester.",
+                    'file' => "Row {$row} has an invalid 'semester_offered'. Use 1st Semester, 2nd Semester, or Summer.",
                 ]);
             }
 
@@ -154,7 +154,7 @@ class SubjectImportController extends Controller
         return match ($normalized) {
             '1', '1st', 'first', '1st semester', 'first semester' => '1st Semester',
             '2', '2nd', 'second', '2nd semester', 'second semester' => '2nd Semester',
-            'summer', 'summer semester', 'midyear', 'midyear semester' => 'Summer Semester',
+            'summer', 'summer semester', 'midyear', 'midyear semester' => 'Summer',
             default => null,
         };
     }
