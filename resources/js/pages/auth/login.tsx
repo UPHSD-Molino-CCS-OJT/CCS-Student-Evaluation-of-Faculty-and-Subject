@@ -26,7 +26,7 @@ export default function Login({
     return (
         <AuthLayout
             title="Staff Login"
-            description="Faculty and dean users can sign in with email and password"
+            description="Faculty, dean, staff, and system admin users can sign in with email and password"
         >
             <Head title="Staff login" />
 
