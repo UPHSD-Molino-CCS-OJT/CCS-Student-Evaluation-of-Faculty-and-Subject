@@ -114,7 +114,7 @@ CSV;
     $response->assertForbidden();
 });
 
-test('import supports summer semester values', function () {
+test('import supports summer values', function () {
     $user = User::factory()->create([
         'role' => 'dean',
         'student_id' => null,
@@ -134,7 +134,7 @@ CSV;
     $this->assertDatabaseHas('subjects', [
         'code' => 'CCS398',
         'title' => 'Practicum',
-        'semester_offered' => 'Summer Semester',
+        'semester_offered' => 'Summer',
         'program' => 'BSCS',
         'curriculum_version' => '2023-2024',
     ]);
