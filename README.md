@@ -98,12 +98,14 @@ Set these in Railway service variables:
 - `APP_ENV=production`
 - `APP_DEBUG=false`
 - `APP_KEY` (generate once using `php artisan key:generate --show`)
-- `APP_URL` (your Railway public URL)
+- `APP_URL` (your Railway public URL, must start with `https://`)
+- `ASSET_URL` (optional; set to the same `https://` public URL if you still see mixed-content assets)
 - `DB_CONNECTION=mysql`
 - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Railway MySQL)
 - `SESSION_DRIVER=database`
 - `CACHE_STORE=database`
 - `QUEUE_CONNECTION=database` (or `sync` if you do not run a worker service)
+- `SESSION_SECURE_COOKIE=true`
 
 ### 3) Create the `worker` service (recommended)
 
