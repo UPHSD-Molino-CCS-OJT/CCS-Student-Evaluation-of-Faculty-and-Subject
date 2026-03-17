@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
@@ -39,13 +40,34 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function DeanSummaries({ questions, rows, evaluationOpen }: Props) {
     const page = usePage();
+    const [file, setFile] = useState<File | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
+    const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
 
     const toggleEvaluation = (nextState: boolean) => {
         router.patch(
             '/evaluation-settings',
             { is_open: nextState },
             { preserveScroll: true },
+        );
+    };
+
+    const importSubjects = () => {
+        if (!file) {
+            return;
+        }
+
+        router.post(
+            '/dean/subjects/import',
+            { file },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setIsImporting(true),
+                onFinish: () => setIsImporting(false),
+            },
         );
     };
 
@@ -70,6 +92,28 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         <p className="text-sm text-muted-foreground">
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
+                    </div>
+                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
+                        <p className="text-sm text-muted-foreground">
+                            Import subjects by semester offered, subject code, course name, program, and curriculum
+                            version.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <a href="/dean/subjects/import-template" className="inline-flex">
+                                <Button type="button" variant="outline">
+                                    Download Excel Template (.xlsx)
+                                </Button>
+                            </a>
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                            />
+                            <Button type="button" onClick={importSubjects} disabled={!file || isImporting}>
+                                {isImporting ? 'Importing...' : 'Import Subjects'}
+                            </Button>
+                        </div>
+                        {errors.file && <p className="text-sm font-medium text-red-600">{errors.file}</p>}
                     </div>
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
