@@ -82,7 +82,7 @@ Use two Railway services for production:
 - Build command:
 
 ```bash
-COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && npm ci && npm run build
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build
 ```
 
 - Start command:
@@ -117,6 +117,7 @@ php artisan queue:work --tries=1 --timeout=0
 ### 4) First deploy notes
 
 - `npm run build` now generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
+- If Railway build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.cache'`, use `npm install` (not `npm ci`) in the build command.
 - If deployment cache is stale, trigger a clear rebuild in Railway and redeploy.
 
 ## Seeded Demo Accounts
