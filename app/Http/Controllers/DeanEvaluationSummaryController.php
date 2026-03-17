@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
+use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,6 +58,7 @@ class DeanEvaluationSummaryController extends Controller
         return Inertia::render('dean/summaries/index', [
             'questions' => config('evaluation.questions'),
             'rows' => $rows,
+            'evaluationOpen' => EvaluationSetting::isOpen(),
         ]);
     }
 }
