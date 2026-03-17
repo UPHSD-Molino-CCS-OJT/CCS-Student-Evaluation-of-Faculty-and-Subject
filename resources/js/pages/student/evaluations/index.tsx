@@ -16,6 +16,7 @@ type EvaluationItem = {
 
 type Props = {
     items: EvaluationItem[];
+    evaluationOpen: boolean;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -25,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function StudentEvaluationsIndex({ items }: Props) {
+export default function StudentEvaluationsIndex({ items, evaluationOpen }: Props) {
     const page = usePage();
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
 
@@ -39,6 +40,11 @@ export default function StudentEvaluationsIndex({ items }: Props) {
                     <p className="mt-1 text-sm text-muted-foreground">
                         Evaluate each assigned subject and faculty using the 25-question form.
                     </p>
+                    {!evaluationOpen && (
+                        <p className="mt-3 text-sm font-medium text-amber-600">
+                            Evaluations are currently closed. Please wait until they are opened by the school staff.
+                        </p>
+                    )}
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
@@ -73,6 +79,8 @@ export default function StudentEvaluationsIndex({ items }: Props) {
                                     <td className="px-4 py-3">
                                         {item.submitted ? (
                                             <span className="text-muted-foreground">Completed</span>
+                                        ) : !evaluationOpen ? (
+                                            <span className="text-muted-foreground">Closed</span>
                                         ) : (
                                             <Button asChild size="sm">
                                                 <Link href={`/student/evaluations/${item.classSectionId}`}>Evaluate Now</Link>
