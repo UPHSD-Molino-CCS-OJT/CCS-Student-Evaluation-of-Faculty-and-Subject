@@ -15,6 +15,9 @@ test('dean, staff, and system admin can download subject import template', funct
     $response->assertOk();
     $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     $response->assertHeader('content-disposition', 'attachment; filename=subjects-import-template.xlsx');
+
+    $content = $response->streamedContent();
+    expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
 test('dean, staff, and system admin can import subjects from csv', function (string $role) {
