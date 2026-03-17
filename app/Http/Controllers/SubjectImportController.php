@@ -35,12 +35,12 @@ class SubjectImportController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
 
             foreach ($columns as $index => $column) {
-                $sheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+                $sheet->setCellValue([$index + 1, 1], $column);
             }
 
             foreach ($sampleRows as $rowIndex => $rowValues) {
                 foreach ($rowValues as $columnIndex => $value) {
-                    $sheet->setCellValueByColumnAndRow($columnIndex + 1, $rowIndex + 2, $value);
+                    $sheet->setCellValue([$columnIndex + 1, $rowIndex + 2], $value);
                 }
             }
 
