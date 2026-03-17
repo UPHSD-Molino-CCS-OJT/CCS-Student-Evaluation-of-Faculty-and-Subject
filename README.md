@@ -109,7 +109,7 @@ npm run lint:check
 php artisan test
 
 # Run a focused test file
-php artisan test tests/Feature/Settings/SecurityTest.php
+php artisan test tests/Feature
 ```
 
 ## Project Structure (High-Level)
