@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\DeanProgramCoursesController;
+use App\Http\Controllers\DeanStudentsController;
 use App\Http\Controllers\EvaluationSettingController;
 use App\Http\Controllers\FacultyEvaluationReportController;
 use App\Http\Controllers\SubjectImportController;
@@ -50,6 +51,9 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('dean/program-courses', [DeanProgramCoursesController::class, 'index'])
             ->name('dean.program-courses.index');
+
+        Route::get('dean/students', [DeanStudentsController::class, 'index'])
+            ->name('dean.students.index');
 
         Route::get('dean/subjects/import-template', [SubjectImportController::class, 'downloadTemplate'])
             ->name('dean.subjects.import-template');
