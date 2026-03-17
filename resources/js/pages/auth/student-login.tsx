@@ -12,9 +12,11 @@ export default function StudentLogin() {
     const [studentIdDigits, setStudentIdDigits] = useState<string[]>(Array.from({ length: 9 }, () => ''));
     const inputRefs = useRef<Array<HTMLInputElement | null>>(Array.from({ length: 9 }, () => null));
 
-    const firstPart = [studentIdDigits[0], studentIdDigits[1]].join('');
-    const secondPart = [studentIdDigits[2], studentIdDigits[3], studentIdDigits[4], studentIdDigits[5]].join('');
-    const thirdPart = [studentIdDigits[6], studentIdDigits[7], studentIdDigits[8]].join('');
+    const enteredDigits = studentIdDigits.join('').slice(0, 9);
+    const usesOneDigitPrefix = enteredDigits.length <= 8;
+    const firstPart = usesOneDigitPrefix ? enteredDigits.slice(0, 1) : enteredDigits.slice(0, 2);
+    const secondPart = usesOneDigitPrefix ? enteredDigits.slice(1, 5) : enteredDigits.slice(2, 6);
+    const thirdPart = usesOneDigitPrefix ? enteredDigits.slice(5, 8) : enteredDigits.slice(6, 9);
     const studentIdValue = `${firstPart}-${secondPart}-${thirdPart}`;
 
     const handleDigitChange = (index: number, value: string) => {
@@ -46,10 +48,13 @@ export default function StudentLogin() {
             return;
         }
 
-        const nextDigits = Array.from({ length: 9 }, (_, index) => digits[index] ?? '');
+        const nextDigits =
+            digits.length === 8
+                ? [digits[0] ?? '', '', digits[1] ?? '', digits[2] ?? '', digits[3] ?? '', digits[4] ?? '', digits[5] ?? '', digits[6] ?? '', digits[7] ?? '']
+                : Array.from({ length: 9 }, (_, index) => digits[index] ?? '');
         setStudentIdDigits(nextDigits);
 
-        const nextFocusIndex = Math.min(digits.length, 8);
+        const nextFocusIndex = digits.length === 8 ? 8 : Math.min(digits.length, 8);
         inputRefs.current[nextFocusIndex]?.focus();
     };
 
@@ -77,7 +82,6 @@ export default function StudentLogin() {
                                                 type="text"
                                                 inputMode="numeric"
                                                 pattern="[0-9]*"
-                                                required
                                                 autoFocus={index === 0}
                                                 autoComplete={index === 0 ? 'username' : 'off'}
                                                 tabIndex={index + 1}
@@ -86,6 +90,12 @@ export default function StudentLogin() {
                                                 value={digit}
                                                 onChange={(event) => handleDigitChange(index, event.target.value)}
                                                 onKeyDown={(event) => {
+                                                    if (index === 1 && event.key === '-') {
+                                                        event.preventDefault();
+                                                        inputRefs.current[2]?.focus();
+                                                        return;
+                                                    }
+
                                                     if (event.key === 'Backspace') {
                                                         handleBackspace(index);
                                                     }
@@ -101,7 +111,7 @@ export default function StudentLogin() {
                                 </div>
                                 <input type="hidden" name="student_id" value={studentIdValue} />
                                 <p className="text-xs text-muted-foreground">
-                                    Enter 9 digits. Format: 1-2345-678 or 12-3456-789
+                                    Enter 8 or 9 digits. Format: 1-2345-678 or 12-3456-789
                                 </p>
                                 <InputError message={errors.student_id} />
                             </div>
