@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClassSection;
 use App\Models\Evaluation;
 use App\Models\EvaluationResponse;
+use App\Models\EvaluationSetting;
 use App\Models\StudentSectionEnrollment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,11 +46,14 @@ class StudentEvaluationController extends Controller
 
         return Inertia::render('student/evaluations/index', [
             'items' => $items,
+            'evaluationOpen' => EvaluationSetting::isOpen(),
         ]);
     }
 
     public function create(Request $request, ClassSection $classSection): Response
     {
+        abort_unless(EvaluationSetting::isOpen(), 403);
+
         $student = $request->user();
 
         $enrolled = StudentSectionEnrollment::query()
@@ -88,6 +92,12 @@ class StudentEvaluationController extends Controller
 
     public function store(Request $request, ClassSection $classSection): RedirectResponse
     {
+        if (! EvaluationSetting::isOpen()) {
+            return redirect()
+                ->route('student.evaluations.index')
+                ->with('status', 'Evaluation is currently closed.');
+        }
+
         $student = $request->user();
 
         $enrolled = StudentSectionEnrollment::query()
