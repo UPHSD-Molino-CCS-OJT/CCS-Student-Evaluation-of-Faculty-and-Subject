@@ -51,7 +51,7 @@ class FortifyServiceProvider extends ServiceProvider
 
             $login = trim($request->string('login')->toString());
             $user = User::query()
-                ->whereIn('role', ['faculty', 'dean'])
+                ->whereIn('role', ['faculty', 'dean', 'staff', 'system_admin'])
                 ->where('email', mb_strtolower($login))
                 ->first();
 
