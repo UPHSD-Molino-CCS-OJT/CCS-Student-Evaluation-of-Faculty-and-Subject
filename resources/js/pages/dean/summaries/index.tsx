@@ -1,6 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -42,6 +43,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
     const page = usePage();
     const [file, setFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
 
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
@@ -50,7 +52,11 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         router.patch(
             '/evaluation-settings',
             { is_open: nextState },
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onStart: () => setIsTogglingEvaluation(true),
+                onFinish: () => setIsTogglingEvaluation(false),
+            },
         );
     };
 
@@ -82,13 +88,15 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         This page summarizes class-level evaluation metrics across the college.
                     </p>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <Button
+                        <LoadingButton
                             type="button"
                             variant={evaluationOpen ? 'default' : 'secondary'}
                             onClick={() => toggleEvaluation(!evaluationOpen)}
+                            loading={isTogglingEvaluation}
+                            loadingText={evaluationOpen ? 'Stopping...' : 'Starting...'}
                         >
                             {evaluationOpen ? 'Stop Evaluation' : 'Start Evaluation'}
-                        </Button>
+                        </LoadingButton>
                         <p className="text-sm text-muted-foreground">
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
@@ -109,9 +117,15 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                 accept=".xlsx,.xls,.csv"
                                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                             />
-                            <Button type="button" onClick={importSubjects} disabled={!file || isImporting}>
-                                {isImporting ? 'Importing...' : 'Import Subjects'}
-                            </Button>
+                            <LoadingButton
+                                type="button"
+                                onClick={importSubjects}
+                                disabled={!file}
+                                loading={isImporting}
+                                loadingText="Importing..."
+                            >
+                                Import Subjects
+                            </LoadingButton>
                         </div>
                         {errors.file && <p className="text-sm font-medium text-red-600">{errors.file}</p>}
                     </div>

@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -62,10 +62,13 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
         term: terms[0] ?? '1st Semester',
         school_year: '',
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const submit = () => {
         router.post('/dean/enrollments', form, {
             preserveScroll: true,
+            onStart: () => setIsSubmitting(true),
+            onFinish: () => setIsSubmitting(false),
         });
     };
 
@@ -84,7 +87,7 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
                 <section className="rounded-xl border p-4">
                     <h2 className="font-semibold">Add Enrollment</h2>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
                         <label className="space-y-1 text-sm">
                             <span>Student</span>
                             <select
@@ -175,12 +178,12 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
                             />
                             {errors.school_year && <p className="text-xs text-red-600">{errors.school_year}</p>}
                         </label>
-                    </div>
+                    </fieldset>
 
                     <div className="mt-4">
-                        <Button type="button" onClick={submit}>
+                        <LoadingButton type="button" onClick={submit} loading={isSubmitting} loadingText="Enrolling...">
                             Enroll Student
-                        </Button>
+                        </LoadingButton>
                         {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
                     </div>
                 </section>

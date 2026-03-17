@@ -1,7 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
@@ -153,9 +153,14 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                         <p className="text-sm text-muted-foreground">
                             {unansweredCount > 0 ? `${unansweredCount} question(s) unanswered` : 'All questions answered'}
                         </p>
-                        <Button type="submit" disabled={processing || unansweredCount > 0}>
+                        <LoadingButton
+                            type="submit"
+                            disabled={unansweredCount > 0}
+                            loading={processing}
+                            loadingText="Submitting..."
+                        >
                             Submit Evaluation
-                        </Button>
+                        </LoadingButton>
                     </div>
                 </form>
             </div>
