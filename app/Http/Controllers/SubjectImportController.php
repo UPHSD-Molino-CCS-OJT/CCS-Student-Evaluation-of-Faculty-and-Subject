@@ -28,6 +28,7 @@ class SubjectImportController extends Controller
         $sampleRows = [
             ['1st Semester', 'CCS101', 'Introduction to Computing', 'BSCS', '2023-2024'],
             ['2nd Semester', 'CCS210', 'Data Structures and Algorithms', 'BSCS', '2023-2024'],
+            ['Summer Semester', 'CCS398', 'Practicum', 'BSCS', '2023-2024'],
         ];
 
         return response()->streamDownload(function () use ($columns, $sampleRows): void {
@@ -93,6 +94,14 @@ class SubjectImportController extends Controller
                 $item[$column] = trim($value);
             }
 
+            $item['semester_offered'] = $this->normalizeSemester($item['semester_offered']);
+
+            if ($item['semester_offered'] === null) {
+                return back()->withErrors([
+                    'file' => "Row {$row} has an invalid 'semester_offered'. Use 1st Semester, 2nd Semester, or Summer Semester.",
+                ]);
+            }
+
             $item['curriculum_version'] = preg_replace('/\s*curriculum\s*/i', '', $item['curriculum_version']) ?? '';
             $item['curriculum_version'] = trim($item['curriculum_version']);
 
@@ -132,5 +141,21 @@ class SubjectImportController extends Controller
         });
 
         return back()->with('status', 'Subjects imported successfully.');
+    }
+
+    private function normalizeSemester(string $semester): ?string
+    {
+        $normalized = Str::of($semester)
+            ->trim()
+            ->lower()
+            ->replaceMatches('/\s+/', ' ')
+            ->value();
+
+        return match ($normalized) {
+            '1', '1st', 'first', '1st semester', 'first semester' => '1st Semester',
+            '2', '2nd', 'second', '2nd semester', 'second semester' => '2nd Semester',
+            'summer', 'summer semester', 'midyear', 'midyear semester' => 'Summer Semester',
+            default => null,
+        };
     }
 }
