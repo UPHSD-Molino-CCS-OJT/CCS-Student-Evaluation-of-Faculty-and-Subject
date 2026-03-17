@@ -18,15 +18,25 @@ class DeanProgramCoursesController extends Controller
             ->get()
             ->groupBy(fn (Subject $subject): string => $subject->program ?: 'Unassigned Program')
             ->map(function ($subjects, string $program): array {
+                $curriculums = $subjects
+                    ->groupBy(fn (Subject $subject): string => $subject->curriculum_version ?: 'Unassigned Curriculum')
+                    ->map(function ($curriculumSubjects, string $curriculum): array {
+                        return [
+                            'curriculum' => $curriculum,
+                            'subjects' => $curriculumSubjects->map(fn (Subject $subject): array => [
+                                'id' => $subject->id,
+                                'code' => $subject->code,
+                                'title' => $subject->title,
+                                'semesterOffered' => $subject->semester_offered,
+                            ])->values(),
+                        ];
+                    })
+                    ->values();
+
                 return [
                     'program' => $program,
-                    'subjects' => $subjects->map(fn (Subject $subject): array => [
-                        'id' => $subject->id,
-                        'code' => $subject->code,
-                        'title' => $subject->title,
-                        'semesterOffered' => $subject->semester_offered,
-                        'curriculumVersion' => $subject->curriculum_version,
-                    ])->values(),
+                    'courseCount' => $subjects->count(),
+                    'curriculums' => $curriculums,
                 ];
             })
             ->values();
