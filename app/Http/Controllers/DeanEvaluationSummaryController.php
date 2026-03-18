@@ -130,7 +130,12 @@ class DeanEvaluationSummaryController extends Controller
             ]);
         }
 
-        if ($fragments['header_html'] === null && $fragments['footer_html'] === null) {
+        $headerHtml = $fragments['header_html'] ?? null;
+        $footerHtml = $fragments['footer_html'] ?? null;
+        $headerText = $fragments['header_text'] ?? null;
+        $footerText = $fragments['footer_text'] ?? null;
+
+        if ($headerHtml === null && $footerHtml === null) {
             return back()->withErrors([
                 'template_file' => 'No header/footer was found in the uploaded .docx template.',
             ]);
@@ -138,10 +143,10 @@ class DeanEvaluationSummaryController extends Controller
 
         $template = ExportDocumentTemplate::current();
         $template->fill([
-            'header_html' => $fragments['header_html'],
-            'footer_html' => $fragments['footer_html'],
-            'header_text' => $fragments['header_text'],
-            'footer_text' => $fragments['footer_text'],
+            'header_html' => $headerHtml,
+            'footer_html' => $footerHtml,
+            'header_text' => $headerText,
+            'footer_text' => $footerText,
             'source_filename' => $templateFile->getClientOriginalName(),
             'updated_by' => $request->user()?->id,
         ]);
