@@ -50,7 +50,6 @@ class ProfileController extends Controller
         ]);
 
         $removeEsign = (bool) ($payload['remove_esign'] ?? false);
-
         if ($removeEsign && ($user->esign_image_path !== null || $user->esign_image_data_uri !== null)) {
             if ($user->esign_image_path !== null) {
                 Storage::disk('public')->delete($user->esign_image_path);

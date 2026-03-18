@@ -292,7 +292,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                             onClick={() => deanSign(row.classSectionId)}
                                             disabled={!row.canDeanSign}
                                         >
-                                            Sign as Dean
+                                            {row.deanSignedAt ? 'Already Signed' : 'Sign as Dean'}
                                         </Button>
                                     </div>
                                 </div>

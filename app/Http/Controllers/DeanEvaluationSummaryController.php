@@ -81,7 +81,8 @@ class DeanEvaluationSummaryController extends Controller
                 'facultySignedBy' => $classSection->reportSignoff?->facultySigner?->name,
                 'deanSignedAt' => $classSection->reportSignoff?->dean_signed_at?->toDateTimeString(),
                 'deanSignedBy' => $classSection->reportSignoff?->deanSigner?->name,
-                'canDeanSign' => $classSection->reportSignoff?->faculty_signed_at !== null,
+                'canDeanSign' => $classSection->reportSignoff?->faculty_signed_at !== null
+                    && $classSection->reportSignoff?->dean_signed_at === null,
                 'questionAverages' => ($questionMap->get($classSection->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
@@ -145,6 +146,12 @@ class DeanEvaluationSummaryController extends Controller
         if ($signoff->faculty_signed_at === null) {
             return back()->withErrors([
                 'esign' => 'Faculty must sign and submit this report before dean confirmation.',
+            ]);
+        }
+
+        if ($signoff->dean_signed_at !== null) {
+            return back()->withErrors([
+                'esign' => 'This report was already signed by dean and cannot be signed again.',
             ]);
         }
 
@@ -738,14 +745,14 @@ class DeanEvaluationSummaryController extends Controller
 
         $signoffRows = [
             [
-                'Faculty',
-                ($data['signoff']['facultySignedBy'] ?? 'Not signed')
-                    .($data['signoff']['facultySignedAt'] ? ' ('.$data['signoff']['facultySignedAt'].')' : ''),
+                'Signed by',
+                $data['signoff']['facultySignedBy'] ?? 'Faculty (not signed)',
+                $data['signoff']['facultySignedAt'] ?? 'Pending',
             ],
             [
-                'Dean',
-                ($data['signoff']['deanSignedBy'] ?? 'Not signed')
-                    .($data['signoff']['deanSignedAt'] ? ' ('.$data['signoff']['deanSignedAt'].')' : ''),
+                'Signed by',
+                $data['signoff']['deanSignedBy'] ?? 'Dean (not signed)',
+                $data['signoff']['deanSignedAt'] ?? 'Pending',
             ],
         ];
 
@@ -757,7 +764,7 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
-            $this->buildWordTableXml(['Role', 'Signed By / Date'], $signoffRows);
+            $this->buildWordTableXml(['Label', 'Name', 'Signed At'], $signoffRows);
     }
 
     /**
@@ -1353,11 +1360,11 @@ class DeanEvaluationSummaryController extends Controller
             <div class=\"esign-grid\">
                 <div class=\"esign-card\">
                     {$facultySignatureImage}
-                    <div class=\"esign-meta\"><strong>Faculty:</strong> {$facultySignedBy}<br /><strong>Signed At:</strong> {$facultySignedAt}</div>
+                    <div class=\"esign-meta\"><strong>Signed by</strong><br />{$facultySignedBy}<br /><strong>Signed At:</strong> {$facultySignedAt}</div>
                 </div>
                 <div class=\"esign-card\">
                     {$deanSignatureImage}
-                    <div class=\"esign-meta\"><strong>Dean:</strong> {$deanSignedBy}<br /><strong>Signed At:</strong> {$deanSignedAt}</div>
+                    <div class=\"esign-meta\"><strong>Signed by</strong><br />{$deanSignedBy}<br /><strong>Signed At:</strong> {$deanSignedAt}</div>
                 </div>
             </div>
         </div>

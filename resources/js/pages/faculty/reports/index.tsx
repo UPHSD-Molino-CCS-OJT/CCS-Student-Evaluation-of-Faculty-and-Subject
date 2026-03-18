@@ -32,6 +32,7 @@ type Props = {
     questions: Question[];
     rows: Row[];
     hasDatabaseEsign: boolean;
+    existingEsignImageUrl?: string | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,7 +42,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function FacultyReports({ questions, rows, hasDatabaseEsign }: Props) {
+export default function FacultyReports({ questions, rows, hasDatabaseEsign, existingEsignImageUrl }: Props) {
     const page = usePage();
     const [esignFile, setEsignFile] = useState<File | null>(null);
     const [isImportingEsign, setIsImportingEsign] = useState(false);
@@ -92,6 +93,16 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign }: Pr
                         <p className="text-sm text-muted-foreground">
                             Import your e-sign so you can sign and submit reports to the dean.
                         </p>
+                        {existingEsignImageUrl && (
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">Current saved e-sign:</p>
+                                <img
+                                    src={existingEsignImageUrl}
+                                    alt="Current faculty e-sign"
+                                    className="max-h-24 rounded border bg-white p-2"
+                                />
+                            </div>
+                        )}
                         <div className="flex flex-wrap items-center gap-3">
                             <input
                                 type="file"
@@ -108,6 +119,11 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign }: Pr
                                 Import E-sign
                             </LoadingButton>
                         </div>
+                        {existingEsignImageUrl && (
+                            <p className="text-xs text-muted-foreground">
+                                An e-sign is already saved for this faculty account. Uploading a new image will replace the current one.
+                            </p>
+                        )}
                         {errors.esign_image && <p className="text-sm font-medium text-red-600">{errors.esign_image}</p>}
                     </div>
                     {errors.esign && <p className="mt-2 text-sm font-medium text-red-600">{errors.esign}</p>}
@@ -147,7 +163,7 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign }: Pr
                                         onClick={() => signAndSubmit(row.classSectionId)}
                                         disabled={!row.canSign}
                                     >
-                                        Sign & Submit to Dean
+                                        {row.facultySignedAt ? 'Already Signed' : 'Sign & Submit to Dean'}
                                     </Button>
                                 </div>
                             </div>

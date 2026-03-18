@@ -55,7 +55,8 @@ class FacultyEvaluationReportController extends Controller
                     : null,
                 'facultySignedAt' => $assignment->reportSignoff?->faculty_signed_at?->toDateTimeString(),
                 'deanSignedAt' => $assignment->reportSignoff?->dean_signed_at?->toDateTimeString(),
-                'canSign' => $this->resolveUserEsignDataUri($faculty) !== null,
+                'canSign' => $this->resolveUserEsignDataUri($faculty) !== null
+                    && $assignment->reportSignoff?->faculty_signed_at === null,
                 'questionAverages' => ($questionMap->get($assignment->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
@@ -69,6 +70,7 @@ class FacultyEvaluationReportController extends Controller
             'questions' => config('evaluation.questions'),
             'rows' => $rows,
             'hasDatabaseEsign' => $faculty->esign_image_data_uri !== null,
+            'existingEsignImageUrl' => $this->resolveUserEsignDataUri($faculty),
         ]);
     }
 
@@ -91,6 +93,12 @@ class FacultyEvaluationReportController extends Controller
         $signoff = EvaluationReportSignoff::query()->firstOrNew([
             'class_section_id' => $classSection->id,
         ]);
+
+        if ($signoff->faculty_signed_at !== null) {
+            return back()->withErrors([
+                'esign' => 'This report was already signed by faculty and cannot be signed again.',
+            ]);
+        }
 
         $signoff->fill([
             'faculty_user_id' => $faculty->id,
