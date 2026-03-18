@@ -44,8 +44,8 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
     const [file, setFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
-    const [overallFormat, setOverallFormat] = useState<'xlsx' | 'doc'>('xlsx');
-    const [classFormats, setClassFormats] = useState<Record<number, 'xlsx' | 'doc'>>({});
+    const [overallFormat, setOverallFormat] = useState<'xlsx' | 'doc' | 'docx'>('xlsx');
+    const [classFormats, setClassFormats] = useState<Record<number, 'xlsx' | 'doc' | 'docx'>>({});
 
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
@@ -79,7 +79,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         );
     };
 
-    const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' => {
+    const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' | 'docx' => {
         return classFormats[classSectionId] ?? 'xlsx';
     };
 
@@ -108,11 +108,12 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         </p>
                         <select
                             value={overallFormat}
-                            onChange={(event) => setOverallFormat(event.target.value as 'xlsx' | 'doc')}
+                            onChange={(event) => setOverallFormat(event.target.value as 'xlsx' | 'doc' | 'docx')}
                             className="h-9 rounded-md border bg-background px-3 text-sm"
                         >
                             <option value="xlsx">Excel (.xlsx)</option>
                             <option value="doc">DOC (.doc)</option>
+                            <option value="docx">Word Template Clone (.docx)</option>
                         </select>
                         <a href={`/dean/summaries/export?format=${overallFormat}`} className="inline-flex">
                             <Button type="button" variant="outline">
@@ -185,13 +186,14 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                             onChange={(event) =>
                                                 setClassFormats((previous) => ({
                                                     ...previous,
-                                                    [row.classSectionId]: event.target.value as 'xlsx' | 'doc',
+                                                    [row.classSectionId]: event.target.value as 'xlsx' | 'doc' | 'docx',
                                                 }))
                                             }
                                             className="h-8 rounded-md border bg-background px-2 text-xs"
                                         >
                                             <option value="xlsx">Excel</option>
                                             <option value="doc">DOC</option>
+                                            <option value="docx">DOCX</option>
                                         </select>
                                         <a
                                             href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=${resolveClassFormat(row.classSectionId)}`}

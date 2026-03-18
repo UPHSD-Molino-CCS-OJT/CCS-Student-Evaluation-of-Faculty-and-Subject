@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Word\WordDocumentCloner;
 use App\Models\ClassSection;
 use App\Models\Evaluation;
 use App\Models\ExportDocumentTemplate;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -32,6 +34,8 @@ class DeanEvaluationSummaryController extends Controller
     private const MAX_TEMPLATE_HTML_LENGTH = 1000000;
 
     private const MAX_TEMPLATE_TEXT_LENGTH = 5000;
+
+    private const TEMPLATE_DOCX_STORAGE_PATH = 'dean-summary-templates/current-template.docx';
 
     public function index(): Response
     {
@@ -131,6 +135,18 @@ class DeanEvaluationSummaryController extends Controller
         $footerHtml = $parsedTemplate['footer_html'];
         $headerText = $parsedTemplate['header_text'];
         $footerText = $parsedTemplate['footer_text'];
+
+        $stored = Storage::disk('local')->putFileAs(
+            dirname(self::TEMPLATE_DOCX_STORAGE_PATH),
+            $templateFile,
+            basename(self::TEMPLATE_DOCX_STORAGE_PATH)
+        );
+
+        if ($stored === false) {
+            return back()->withErrors([
+                'template_file' => 'Template was parsed but could not be stored for DOCX cloning. Check writable storage and try again.',
+            ]);
+        }
 
         $template = ExportDocumentTemplate::current();
         $template->fill([
@@ -291,6 +307,10 @@ class DeanEvaluationSummaryController extends Controller
         $data = $this->buildClassSectionSummaryData($classSection);
         $format = $this->resolveExportFormat($request);
 
+        if ($format === 'docx') {
+            return $this->exportClassSectionDocx($data);
+        }
+
         if ($format === 'doc') {
             $fileName = sprintf(
                 'evaluation-summary-%s-%s.doc',
@@ -343,6 +363,10 @@ class DeanEvaluationSummaryController extends Controller
     {
         $data = $this->buildOverallSummaryData();
         $format = $this->resolveExportFormat($request);
+
+        if ($format === 'docx') {
+            return $this->exportOverallDocx($data);
+        }
 
         if ($format === 'doc') {
             $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.doc';
@@ -493,7 +517,218 @@ class DeanEvaluationSummaryController extends Controller
     {
         $format = strtolower($request->query('format', 'xlsx'));
 
-        return in_array($format, ['xlsx', 'doc'], true) ? $format : 'xlsx';
+        return in_array($format, ['xlsx', 'doc', 'docx'], true) ? $format : 'xlsx';
+    }
+
+    /**
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     */
+    private function exportClassSectionDocx(array $data): StreamedResponse|HttpResponse
+    {
+        $templatePath = $this->resolveDocxTemplatePath();
+
+        if ($templatePath === null) {
+            return response($this->renderClassDocHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'application/msword',
+                'Content-Disposition' => 'attachment; filename=evaluation-summary-'.$data['classSection']->id.'-'.now()->format('Ymd-His').'.doc',
+            ]);
+        }
+
+        $tempOutput = tempnam(sys_get_temp_dir(), 'dean-class-docx-');
+
+        if ($tempOutput === false) {
+            throw new RuntimeException('Unable to allocate temporary DOCX output file.');
+        }
+
+        $outputPath = $tempOutput.'.docx';
+        @rename($tempOutput, $outputPath);
+
+        $cloner = app(WordDocumentCloner::class);
+        $cloner->cloneWithBodyXml($templatePath, $outputPath, $this->buildClassSectionWordBodyXml($data));
+
+        $fileName = sprintf(
+            'evaluation-summary-%s-%s.docx',
+            $data['classSection']->subject?->code ?? 'subject',
+            now()->format('Ymd-His')
+        );
+
+        return response()->streamDownload(function () use ($outputPath): void {
+            $stream = fopen($outputPath, 'rb');
+            if ($stream !== false) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+
+            @unlink($outputPath);
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ]);
+    }
+
+    /**
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     */
+    private function exportOverallDocx(array $data): StreamedResponse|HttpResponse
+    {
+        $templatePath = $this->resolveDocxTemplatePath();
+
+        if ($templatePath === null) {
+            return response($this->renderOverallDocHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'application/msword',
+                'Content-Disposition' => 'attachment; filename=evaluation-summary-overall-'.now()->format('Ymd-His').'.doc',
+            ]);
+        }
+
+        $tempOutput = tempnam(sys_get_temp_dir(), 'dean-overall-docx-');
+
+        if ($tempOutput === false) {
+            throw new RuntimeException('Unable to allocate temporary DOCX output file.');
+        }
+
+        $outputPath = $tempOutput.'.docx';
+        @rename($tempOutput, $outputPath);
+
+        $cloner = app(WordDocumentCloner::class);
+        $cloner->cloneWithBodyXml($templatePath, $outputPath, $this->buildOverallWordBodyXml($data));
+
+        $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.docx';
+
+        return response()->streamDownload(function () use ($outputPath): void {
+            $stream = fopen($outputPath, 'rb');
+            if ($stream !== false) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+
+            @unlink($outputPath);
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ]);
+    }
+
+    /**
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     */
+    private function buildClassSectionWordBodyXml(array $data): string
+    {
+        $classSection = $data['classSection'];
+        $lines = [
+            'STUDENT EVALUATION SUMMARY',
+            'Subject: '.(($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? '')),
+            'Faculty: '.($classSection->faculty?->name ?? ''),
+            'Section: '.($classSection->section?->code ?? ''),
+            'Term: '.($classSection->term ?? ''),
+            'School Year: '.($classSection->school_year ?? ''),
+            'Respondents: '.(string) $data['respondents'],
+            'Overall Average: '.($data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-'),
+            '',
+            'Question Averages',
+        ];
+
+        foreach ($data['questionRows'] as $row) {
+            $lines[] = sprintf(
+                '%d. %s | Average: %s | Remarks: %s',
+                (int) $row['number'],
+                (string) $row['text'],
+                $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
+                $this->remarkFromAverage($row['average'])
+            );
+        }
+
+        $lines[] = '';
+        $lines[] = 'Comments';
+
+        if ($data['comments'] === []) {
+            $lines[] = '- No comments submitted.';
+        } else {
+            foreach ($data['comments'] as $comment) {
+                $lines[] = '- '.$comment;
+            }
+        }
+
+        return $this->buildWordParagraphXmlFromLines($lines);
+    }
+
+    /**
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     */
+    private function buildOverallWordBodyXml(array $data): string
+    {
+        $lines = [
+            'OVERALL EVALUATION SUMMARY',
+            '',
+            'Class Sections',
+        ];
+
+        foreach ($data['classSections'] as $classSection) {
+            $summary = $data['summaryMap'][$classSection->id] ?? null;
+            $average = $summary?->overall_average !== null ? number_format((float) $summary->overall_average, 2) : '-';
+
+            $lines[] = sprintf(
+                '%s - %s | %s | %s | %s | Average: %s',
+                (string) ($classSection->subject?->code ?? ''),
+                (string) ($classSection->subject?->title ?? ''),
+                (string) ($classSection->faculty?->name ?? ''),
+                (string) ($classSection->section?->code ?? ''),
+                (string) (($classSection->term ?? '').' '.($classSection->school_year ?? '')),
+                $average
+            );
+        }
+
+        $lines[] = '';
+        $lines[] = 'Overall Question Averages';
+
+        foreach ($data['overallQuestionRows'] as $row) {
+            $lines[] = sprintf(
+                '%d. %s | Average: %s | Remarks: %s',
+                (int) $row['number'],
+                (string) $row['text'],
+                $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
+                $this->remarkFromAverage($row['average'])
+            );
+        }
+
+        return $this->buildWordParagraphXmlFromLines($lines);
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     */
+    private function buildWordParagraphXmlFromLines(array $lines): string
+    {
+        if ($lines === []) {
+            return '<w:p/>';
+        }
+
+        $paragraphs = [];
+
+        foreach ($lines as $line) {
+            $value = trim($line);
+
+            if ($value === '') {
+                $paragraphs[] = '<w:p/>';
+                continue;
+            }
+
+            $paragraphs[] = '<w:p><w:r><w:t xml:space="preserve">'.htmlspecialchars($line, ENT_XML1 | ENT_QUOTES, 'UTF-8').'</w:t></w:r></w:p>';
+        }
+
+        return implode('', $paragraphs);
+    }
+
+    private function resolveDocxTemplatePath(): ?string
+    {
+        if (Storage::disk('local')->exists(self::TEMPLATE_DOCX_STORAGE_PATH)) {
+            return Storage::disk('local')->path(self::TEMPLATE_DOCX_STORAGE_PATH);
+        }
+
+        $workspaceTemplate = base_path('CCS-Document-Template-Folio.docx');
+
+        if (is_file($workspaceTemplate) && is_readable($workspaceTemplate)) {
+            return $workspaceTemplate;
+        }
+
+        return null;
     }
 
     /**
