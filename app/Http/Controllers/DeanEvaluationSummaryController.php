@@ -111,8 +111,16 @@ class DeanEvaluationSummaryController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
+            $errorMessage = 'Unable to read the uploaded DOCX template on this server. Ensure the file is a valid .docx and the PHP zip extension is enabled.';
+
+            if (str_contains($exception->getMessage(), 'zip extension is not available')) {
+                $errorMessage = 'DOCX import is not available on this Railway runtime because PHP zip (ZipArchive) is missing. Enable ext-zip in the deployment image or use Preview Edit mode to save header/footer manually.';
+            } elseif (str_contains($exception->getMessage(), 'Unable to open DOCX archive')) {
+                $errorMessage = 'The uploaded file could not be opened as a DOCX archive. Re-save it as Word .docx (not .doc or exported PDF) and try again.';
+            }
+
             return back()->withErrors([
-                'template_file' => 'Unable to read the uploaded DOCX template on this server. Ensure the file is a valid .docx and the PHP zip extension is enabled.',
+                'template_file' => $errorMessage,
             ]);
         }
 
@@ -886,7 +894,7 @@ class DeanEvaluationSummaryController extends Controller
         $openResult = $zip->open($filePath);
 
         if ($openResult !== true) {
-            throw new RuntimeException('Unable to open DOCX archive.');
+            throw new RuntimeException('Unable to open DOCX archive: '.$this->zipOpenErrorToMessage($openResult));
         }
 
         $headerXml = $this->collectDocxPartXml($zip, '/^word\/header\d+\.xml$/');
@@ -976,6 +984,23 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return $html;
+    }
+
+    private function zipOpenErrorToMessage(int|string $openResult): string
+    {
+        if (! is_int($openResult)) {
+            return 'unknown error';
+        }
+
+        return match ($openResult) {
+            ZipArchive::ER_NOZIP => 'not a zip archive',
+            ZipArchive::ER_INCONS => 'zip archive inconsistent or corrupted',
+            ZipArchive::ER_MEMORY => 'memory allocation failure',
+            ZipArchive::ER_READ => 'read error',
+            ZipArchive::ER_OPEN => 'cannot open file',
+            ZipArchive::ER_NOENT => 'file does not exist',
+            default => 'zip error code '.$openResult,
+        };
     }
 
     /**
