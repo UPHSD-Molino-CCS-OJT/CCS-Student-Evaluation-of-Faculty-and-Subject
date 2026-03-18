@@ -113,6 +113,44 @@ function createDocxTemplateUploadWithHeaderImage(string $headerText, string $foo
     return new UploadedFile($docxPath, 'template-with-image.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
 }
 
+function createDocxTemplateUploadWithDuplicateHeaderParts(string $headerText, string $footerText): UploadedFile
+{
+    $tempPath = tempnam(sys_get_temp_dir(), 'template-dup-');
+
+    if ($tempPath === false) {
+        throw new RuntimeException('Failed to create temporary file for duplicate-header DOCX template.');
+    }
+
+    $docxPath = $tempPath.'.docx';
+    rename($tempPath, $docxPath);
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($docxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+    if ($opened !== true) {
+        throw new RuntimeException('Failed to open duplicate-header DOCX archive for writing.');
+    }
+
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Yb9QAAAAASUVORK5CYII=', true) ?: '';
+
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+    $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:body></w:document>');
+
+    $headerXml = '<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:p><w:r><w:drawing><wp:inline><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p><w:p><w:r><w:t>'.htmlspecialchars($headerText, ENT_QUOTES).'</w:t></w:r></w:p></w:hdr>';
+    $headerRels = '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>';
+
+    $zip->addFromString('word/header1.xml', $headerXml);
+    $zip->addFromString('word/header2.xml', $headerXml);
+    $zip->addFromString('word/_rels/header1.xml.rels', $headerRels);
+    $zip->addFromString('word/_rels/header2.xml.rels', $headerRels);
+    $zip->addFromString('word/media/image1.png', $png);
+    $zip->addFromString('word/footer1.xml', '<?xml version="1.0" encoding="UTF-8"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>'.htmlspecialchars($footerText, ENT_QUOTES).'</w:t></w:r></w:p></w:ftr>');
+    $zip->close();
+
+    return new UploadedFile($docxPath, 'template-duplicate-headers.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
+}
+
 test('dean staff and system admin can export overall summary', function (string $role) {
     createClassSectionWithEvaluation();
 
@@ -253,6 +291,36 @@ test('dean can import docx template header image and it appears in doc export', 
     $docResponse->assertHeader('content-type', 'application/msword');
     $docResponse->assertSee('data:image/png;base64,', false);
     $docResponse->assertSee('IMAGE HEADER', false);
+});
+
+test('dean import deduplicates duplicated header image parts', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $templateFile = createDocxTemplateUploadWithDuplicateHeaderParts('DEDUP HEADER', 'DEDUP FOOTER');
+
+    $uploadResponse = $this->actingAs($dean)->post(route('dean.summaries.template.store'), [
+        'template_file' => $templateFile,
+    ]);
+
+    $uploadResponse->assertRedirect();
+    $uploadResponse->assertSessionHas('status', 'Template imported successfully and set as default for all previews and exports. Imported 1 image(s) from header/footer.');
+
+    $docResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'doc',
+    ]));
+
+    $docResponse->assertOk();
+    $docResponse->assertHeader('content-type', 'application/msword');
+
+    $html = $docResponse->getContent();
+    expect(substr_count($html ?: '', 'data:image/png;base64,'))->toBe(1);
+    expect(substr_count($html ?: '', 'DEDUP HEADER'))->toBe(1);
 });
 
 test('dean can save header and footer from preview editor and they appear in doc export', function () {

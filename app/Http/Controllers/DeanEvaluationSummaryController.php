@@ -1006,8 +1006,9 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function buildDocxTemplateFragment(ZipArchive $zip, array $partNames): array
     {
-        $htmlFragments = [];
-        $imageCount = 0;
+        $selectedHtml = null;
+        $selectedImageCount = 0;
+        $seenFragmentHashes = [];
 
         foreach ($partNames as $partName) {
             $partXml = $zip->getFromName($partName);
@@ -1023,8 +1024,6 @@ class DeanEvaluationSummaryController extends Controller
                 continue;
             }
 
-            $imageCount += count($imageTags);
-
             $fragment = '<div class="template-fragment">';
 
             foreach ($imageTags as $imageTag) {
@@ -1036,10 +1035,23 @@ class DeanEvaluationSummaryController extends Controller
             }
 
             $fragment .= '</div>';
-            $htmlFragments[] = $fragment;
+            $fragmentHash = sha1($fragment);
+
+            if (isset($seenFragmentHashes[$fragmentHash])) {
+                continue;
+            }
+
+            $seenFragmentHashes[$fragmentHash] = true;
+
+            // Word files commonly include first/even/default header/footer variants
+            // with identical content. Keep the first unique fragment to avoid duplicates.
+            if ($selectedHtml === null) {
+                $selectedHtml = $fragment;
+                $selectedImageCount = count($imageTags);
+            }
         }
 
-        if ($htmlFragments === []) {
+        if ($selectedHtml === null) {
             return [
                 'html' => null,
                 'image_count' => 0,
@@ -1047,8 +1059,8 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return [
-            'html' => implode('', $htmlFragments),
-            'image_count' => $imageCount,
+            'html' => $selectedHtml,
+            'image_count' => $selectedImageCount,
         ];
     }
 
@@ -1119,6 +1131,7 @@ class DeanEvaluationSummaryController extends Controller
 
         $imageTags = [];
         $usedRelationshipIds = [];
+        $usedImagePaths = [];
 
         foreach ($orderedRelationshipIds as $relationshipId) {
             if (isset($usedRelationshipIds[$relationshipId]) || ! isset($relationshipMap[$relationshipId])) {
@@ -1128,6 +1141,11 @@ class DeanEvaluationSummaryController extends Controller
             $usedRelationshipIds[$relationshipId] = true;
 
             $imagePath = $this->normalizeDocxPath($relationshipMap[$relationshipId]);
+
+            if (isset($usedImagePaths[$imagePath])) {
+                continue;
+            }
+
             $imageBinary = $zip->getFromName($imagePath);
 
             if ($imageBinary === false) {
@@ -1138,6 +1156,8 @@ class DeanEvaluationSummaryController extends Controller
             if ($mimeType === null) {
                 continue;
             }
+
+            $usedImagePaths[$imagePath] = true;
 
             $imageTags[] = '<img src="data:'.$mimeType.';base64,'.base64_encode($imageBinary).'" alt="Template image" />';
         }
