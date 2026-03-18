@@ -736,7 +736,19 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return '<w:tbl>'
-            .'<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>'
+            .'<w:tblPr>'
+            .'<w:tblStyle w:val="TableGrid"/>'
+            .'<w:tblW w:w="0" w:type="auto"/>'
+            .'<w:tblCellSpacing w:w="0" w:type="dxa"/>'
+            .'<w:tblBorders>'
+            .'<w:top w:val="single" w:sz="8" w:space="0" w:color="auto"/>'
+            .'<w:left w:val="single" w:sz="8" w:space="0" w:color="auto"/>'
+            .'<w:bottom w:val="single" w:sz="8" w:space="0" w:color="auto"/>'
+            .'<w:right w:val="single" w:sz="8" w:space="0" w:color="auto"/>'
+            .'<w:insideH w:val="single" w:sz="6" w:space="0" w:color="auto"/>'
+            .'<w:insideV w:val="single" w:sz="6" w:space="0" w:color="auto"/>'
+            .'</w:tblBorders>'
+            .'</w:tblPr>'
             .'<w:tblGrid>'.$gridCols.'</w:tblGrid>'
             .'<w:tr>'.$headerCells.'</w:tr>'
             .$bodyRows
