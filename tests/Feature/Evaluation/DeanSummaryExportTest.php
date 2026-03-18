@@ -65,11 +65,11 @@ test('dean staff and system admin can export overall summary', function (string 
     $response = $this->actingAs($user)->get(route('dean.summaries.export-overall'));
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     $response->assertHeader('content-disposition');
 
     $content = $response->streamedContent();
-    expect($content)->toContain('Class Evaluation Summary');
+    expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
 test('dean staff and system admin can export class section summary', function (string $role) {
@@ -83,12 +83,11 @@ test('dean staff and system admin can export class section summary', function (s
     $response = $this->actingAs($user)->get(route('dean.summaries.export-class-section', $classSection));
 
     $response->assertOk();
-    $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     $response->assertHeader('content-disposition');
 
     $content = $response->streamedContent();
-    expect($content)->toContain('Question Number');
-    expect($content)->toContain('Database Systems');
+    expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
 test('faculty cannot export dean summaries', function () {
