@@ -1064,16 +1064,23 @@ class DeanEvaluationSummaryController extends Controller
         .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
         .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
         .print-header,.print-footer{display:none}
-        .page{max-width:900px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-        .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
+        .page{max-width:960px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        .content-shell{margin-top:14px;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fcfcfd}
+        .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}
+        .meta-item{border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4}
+        .meta-label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b7280;font-weight:700}
+        .meta-value{display:block;margin-top:2px;color:#111}
         .template-fragment{border:0;padding:0;margin:0;background:transparent;font-size:inherit}
         .template-fragment img{display:block;margin:0}
-        table{width:100%;border-collapse:collapse}
-        th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
-        th{background:#efefef;text-align:left}
+        table{width:100%;border-collapse:separate;border-spacing:0}
+        .modern-table{border:1px solid #d1d5db;border-radius:10px;overflow:hidden;background:#fff}
+        .modern-table th,.modern-table td{border-bottom:1px solid #e5e7eb;padding:8px 10px;font-size:12px;vertical-align:top}
+        .modern-table tbody tr:last-child td{border-bottom:0}
+        .modern-table th{background:#f3f4f6;text-align:left;font-weight:700}
+        .modern-table tbody tr:nth-child(even){background:#fafafa}
         .right{text-align:right}
         .avg td{font-weight:700}
-        .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
+        .section-title{margin:14px 0 8px;font-size:13px;font-weight:700;color:#1f2937}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1081,6 +1088,7 @@ class DeanEvaluationSummaryController extends Controller
             .print-header{top:0;padding:8px 28px 0}
             .print-footer{bottom:0;padding:0 28px 8px}
             .page{box-shadow:none;margin:0;max-width:none;padding:132px 28px 120px}
+            .content-shell{border:0;border-radius:0;padding:0;background:transparent}
             .template-region{display:none}
         }
     </style>
@@ -1109,21 +1117,25 @@ class DeanEvaluationSummaryController extends Controller
     {$printFooterHtml}
     <div class=\"page\">
         <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
-        <div class=\"meta\">
-            <div>PERIOD : {$term} {$schoolYear}<br />NAME : {$faculty}</div>
-            <div>SUBJECT/S : {$subject}<br />EVALUATORS : {$data['respondents']} STUDENTS</div>
+        <div class=\"content-shell\">
+            <div class=\"meta-grid\">
+                <div class=\"meta-item\"><span class=\"meta-label\">Period</span><span class=\"meta-value\">{$term} {$schoolYear}</span></div>
+                <div class=\"meta-item\"><span class=\"meta-label\">Faculty</span><span class=\"meta-value\">{$faculty}</span></div>
+                <div class=\"meta-item\"><span class=\"meta-label\">Subject</span><span class=\"meta-value\">{$subject}</span></div>
+                <div class=\"meta-item\"><span class=\"meta-label\">Evaluators</span><span class=\"meta-value\">{$data['respondents']} Students</span></div>
+            </div>
+
+            <div class=\"section-title\">Student Evaluation</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody>{$rowsHtml}</tbody>
+            </table>
+
+            <div class=\"section-title\">Comments</div>
+            <table class=\"modern-table\"><tbody>{$commentsHtml}</tbody></table>
         </div>
-
-        <div class=\"section-title\">STUDENT EVALUATION</div>
-        <table>
-            <thead>
-                <tr><th>CRITERIA</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
-            </thead>
-            <tbody>{$rowsHtml}</tbody>
-        </table>
-
-        <div class=\"section-title\">COMMENTS</div>
-        <table><tbody>{$commentsHtml}</tbody></table>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
     </div>
@@ -1185,14 +1197,18 @@ class DeanEvaluationSummaryController extends Controller
         .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
         .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
         .print-header,.print-footer{display:none}
-        .page{max-width:980px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        .page{max-width:1020px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        .content-shell{margin-top:14px;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fcfcfd}
         .template-fragment{border:0;padding:0;margin:0;background:transparent;font-size:inherit}
         .template-fragment img{display:block;margin:0}
-        table{width:100%;border-collapse:collapse;margin-top:10px}
-        th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
-        th{background:#efefef;text-align:left}
+        table{width:100%;border-collapse:separate;border-spacing:0}
+        .modern-table{border:1px solid #d1d5db;border-radius:10px;overflow:hidden;background:#fff;margin-top:0}
+        .modern-table th,.modern-table td{border-bottom:1px solid #e5e7eb;padding:8px 10px;font-size:12px;vertical-align:top}
+        .modern-table tbody tr:last-child td{border-bottom:0}
+        .modern-table th{background:#f3f4f6;text-align:left;font-weight:700}
+        .modern-table tbody tr:nth-child(even){background:#fafafa}
         .right{text-align:right}
-        .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
+        .section-title{margin:14px 0 8px;font-size:13px;font-weight:700;color:#1f2937}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1200,6 +1216,7 @@ class DeanEvaluationSummaryController extends Controller
             .print-header{top:0;padding:8px 28px 0}
             .print-footer{bottom:0;padding:0 28px 8px}
             .page{box-shadow:none;margin:0;max-width:none;padding:132px 28px 120px}
+            .content-shell{border:0;border-radius:0;padding:0;background:transparent}
             .template-region{display:none}
         }
     </style>
@@ -1228,22 +1245,23 @@ class DeanEvaluationSummaryController extends Controller
     {$printFooterHtml}
     <div class=\"page\">
         <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
+        <div class=\"content-shell\">
+            <div class=\"section-title\">Class Evaluation Summary</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Subject</th><th>Faculty</th><th>Section</th><th>Term</th><th>School Year</th><th>Average</th><th>Remarks</th></tr>
+                </thead>
+                <tbody>{$rowsHtml}</tbody>
+            </table>
 
-        <div class=\"section-title\">CLASS EVALUATION SUMMARY</div>
-        <table>
-            <thead>
-                <tr><th>SUBJECT</th><th>FACULTY</th><th>SECTION</th><th>TERM</th><th>SCHOOL YEAR</th><th>AVERAGE</th><th>REMARKS</th></tr>
-            </thead>
-            <tbody>{$rowsHtml}</tbody>
-        </table>
-
-        <div class=\"section-title\">OVERALL QUESTION AVERAGES</div>
-        <table>
-            <thead>
-                <tr><th>CRITERIA</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
-            </thead>
-            <tbody>{$questionRowsHtml}</tbody>
-        </table>
+            <div class=\"section-title\">Overall Question Averages</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody>{$questionRowsHtml}</tbody>
+            </table>
+        </div>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
     </div>

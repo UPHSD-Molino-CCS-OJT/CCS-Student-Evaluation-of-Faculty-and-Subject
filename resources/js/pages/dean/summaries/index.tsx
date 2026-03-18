@@ -134,6 +134,11 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             <option value="doc">DOC (.doc)</option>
                             <option value="docx">Word Template Clone (.docx)</option>
                         </select>
+                        <a href="/dean/summaries/preview" target="_blank" rel="noreferrer" className="inline-flex">
+                            <Button type="button" variant="outline">
+                                Preview Overall
+                            </Button>
+                        </a>
                         <a href={`/dean/summaries/export?format=${overallFormat}`} className="inline-flex">
                             <Button type="button" variant="outline">
                                 Download Overall Summary
@@ -225,6 +230,16 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
+                                        <a
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex"
+                                        >
+                                            <Button type="button" variant="outline" size="sm">
+                                                Preview
+                                            </Button>
+                                        </a>
                                         <select
                                             value={resolveClassFormat(row.classSectionId)}
                                             onChange={(event) =>
