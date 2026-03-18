@@ -40,7 +40,7 @@ class FacultyEvaluationReportController extends Controller
             ->get()
             ->keyBy('class_section_id');
 
-        $rows = $assignments->map(function (ClassSection $assignment) use ($questionMap, $respondentMap): array {
+        $rows = $assignments->map(function (ClassSection $assignment) use ($faculty, $questionMap, $respondentMap): array {
             $summary = $respondentMap->get($assignment->id);
 
             return [
