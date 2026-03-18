@@ -26,6 +26,7 @@ class User extends Authenticatable
         'student_id',
         'password',
         'role',
+        'esign_image_path',
     ];
 
     /**
@@ -67,5 +68,15 @@ class User extends Authenticatable
     public function evaluations(): HasMany
     {
         return $this->hasMany(Evaluation::class, 'student_id');
+    }
+
+    public function facultySignoffs(): HasMany
+    {
+        return $this->hasMany(EvaluationReportSignoff::class, 'faculty_user_id');
+    }
+
+    public function deanSignoffs(): HasMany
+    {
+        return $this->hasMany(EvaluationReportSignoff::class, 'dean_user_id');
     }
 }

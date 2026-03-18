@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,9 +20,59 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        $canManageEsign = in_array((string) $user->role, ['faculty', 'dean'], true);
+
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'canManageEsign' => $canManageEsign,
+            'esignImageUrl' => $canManageEsign && $user->esign_image_path !== null
+                ? Storage::disk('public')->url($user->esign_image_path)
+                : null,
+        ]);
+    }
+
+    /**
+     * Upload or remove e-sign image for faculty/dean.
+     */
+    public function updateEsign(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (! in_array((string) $user->role, ['faculty', 'dean'], true)) {
+            abort(403);
+        }
+
+        $payload = $request->validate([
+            'esign_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+            'remove_esign' => ['nullable', 'boolean'],
+        ]);
+
+        $removeEsign = (bool) ($payload['remove_esign'] ?? false);
+
+        if ($removeEsign && $user->esign_image_path !== null) {
+            Storage::disk('public')->delete($user->esign_image_path);
+            $user->esign_image_path = null;
+            $user->save();
+
+            return to_route('profile.edit')->with('status', 'E-sign removed successfully.');
+        }
+
+        if ($request->hasFile('esign_image')) {
+            if ($user->esign_image_path !== null) {
+                Storage::disk('public')->delete($user->esign_image_path);
+            }
+
+            $path = $request->file('esign_image')->store('esignatures/'.$user->id, 'public');
+            $user->esign_image_path = $path;
+            $user->save();
+
+            return to_route('profile.edit')->with('status', 'E-sign uploaded successfully.');
+        }
+
+        return to_route('profile.edit')->withErrors([
+            'esign_image' => 'Please select an image to upload.',
         ]);
     }
 

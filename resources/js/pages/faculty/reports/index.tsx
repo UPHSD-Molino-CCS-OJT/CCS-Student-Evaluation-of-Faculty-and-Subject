@@ -1,4 +1,5 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -16,6 +17,9 @@ type Row = {
     schoolYear?: string | null;
     respondents: number;
     overallAverage?: number | string | null;
+    facultySignedAt?: string | null;
+    deanSignedAt?: string | null;
+    canSign?: boolean;
     questionAverages: Array<{
         questionNumber: number;
         averageRating: number;
@@ -35,6 +39,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function FacultyReports({ questions, rows }: Props) {
+    const page = usePage();
+    const status = (page.props as { flash?: { status?: string } }).flash?.status;
+    const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
+
+    const signAndSubmit = (classSectionId: number) => {
+        router.post(`/faculty/reports/${classSectionId}/sign`, {}, { preserveScroll: true });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Faculty Reports" />
@@ -45,6 +57,8 @@ export default function FacultyReports({ questions, rows }: Props) {
                     <p className="mt-1 text-sm text-muted-foreground">
                         This report shows your average rating for each question and class assignment.
                     </p>
+                    {errors.esign && <p className="mt-2 text-sm font-medium text-red-600">{errors.esign}</p>}
+                    {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
                 {rows.map((row) => {
@@ -69,6 +83,20 @@ export default function FacultyReports({ questions, rows }: Props) {
                                         ? overallAverage.toFixed(2)
                                         : '-'}
                                 </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Faculty Signed: {row.facultySignedAt ?? 'Pending'} | Dean Confirmation:{' '}
+                                    {row.deanSignedAt ?? 'Pending'}
+                                </p>
+                                <div className="mt-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => signAndSubmit(row.classSectionId)}
+                                        disabled={!row.canSign}
+                                    >
+                                        Sign & Submit to Dean
+                                    </Button>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-border text-sm">

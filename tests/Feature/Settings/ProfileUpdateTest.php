@@ -1,6 +1,11 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+
+beforeEach(function () {
+    $this->withoutVite();
+});
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -82,4 +87,19 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect(route('profile.edit'));
 
     expect($user->fresh())->not->toBeNull();
+});
+
+test('student cannot upload e-sign in profile settings', function () {
+    $student = User::factory()->create([
+        'role' => 'student',
+        'student_id' => '1-1111-111',
+    ]);
+
+    $response = $this
+        ->actingAs($student)
+        ->patch(route('profile.esign.update'), [
+            'esign_image' => UploadedFile::fake()->image('student-signature.png', 320, 120),
+        ]);
+
+    $response->assertForbidden();
 });

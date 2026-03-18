@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
+use App\Models\EvaluationReportSignoff;
 use App\Models\EvaluationResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,7 +18,7 @@ class FacultyEvaluationReportController extends Controller
         $faculty = $request->user();
 
         $assignments = ClassSection::query()
-            ->with(['subject', 'section'])
+            ->with(['subject', 'section', 'reportSignoff'])
             ->where('faculty_id', $faculty->id)
             ->get();
 
@@ -50,6 +53,9 @@ class FacultyEvaluationReportController extends Controller
                 'overallAverage' => $summary?->overall_average !== null
                     ? (float) $summary->overall_average
                     : null,
+                'facultySignedAt' => $assignment->reportSignoff?->faculty_signed_at?->toDateTimeString(),
+                'deanSignedAt' => $assignment->reportSignoff?->dean_signed_at?->toDateTimeString(),
+                'canSign' => $faculty->esign_image_path !== null,
                 'questionAverages' => ($questionMap->get($assignment->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
@@ -63,5 +69,36 @@ class FacultyEvaluationReportController extends Controller
             'questions' => config('evaluation.questions'),
             'rows' => $rows,
         ]);
+    }
+
+    public function signAndSubmit(Request $request, ClassSection $classSection): RedirectResponse
+    {
+        $faculty = $request->user();
+
+        if ($classSection->faculty_id !== $faculty->id) {
+            abort(403);
+        }
+
+        if ($faculty->esign_image_path === null || ! Storage::disk('public')->exists($faculty->esign_image_path)) {
+            return back()->withErrors([
+                'esign' => 'Upload your e-sign in Settings before signing a report.',
+            ]);
+        }
+
+        $signoff = EvaluationReportSignoff::query()->firstOrNew([
+            'class_section_id' => $classSection->id,
+        ]);
+
+        $signoff->fill([
+            'faculty_user_id' => $faculty->id,
+            'faculty_signed_at' => now(),
+            'faculty_signature_path' => $faculty->esign_image_path,
+            'dean_user_id' => null,
+            'dean_signed_at' => null,
+            'dean_signature_path' => null,
+        ]);
+        $signoff->save();
+
+        return back()->with('status', 'Report signed and submitted to dean.');
     }
 }

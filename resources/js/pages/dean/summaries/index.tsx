@@ -20,6 +20,11 @@ type Row = {
     schoolYear?: string | null;
     respondents: number;
     overallAverage?: number | string | null;
+    facultySignedAt?: string | null;
+    facultySignedBy?: string | null;
+    deanSignedAt?: string | null;
+    deanSignedBy?: string | null;
+    canDeanSign?: boolean;
     questionAverages: Array<{
         questionNumber: number;
         averageRating: number;
@@ -96,6 +101,10 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                 onFinish: () => setIsImportingTemplate(false),
             },
         );
+    };
+
+    const deanSign = (classSectionId: number) => {
+        router.post(`/dean/summaries/class-sections/${classSectionId}/sign`, {}, { preserveScroll: true });
     };
 
     const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' | 'docx' | 'pdf' => {
@@ -199,6 +208,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             <p className="text-sm font-medium text-red-600">{errors.template_file}</p>
                         )}
                     </div>
+                    {errors.esign && <p className="mt-3 text-sm font-medium text-red-600">{errors.esign}</p>}
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
@@ -228,6 +238,18 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                             {overallAverage !== null && Number.isFinite(overallAverage)
                                                 ? overallAverage.toFixed(2)
                                                 : '-'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Faculty Signed:{' '}
+                                            {row.facultySignedAt
+                                                ? `${row.facultySignedBy ?? 'Faculty'} at ${row.facultySignedAt}`
+                                                : 'Pending'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Dean Signed:{' '}
+                                            {row.deanSignedAt
+                                                ? `${row.deanSignedBy ?? 'Dean'} at ${row.deanSignedAt}`
+                                                : 'Pending'}
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
@@ -264,6 +286,14 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                                 Download
                                             </Button>
                                         </a>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => deanSign(row.classSectionId)}
+                                            disabled={!row.canDeanSign}
+                                        >
+                                            Sign as Dean
+                                        </Button>
                                     </div>
                                 </div>
                             </div>

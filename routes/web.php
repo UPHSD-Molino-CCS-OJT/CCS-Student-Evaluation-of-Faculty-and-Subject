@@ -45,6 +45,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:faculty')->group(function () {
         Route::get('faculty/reports', [FacultyEvaluationReportController::class, 'index'])
             ->name('faculty.reports.index');
+
+        Route::post('faculty/reports/{classSection}/sign', [FacultyEvaluationReportController::class, 'signAndSubmit'])
+            ->name('faculty.reports.sign');
     });
 
     Route::middleware('role:dean,system_admin,staff')->group(function () {
@@ -71,6 +74,9 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('dean/summaries/class-sections/{classSection}/preview', [DeanEvaluationSummaryController::class, 'previewClassSection'])
             ->name('dean.summaries.preview-class-section');
+
+        Route::post('dean/summaries/class-sections/{classSection}/sign', [DeanEvaluationSummaryController::class, 'signClassSection'])
+            ->name('dean.summaries.sign-class-section');
 
         Route::get('dean/program-courses', [DeanProgramCoursesController::class, 'index'])
             ->name('dean.program-courses.index');

@@ -1,5 +1,6 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { FormEvent, useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
@@ -23,11 +24,46 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Profile({
     mustVerifyEmail,
     status,
+    canManageEsign,
+    esignImageUrl,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
+    canManageEsign?: boolean;
+    esignImageUrl?: string | null;
 }) {
     const { auth } = usePage().props;
+    const [esignFile, setEsignFile] = useState<File | null>(null);
+    const [isUploadingEsign, setIsUploadingEsign] = useState(false);
+
+    const submitEsign = (event: FormEvent) => {
+        event.preventDefault();
+
+        if (!esignFile) {
+            return;
+        }
+
+        router.patch(
+            '/settings/esign',
+            { esign_image: esignFile },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setIsUploadingEsign(true),
+                onFinish: () => setIsUploadingEsign(false),
+            },
+        );
+    };
+
+    const removeEsign = () => {
+        router.patch(
+            '/settings/esign',
+            { remove_esign: true },
+            {
+                preserveScroll: true,
+            },
+        );
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -141,6 +177,49 @@ export default function Profile({
                             </>
                         )}
                     </Form>
+
+                    {canManageEsign && (
+                        <div className="space-y-4 rounded-lg border p-4">
+                            <Heading
+                                variant="small"
+                                title="E-signature"
+                                description="Upload your signature image. This is used for one-click document signing."
+                            />
+
+                            {esignImageUrl ? (
+                                <div className="space-y-2">
+                                    <img
+                                        src={esignImageUrl}
+                                        alt="Current e-sign"
+                                        className="max-h-24 rounded border bg-white p-2"
+                                    />
+                                    <Button type="button" variant="outline" onClick={removeEsign}>
+                                        Remove E-sign
+                                    </Button>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    No e-sign uploaded yet.
+                                </p>
+                            )}
+
+                            <form onSubmit={submitEsign} className="space-y-3">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="esign_image">Upload E-sign (PNG/JPG)</Label>
+                                    <Input
+                                        id="esign_image"
+                                        type="file"
+                                        accept="image/png,image/jpeg"
+                                        onChange={(event) => setEsignFile(event.target.files?.[0] ?? null)}
+                                    />
+                                </div>
+
+                                <Button type="submit" disabled={!esignFile || isUploadingEsign}>
+                                    {isUploadingEsign ? 'Uploading...' : 'Save E-sign'}
+                                </Button>
+                            </form>
+                        </div>
+                    )}
                 </div>
 
                 <DeleteUser />

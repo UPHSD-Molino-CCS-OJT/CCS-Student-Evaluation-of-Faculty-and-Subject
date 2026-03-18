@@ -4,6 +4,7 @@ export type User = {
     email: string;
     role: 'student' | 'faculty' | 'dean' | 'staff' | 'system_admin';
     student_id?: string | null;
+    esign_image_path?: string | null;
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;

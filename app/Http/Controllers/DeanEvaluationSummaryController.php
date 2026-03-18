@@ -6,6 +6,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Word\WordDocumentCloner;
 use App\Models\ClassSection;
 use App\Models\Evaluation;
+use App\Models\EvaluationReportSignoff;
 use App\Models\ExportDocumentTemplate;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
@@ -41,7 +42,7 @@ class DeanEvaluationSummaryController extends Controller
     public function index(): Response
     {
         $classSections = ClassSection::query()
-            ->with(['subject', 'section', 'faculty'])
+            ->with(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name'])
             ->get();
 
         $questionMap = EvaluationResponse::query()
@@ -76,6 +77,11 @@ class DeanEvaluationSummaryController extends Controller
                 'overallAverage' => $summary?->overall_average !== null
                     ? (float) $summary->overall_average
                     : null,
+                'facultySignedAt' => $classSection->reportSignoff?->faculty_signed_at?->toDateTimeString(),
+                'facultySignedBy' => $classSection->reportSignoff?->facultySigner?->name,
+                'deanSignedAt' => $classSection->reportSignoff?->dean_signed_at?->toDateTimeString(),
+                'deanSignedBy' => $classSection->reportSignoff?->deanSigner?->name,
+                'canDeanSign' => $classSection->reportSignoff?->faculty_signed_at !== null,
                 'questionAverages' => ($questionMap->get($classSection->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
@@ -114,6 +120,40 @@ class DeanEvaluationSummaryController extends Controller
         return response($this->renderOverallPreviewHtml($data), HttpResponse::HTTP_OK, [
             'Content-Type' => 'text/html; charset=UTF-8',
         ]);
+    }
+
+    public function signClassSection(Request $request, ClassSection $classSection): RedirectResponse
+    {
+        $dean = $request->user();
+
+        if ((string) $dean->role !== 'dean') {
+            abort(403);
+        }
+
+        if ($dean->esign_image_path === null || ! Storage::disk('public')->exists($dean->esign_image_path)) {
+            return back()->withErrors([
+                'esign' => 'Upload your e-sign in Settings before signing a report.',
+            ]);
+        }
+
+        $signoff = EvaluationReportSignoff::query()->firstOrNew([
+            'class_section_id' => $classSection->id,
+        ]);
+
+        if ($signoff->faculty_signed_at === null) {
+            return back()->withErrors([
+                'esign' => 'Faculty must sign and submit this report before dean confirmation.',
+            ]);
+        }
+
+        $signoff->fill([
+            'dean_user_id' => $dean->id,
+            'dean_signed_at' => now(),
+            'dean_signature_path' => $dean->esign_image_path,
+        ]);
+        $signoff->save();
+
+        return back()->with('status', 'Dean e-sign applied. Evaluation confirmed as checked.');
     }
 
     public function storeTemplate(Request $request): RedirectResponse
@@ -432,12 +472,13 @@ class DeanEvaluationSummaryController extends Controller
      *   respondents:int,
      *   overallAverage:float|null,
      *   questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,
-     *   comments:array<int, string>
+      *   comments:array<int, string>,
+      *   signoff:array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}
      * }
      */
     private function buildClassSectionSummaryData(ClassSection $classSection): array
     {
-        $classSection->load(['subject', 'section', 'faculty']);
+          $classSection->load(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name']);
         $questions = collect(config('evaluation.questions'));
 
         $questionAverages = EvaluationResponse::query()
@@ -486,7 +527,40 @@ class DeanEvaluationSummaryController extends Controller
             'overallAverage' => $summary?->overall_average !== null ? (float) $summary->overall_average : null,
             'questionRows' => $questionRows,
             'comments' => $comments,
+            'signoff' => $this->buildSignoffPayload($classSection->reportSignoff),
         ];
+    }
+
+    /**
+     * @return array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}
+     */
+    private function buildSignoffPayload(?EvaluationReportSignoff $signoff): array
+    {
+        return [
+            'facultySignedAt' => $signoff?->faculty_signed_at?->toDateTimeString(),
+            'facultySignedBy' => $signoff?->facultySigner?->name,
+            'facultySignatureDataUri' => $this->signaturePathToDataUri($signoff?->faculty_signature_path),
+            'deanSignedAt' => $signoff?->dean_signed_at?->toDateTimeString(),
+            'deanSignedBy' => $signoff?->deanSigner?->name,
+            'deanSignatureDataUri' => $this->signaturePathToDataUri($signoff?->dean_signature_path),
+        ];
+    }
+
+    private function signaturePathToDataUri(?string $path): ?string
+    {
+        if ($path === null || $path === '' || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        $bytes = Storage::disk('public')->get($path);
+
+        if ($bytes === '') {
+            return null;
+        }
+
+        $mimeType = Storage::disk('public')->mimeType($path) ?: 'image/png';
+
+        return 'data:'.$mimeType.';base64,'.base64_encode($bytes);
     }
 
     /**
@@ -546,7 +620,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>,signoff:array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}}  $data
      */
     private function exportClassSectionDocx(array $data, bool $inline = false): StreamedResponse|HttpResponse
     {
@@ -612,7 +686,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>,signoff:array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}}  $data
      */
     private function buildClassSectionWordBodyXml(array $data): string
     {
@@ -648,13 +722,28 @@ class DeanEvaluationSummaryController extends Controller
             }
         }
 
+        $signoffRows = [
+            [
+                'Faculty',
+                ($data['signoff']['facultySignedBy'] ?? 'Not signed')
+                    .($data['signoff']['facultySignedAt'] ? ' ('.$data['signoff']['facultySignedAt'].')' : ''),
+            ],
+            [
+                'Dean',
+                ($data['signoff']['deanSignedBy'] ?? 'Not signed')
+                    .($data['signoff']['deanSignedAt'] ? ' ('.$data['signoff']['deanSignedAt'].')' : ''),
+            ],
+        ];
+
         return
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION SUMMARY').
             $this->buildWordTableXml(['Field', 'Value'], $metaRows).
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION').
             $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $evaluationRows).
             $this->buildWordHeadingParagraphXml('COMMENTS').
-            $this->buildWordTableXml(['Comment'], $commentRows);
+            $this->buildWordTableXml(['Comment'], $commentRows).
+            $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
+            $this->buildWordTableXml(['Role', 'Signed By / Date'], $signoffRows);
     }
 
     /**
@@ -1141,6 +1230,23 @@ class DeanEvaluationSummaryController extends Controller
             }
         }
 
+        $facultySignedBy = htmlspecialchars((string) ($data['signoff']['facultySignedBy'] ?? 'Not signed'));
+        $facultySignedAt = $data['signoff']['facultySignedAt'] !== null
+            ? htmlspecialchars((string) $data['signoff']['facultySignedAt'])
+            : 'Pending';
+        $deanSignedBy = htmlspecialchars((string) ($data['signoff']['deanSignedBy'] ?? 'Not signed'));
+        $deanSignedAt = $data['signoff']['deanSignedAt'] !== null
+            ? htmlspecialchars((string) $data['signoff']['deanSignedAt'])
+            : 'Pending';
+
+        $facultySignatureImage = $data['signoff']['facultySignatureDataUri'] !== null
+            ? '<img class="esign-image" src="'.htmlspecialchars($data['signoff']['facultySignatureDataUri']).'" alt="Faculty e-sign" />'
+            : '<div class="esign-placeholder">No faculty e-sign yet</div>';
+
+        $deanSignatureImage = $data['signoff']['deanSignatureDataUri'] !== null
+            ? '<img class="esign-image" src="'.htmlspecialchars($data['signoff']['deanSignatureDataUri']).'" alt="Dean e-sign" />'
+            : '<div class="esign-placeholder">No dean e-sign yet</div>';
+
         return "<!doctype html>
 <html>
 <head>
@@ -1169,6 +1275,11 @@ class DeanEvaluationSummaryController extends Controller
         .right{text-align:right}
         .avg td{font-weight:700}
         .section-title{margin:14px 0 8px;font-size:13px;font-weight:700;color:#1f2937}
+        .esign-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
+        .esign-card{border:1px solid #d1d5db;border-radius:10px;background:#fff;padding:10px}
+        .esign-meta{font-size:12px;color:#374151;line-height:1.5}
+        .esign-image{display:block;max-height:64px;max-width:100%;margin:0 0 8px}
+        .esign-placeholder{font-size:12px;color:#6b7280;border:1px dashed #d1d5db;border-radius:8px;padding:10px;margin-bottom:8px}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1223,6 +1334,18 @@ class DeanEvaluationSummaryController extends Controller
 
             <div class=\"section-title\">Comments</div>
             <table class=\"modern-table\"><tbody>{$commentsHtml}</tbody></table>
+
+            <div class=\"section-title\">E-Signatures</div>
+            <div class=\"esign-grid\">
+                <div class=\"esign-card\">
+                    {$facultySignatureImage}
+                    <div class=\"esign-meta\"><strong>Faculty:</strong> {$facultySignedBy}<br /><strong>Signed At:</strong> {$facultySignedAt}</div>
+                </div>
+                <div class=\"esign-card\">
+                    {$deanSignatureImage}
+                    <div class=\"esign-meta\"><strong>Dean:</strong> {$deanSignedBy}<br /><strong>Signed At:</strong> {$deanSignedAt}</div>
+                </div>
+            </div>
         </div>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
