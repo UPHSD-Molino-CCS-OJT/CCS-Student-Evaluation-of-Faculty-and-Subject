@@ -726,7 +726,7 @@ class DeanEvaluationSummaryController extends Controller
     /**
      * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
      */
-    private function renderClassPreviewHtml(array $data): string
+    private function renderClassPreviewHtml(array $data, bool $usePrintFixedHeaderFooter = true): string
     {
         $classSection = $data['classSection'];
         $subject = htmlspecialchars(($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? ''));
@@ -737,6 +737,12 @@ class DeanEvaluationSummaryController extends Controller
         $template = ExportDocumentTemplate::current();
         $templateHeader = $this->sanitizeTemplateHtmlFragment($template->header_html);
         $templateFooter = $this->sanitizeTemplateHtmlFragment($template->footer_html);
+        $printHeaderHtml = $usePrintFixedHeaderFooter
+            ? '<div class="print-header">'.$templateHeader.'</div>'
+            : '';
+        $printFooterHtml = $usePrintFixedHeaderFooter
+            ? '<div class="print-footer">'.$templateFooter.'<div class="footer">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div></div>'
+            : '';
 
         $rowsHtml = '';
         foreach ($data['questionRows'] as $row) {
@@ -769,9 +775,8 @@ class DeanEvaluationSummaryController extends Controller
         .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;z-index:10}
         .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
         .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
+        .print-header,.print-footer{display:none}
         .page{max-width:900px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-        h1{margin:0;font-size:34px;line-height:1;color:#b06464;font-weight:800}
-        .sub{font-size:14px;color:#555;margin-top:4px}
         .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
         .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
         .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
@@ -782,7 +787,15 @@ class DeanEvaluationSummaryController extends Controller
         .avg td{font-weight:700}
         .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
         .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
-        @media print{.toolbar{display:none}.page{box-shadow:none;margin:0;max-width:none}}
+        @media print{
+            body{background:#fff}
+            .toolbar{display:none}
+            .print-header,.print-footer{display:block;position:fixed;left:0;right:0;background:#fff;z-index:999}
+            .print-header{top:0;padding:8px 28px 0}
+            .print-footer{bottom:0;padding:0 28px 8px}
+            .page{box-shadow:none;margin:0;max-width:none;padding:132px 28px 120px}
+            .template-region{display:none}
+        }
     </style>
 </head>
 <body>
@@ -796,10 +809,10 @@ class DeanEvaluationSummaryController extends Controller
         <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
+    {$printHeaderHtml}
+    {$printFooterHtml}
     <div class=\"page\">
         <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
-        <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
-        <div class=\"sub\">College of Computer Studies</div>
         <div class=\"meta\">
             <div>PERIOD : {$term} {$schoolYear}<br />NAME : {$faculty}</div>
             <div>SUBJECT/S : {$subject}<br />EVALUATORS : {$data['respondents']} STUDENTS</div>
@@ -833,11 +846,17 @@ class DeanEvaluationSummaryController extends Controller
     /**
      * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
      */
-    private function renderOverallPreviewHtml(array $data): string
+    private function renderOverallPreviewHtml(array $data, bool $usePrintFixedHeaderFooter = true): string
     {
         $template = ExportDocumentTemplate::current();
         $templateHeader = $this->sanitizeTemplateHtmlFragment($template->header_html);
         $templateFooter = $this->sanitizeTemplateHtmlFragment($template->footer_html);
+        $printHeaderHtml = $usePrintFixedHeaderFooter
+            ? '<div class="print-header">'.$templateHeader.'</div>'
+            : '';
+        $printFooterHtml = $usePrintFixedHeaderFooter
+            ? '<div class="print-footer">'.$templateFooter.'<div class="footer">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div></div>'
+            : '';
 
         $rowsHtml = '';
         foreach ($data['classSections'] as $classSection) {
@@ -870,9 +889,8 @@ class DeanEvaluationSummaryController extends Controller
         .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;z-index:10}
         .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
         .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
+        .print-header,.print-footer{display:none}
         .page{max-width:980px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-        h1{margin:0;font-size:30px;line-height:1;color:#b06464;font-weight:800}
-        .sub{font-size:14px;color:#555;margin-top:4px}
         .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
         .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
         table{width:100%;border-collapse:collapse;margin-top:10px}
@@ -881,7 +899,15 @@ class DeanEvaluationSummaryController extends Controller
         .right{text-align:right}
         .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
         .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
-        @media print{.toolbar{display:none}.page{box-shadow:none;margin:0;max-width:none}}
+        @media print{
+            body{background:#fff}
+            .toolbar{display:none}
+            .print-header,.print-footer{display:block;position:fixed;left:0;right:0;background:#fff;z-index:999}
+            .print-header{top:0;padding:8px 28px 0}
+            .print-footer{bottom:0;padding:0 28px 8px}
+            .page{box-shadow:none;margin:0;max-width:none;padding:132px 28px 120px}
+            .template-region{display:none}
+        }
     </style>
 </head>
 <body>
@@ -895,10 +921,10 @@ class DeanEvaluationSummaryController extends Controller
         <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
+    {$printHeaderHtml}
+    {$printFooterHtml}
     <div class=\"page\">
         <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
-        <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
-        <div class=\"sub\">College of Computer Studies - Overall Evaluation Summary</div>
 
         <div class=\"section-title\">CLASS EVALUATION SUMMARY</div>
         <table>
@@ -963,8 +989,16 @@ class DeanEvaluationSummaryController extends Controller
             throw new RuntimeException('Unable to open DOCX archive: '.$this->zipOpenErrorToMessage($openResult));
         }
 
-        $headerPartNames = $this->collectDocxPartNames($zip, '/^word\/header[^\/]*\.xml$/i');
-        $footerPartNames = $this->collectDocxPartNames($zip, '/^word\/footer[^\/]*\.xml$/i');
+        $headerPartNames = $this->collectReferencedHeaderFooterParts($zip, 'header');
+        $footerPartNames = $this->collectReferencedHeaderFooterParts($zip, 'footer');
+
+        if ($headerPartNames === []) {
+            $headerPartNames = $this->collectDocxPartNames($zip, '/^word\/header[^\/]*\.xml$/i');
+        }
+
+        if ($footerPartNames === []) {
+            $footerPartNames = $this->collectDocxPartNames($zip, '/^word\/footer[^\/]*\.xml$/i');
+        }
 
         $headerFragment = $this->buildDocxTemplateFragment($zip, $headerPartNames);
         $footerFragment = $this->buildDocxTemplateFragment($zip, $footerPartNames);
@@ -998,6 +1032,114 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return $partNames;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function collectReferencedHeaderFooterParts(ZipArchive $zip, string $kind): array
+    {
+        if (! in_array($kind, ['header', 'footer'], true)) {
+            return [];
+        }
+
+        $documentXml = $zip->getFromName('word/document.xml');
+        $documentRelsXml = $zip->getFromName('word/_rels/document.xml.rels');
+
+        if ($documentXml === false || trim($documentXml) === '' || $documentRelsXml === false || trim($documentRelsXml) === '') {
+            return [];
+        }
+
+        $referencePattern = $kind === 'header'
+            ? '/<w:headerReference\b[^>]*>/i'
+            : '/<w:footerReference\b[^>]*>/i';
+
+        $referenceMatches = [];
+        preg_match_all($referencePattern, $documentXml, $referenceMatches, PREG_SET_ORDER);
+
+        if ($referenceMatches === []) {
+            return [];
+        }
+
+        $relsMap = $this->extractDocumentPartRelationshipMap($documentRelsXml, $kind);
+
+        if ($relsMap === []) {
+            return [];
+        }
+
+        $byType = [
+            'default' => [],
+            'first' => [],
+            'even' => [],
+            'other' => [],
+        ];
+
+        foreach ($referenceMatches as $match) {
+            $tag = $match[0] ?? '';
+            $relationshipId = $this->extractXmlAttributeValue($tag, 'r:id');
+            $referenceType = strtolower($this->extractXmlAttributeValue($tag, 'w:type'));
+
+            if ($relationshipId === '' || ! isset($relsMap[$relationshipId])) {
+                continue;
+            }
+
+            $partPath = $this->normalizeDocxPath('word/'.$relsMap[$relationshipId]);
+
+            $bucket = match ($referenceType) {
+                'default' => 'default',
+                'first' => 'first',
+                'even' => 'even',
+                default => 'other',
+            };
+
+            $byType[$bucket][] = $partPath;
+        }
+
+        $ordered = [];
+        $seen = [];
+
+        foreach (['default', 'first', 'even', 'other'] as $bucket) {
+            foreach ($byType[$bucket] as $partPath) {
+                if (isset($seen[$partPath])) {
+                    continue;
+                }
+
+                $seen[$partPath] = true;
+                $ordered[] = $partPath;
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractDocumentPartRelationshipMap(string $documentRelsXml, string $kind): array
+    {
+        $matches = [];
+        preg_match_all('/<Relationship\b[^>]*>/i', $documentRelsXml, $matches, PREG_SET_ORDER);
+
+        if ($matches === []) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($matches as $match) {
+            $tag = $match[0] ?? '';
+            $relationshipId = $this->extractXmlAttributeValue($tag, 'Id');
+            $relationshipType = strtolower($this->extractXmlAttributeValue($tag, 'Type'));
+            $relationshipTarget = $this->extractXmlAttributeValue($tag, 'Target');
+
+            if ($relationshipId === '' || $relationshipTarget === '' || ! str_ends_with($relationshipType, '/'.$kind)) {
+                continue;
+            }
+
+            $map[$relationshipId] = $relationshipTarget;
+        }
+
+        return $map;
     }
 
     /**
@@ -1301,7 +1443,7 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function renderClassDocHtml(array $data): string
     {
-        return $this->renderClassPreviewHtml($data);
+        return $this->renderClassPreviewHtml($data, false);
     }
 
     /**
@@ -1309,6 +1451,6 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function renderOverallDocHtml(array $data): string
     {
-        return $this->renderOverallPreviewHtml($data);
+        return $this->renderOverallPreviewHtml($data, false);
     }
 }
