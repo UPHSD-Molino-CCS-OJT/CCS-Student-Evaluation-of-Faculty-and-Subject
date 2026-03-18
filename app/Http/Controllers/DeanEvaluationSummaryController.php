@@ -308,7 +308,9 @@ class DeanEvaluationSummaryController extends Controller
         $format = $this->resolveExportFormat($request);
 
         if ($format === 'docx') {
-            return $this->exportClassSectionDocx($data);
+            $inline = strtolower((string) $request->query('disposition', 'attachment')) === 'inline';
+
+            return $this->exportClassSectionDocx($data, $inline);
         }
 
         if ($format === 'doc') {
@@ -365,7 +367,9 @@ class DeanEvaluationSummaryController extends Controller
         $format = $this->resolveExportFormat($request);
 
         if ($format === 'docx') {
-            return $this->exportOverallDocx($data);
+            $inline = strtolower((string) $request->query('disposition', 'attachment')) === 'inline';
+
+            return $this->exportOverallDocx($data, $inline);
         }
 
         if ($format === 'doc') {
@@ -523,7 +527,7 @@ class DeanEvaluationSummaryController extends Controller
     /**
      * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
      */
-    private function exportClassSectionDocx(array $data): StreamedResponse|HttpResponse
+    private function exportClassSectionDocx(array $data, bool $inline = false): StreamedResponse|HttpResponse
     {
         $templatePath = $this->resolveDocxTemplatePath();
 
@@ -552,23 +556,13 @@ class DeanEvaluationSummaryController extends Controller
             now()->format('Ymd-His')
         );
 
-        return response()->streamDownload(function () use ($outputPath): void {
-            $stream = fopen($outputPath, 'rb');
-            if ($stream !== false) {
-                fpassthru($stream);
-                fclose($stream);
-            }
-
-            @unlink($outputPath);
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ]);
+        return $this->streamDocxFile($outputPath, $fileName, $inline);
     }
 
     /**
      * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
      */
-    private function exportOverallDocx(array $data): StreamedResponse|HttpResponse
+    private function exportOverallDocx(array $data, bool $inline = false): StreamedResponse|HttpResponse
     {
         $templatePath = $this->resolveDocxTemplatePath();
 
@@ -593,17 +587,7 @@ class DeanEvaluationSummaryController extends Controller
 
         $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.docx';
 
-        return response()->streamDownload(function () use ($outputPath): void {
-            $stream = fopen($outputPath, 'rb');
-            if ($stream !== false) {
-                fpassthru($stream);
-                fclose($stream);
-            }
-
-            @unlink($outputPath);
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ]);
+        return $this->streamDocxFile($outputPath, $fileName, $inline);
     }
 
     /**
@@ -612,41 +596,44 @@ class DeanEvaluationSummaryController extends Controller
     private function buildClassSectionWordBodyXml(array $data): string
     {
         $classSection = $data['classSection'];
-        $lines = [
-            'STUDENT EVALUATION SUMMARY',
-            'Subject: '.(($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? '')),
-            'Faculty: '.($classSection->faculty?->name ?? ''),
-            'Section: '.($classSection->section?->code ?? ''),
-            'Term: '.($classSection->term ?? ''),
-            'School Year: '.($classSection->school_year ?? ''),
-            'Respondents: '.(string) $data['respondents'],
-            'Overall Average: '.($data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-'),
-            '',
-            'Question Averages',
+        $metaRows = [
+            ['Period', (string) (($classSection->term ?? '').' '.($classSection->school_year ?? ''))],
+            ['Faculty', (string) ($classSection->faculty?->name ?? '')],
+            ['Subject', (string) (($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? ''))],
+            ['Evaluators', (string) $data['respondents'].' Students'],
         ];
 
+        $evaluationRows = [];
         foreach ($data['questionRows'] as $row) {
-            $lines[] = sprintf(
-                '%d. %s | Average: %s | Remarks: %s',
-                (int) $row['number'],
+            $evaluationRows[] = [
                 (string) $row['text'],
                 $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
-                $this->remarkFromAverage($row['average'])
-            );
+                $this->remarkFromAverage($row['average']),
+            ];
         }
 
-        $lines[] = '';
-        $lines[] = 'Comments';
+        $evaluationRows[] = [
+            'AVERAGE',
+            $data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-',
+            $this->remarkFromAverage($data['overallAverage']),
+        ];
 
+        $commentRows = [];
         if ($data['comments'] === []) {
-            $lines[] = '- No comments submitted.';
+            $commentRows[] = ['No comments submitted.'];
         } else {
             foreach ($data['comments'] as $comment) {
-                $lines[] = '- '.$comment;
+                $commentRows[] = [(string) $comment];
             }
         }
 
-        return $this->buildWordParagraphXmlFromLines($lines);
+        return
+            $this->buildWordHeadingParagraphXml('STUDENT EVALUATION SUMMARY').
+            $this->buildWordTableXml(['Field', 'Value'], $metaRows).
+            $this->buildWordHeadingParagraphXml('STUDENT EVALUATION').
+            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $evaluationRows).
+            $this->buildWordHeadingParagraphXml('COMMENTS').
+            $this->buildWordTableXml(['Comment'], $commentRows);
     }
 
     /**
@@ -654,41 +641,37 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function buildOverallWordBodyXml(array $data): string
     {
-        $lines = [
-            'OVERALL EVALUATION SUMMARY',
-            '',
-            'Class Sections',
-        ];
-
+        $classRows = [];
         foreach ($data['classSections'] as $classSection) {
             $summary = $data['summaryMap'][$classSection->id] ?? null;
             $average = $summary?->overall_average !== null ? number_format((float) $summary->overall_average, 2) : '-';
 
-            $lines[] = sprintf(
-                '%s - %s | %s | %s | %s | Average: %s',
-                (string) ($classSection->subject?->code ?? ''),
-                (string) ($classSection->subject?->title ?? ''),
+            $classRows[] = [
+                (string) (($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? '')),
                 (string) ($classSection->faculty?->name ?? ''),
                 (string) ($classSection->section?->code ?? ''),
-                (string) (($classSection->term ?? '').' '.($classSection->school_year ?? '')),
-                $average
-            );
+                (string) ($classSection->term ?? ''),
+                (string) ($classSection->school_year ?? ''),
+                $average,
+                $this->remarkFromAverage($summary?->overall_average !== null ? (float) $summary->overall_average : null),
+            ];
         }
 
-        $lines[] = '';
-        $lines[] = 'Overall Question Averages';
-
+        $questionRows = [];
         foreach ($data['overallQuestionRows'] as $row) {
-            $lines[] = sprintf(
-                '%d. %s | Average: %s | Remarks: %s',
-                (int) $row['number'],
+            $questionRows[] = [
                 (string) $row['text'],
                 $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
-                $this->remarkFromAverage($row['average'])
-            );
+                $this->remarkFromAverage($row['average']),
+            ];
         }
 
-        return $this->buildWordParagraphXmlFromLines($lines);
+        return
+            $this->buildWordHeadingParagraphXml('OVERALL EVALUATION SUMMARY').
+            $this->buildWordHeadingParagraphXml('CLASS EVALUATION SUMMARY').
+            $this->buildWordTableXml(['Subject', 'Faculty', 'Section', 'Term', 'School Year', 'Average', 'Remarks'], $classRows).
+            $this->buildWordHeadingParagraphXml('OVERALL QUESTION AVERAGES').
+            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $questionRows);
     }
 
     /**
@@ -714,6 +697,78 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return implode('', $paragraphs);
+    }
+
+    private function buildWordHeadingParagraphXml(string $text): string
+    {
+        return '<w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">'
+            .htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8')
+            .'</w:t></w:r></w:p>';
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     * @param  array<int, array<int, string>>  $rows
+     */
+    private function buildWordTableXml(array $headers, array $rows): string
+    {
+        $columnCount = max(1, count($headers));
+        $colWidth = max(1200, (int) floor(9000 / $columnCount));
+
+        $gridCols = '';
+        for ($i = 0; $i < $columnCount; $i++) {
+            $gridCols .= '<w:gridCol w:w="'.$colWidth.'"/>';
+        }
+
+        $headerCells = '';
+        foreach ($headers as $header) {
+            $headerCells .= $this->buildWordTableCellXml($header, $colWidth, true);
+        }
+
+        $bodyRows = '';
+        foreach ($rows as $row) {
+            $cells = '';
+            for ($index = 0; $index < $columnCount; $index++) {
+                $cells .= $this->buildWordTableCellXml((string) ($row[$index] ?? ''), $colWidth, false);
+            }
+
+            $bodyRows .= '<w:tr>'.$cells.'</w:tr>';
+        }
+
+        return '<w:tbl>'
+            .'<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>'
+            .'<w:tblGrid>'.$gridCols.'</w:tblGrid>'
+            .'<w:tr>'.$headerCells.'</w:tr>'
+            .$bodyRows
+            .'</w:tbl>';
+    }
+
+    private function buildWordTableCellXml(string $text, int $widthDxa, bool $bold): string
+    {
+        $escaped = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        $runProps = $bold ? '<w:rPr><w:b/></w:rPr>' : '';
+
+        return '<w:tc>'
+            .'<w:tcPr><w:tcW w:w="'.$widthDxa.'" w:type="dxa"/></w:tcPr>'
+            .'<w:p><w:r>'.$runProps.'<w:t xml:space="preserve">'.$escaped.'</w:t></w:r></w:p>'
+            .'</w:tc>';
+    }
+
+    private function streamDocxFile(string $filePath, string $fileName, bool $inline): StreamedResponse
+    {
+        return response()->stream(function () use ($filePath): void {
+            $stream = fopen($filePath, 'rb');
+
+            if ($stream !== false) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+
+            @unlink($filePath);
+        }, HttpResponse::HTTP_OK, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => ($inline ? 'inline' : 'attachment').'; filename='.$fileName,
+        ]);
     }
 
     private function resolveDocxTemplatePath(): ?string
@@ -1125,7 +1180,7 @@ class DeanEvaluationSummaryController extends Controller
                 <div class=\"meta-item\"><span class=\"meta-label\">Evaluators</span><span class=\"meta-value\">{$data['respondents']} Students</span></div>
             </div>
 
-            <div class=\"section-title\">Student Evaluation</div>
+            <div class=\"section-title\">STUDENT EVALUATION</div>
             <table class=\"modern-table\">
                 <thead>
                     <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>

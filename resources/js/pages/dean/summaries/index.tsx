@@ -134,9 +134,9 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             <option value="doc">DOC (.doc)</option>
                             <option value="docx">Word Template Clone (.docx)</option>
                         </select>
-                        <a href="/dean/summaries/preview" target="_blank" rel="noreferrer" className="inline-flex">
+                        <a href="/dean/summaries/export?format=docx&disposition=inline" target="_blank" rel="noreferrer" className="inline-flex">
                             <Button type="button" variant="outline">
-                                Preview Overall
+                                Preview Overall DOCX
                             </Button>
                         </a>
                         <a href={`/dean/summaries/export?format=${overallFormat}`} className="inline-flex">
@@ -231,13 +231,13 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx&disposition=inline`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-flex"
                                         >
                                             <Button type="button" variant="outline" size="sm">
-                                                Preview
+                                                Preview DOCX
                                             </Button>
                                         </a>
                                         <select
