@@ -1,19 +1,7 @@
+[variables]
+NIXPACKS_PHP_EXTENSIONS = "zip,gd"
+NIXPACKS_NODE_VERSION = "22"
+
 [build]
 builder = "NIXPACKS"
-
-[deploy]
-startCommand = "npm run build && npm start"
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
-
-[[deploy.healthcheckPath]]
-path = "/api/health"
-
-[deploy.healthcheckTimeout]
-value = 300
-
-# Railway Volume configuration
-# Create volume in Railway dashboard: railway volume create signatures-storage --mount /data/uploads
-# The volume will persist across deployments
-[volumes]
-mount_path = "/data/uploads"
+buildCommand = "npm install -g n && n 22.12.0 && hash -r && node -v && npm -v && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules node_modules/.cache || true) && npm install --include=dev --include=optional --no-audit --no-fund && npm run build"

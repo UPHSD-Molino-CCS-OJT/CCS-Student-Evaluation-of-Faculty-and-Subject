@@ -1,228 +1,197 @@
-# 🎓 UPHSD Student Faculty Evaluation System (React + Vite)
+# CCS Student Evaluation of Faculty and Subject
 
-A modern, full-stack web application for collecting anonymous student feedback on faculty performance, built with **React.js + Vite** frontend and **Express.js + MongoDB** backend.
+A Laravel 12 + Inertia React web application for student evaluation of faculty and subjects.
 
-## 🌟 Version 2.0 - React Migration
+## Tech Stack
 
-**Major Update:** The system has been migrated from EJS server-side rendering to a modern React + Vite architecture for improved performance, better user experience, and enhanced developer workflow.
+- Backend: Laravel 12, PHP 8.2+
+- Frontend: React 19, Vite 7, Tailwind CSS 4
+- Auth: Laravel Fortify (custom login via student ID or email)
+- Database: SQLite (default), MySQL-compatible schema
+- Testing: Pest
 
-## ✨ Key Features
+## Core Features
 
-### Student Portal
-- 💾 **Auto-save Draft System** - Automatic progress saving
-- 📊 **Real-time Progress Tracker** - Visual completion indicators  
-- ✅ **Smart Form Validation** - Instant feedback
-- 🎯 **Section Accordion Navigation** - Easy form navigation
-- ⌨️ **Keyboard Shortcuts** - Ctrl+S to save manually
-- 📱 **Fully Responsive** - Works on all devices
-- 🔒 **10-Layer Privacy Protection** - Strong anonymity protection
+- Student authentication using:
+  - Student ID format: `1-2345-678` or `00-0000-000`
+  - Email login also supported
+- Student dashboard for assigned subject-faculty evaluations
+- 25-question evaluation form with 1 to 5 rating legend
+- Faculty view:
+  - Evaluation results per subject and section
+  - Question-level averages and overall average
+- Dean view:
+  - Summary per subject, faculty, and section
+  - Question-level averages and respondent counts
+- Role-based routing and dashboard redirection
 
-### Admin Portal  
-- 🔐 **Secure Authentication** - Session-based login
-- 📊 **Comprehensive Dashboard** - Statistics and analytics
-- 👁️ **Detailed Evaluation Reports** - Color-coded ratings
-- 👨‍🏫 **Teacher Management** - Full CRUD operations
-- 📚 **Course Management** - Organize by program
-- 🎓 **Program Management** - Academic program control
-- 🛡️ **Privacy Audit System** - Compliance monitoring
+## Roles
 
-## 🚀 Quick Start
+- `student`
+- `faculty`
+- `dean`
+- `staff`
+- `system_admin`
 
-### Prerequisites
-- Node.js 18 or higher
-- MongoDB
-- npm or yarn
+## Local Setup
 
-### Installation
-
-1. **Clone and install:**
-   ```bash
-   git clone <repository-url>
-   cd CCS-Student-Evaluation-of-Faculty-and-Subject
-   npm install
-   cd client && npm install && cd ..
-   ```
-
-2. **Configure environment:**
-   ```bash
-   # Create .env in root directory
-   MONGODB_URI=mongodb://localhost:27017/student_evaluation
-   SESSION_SECRET=your_secret_key_here
-   NODE_ENV=development
-   ```
-
-3. **Initialize database:**
-   ```bash
-   npm run setup-db
-   ```
-
-### Development Mode
-
-**Run full-stack application:**
-```bash
-npm run dev:fullstack
-```
-- Backend API: `http://localhost:3000`
-- Frontend: `http://localhost:5173`
-
-**Or run separately:**
-```bash
-# Terminal 1 - Backend
-npm run dev
-
-# Terminal 2 - Frontend  
-cd client
-npm run dev
-```
-
-### Production Mode
+1. Install dependencies
 
 ```bash
-# Build React app
-npm run build
-
-# Start production server
-npm start
-```
-Access at `http://localhost:3000`
-
-## 🏗️ Tech Stack
-
-### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **React Router v6** - Client-side routing
-- **Tailwind CSS** - Utility-first styling
-- **Axios** - HTTP client
-- **Lucide React** - Modern icon library
-
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **bcrypt** - Password hashing
-- **express-session** - Session management
-
-## 📁 Project Structure
-
-```
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/    # Reusable components
-│   │   ├── pages/         # Page components
-│   │   ├── App.jsx        # Main app
-│   │   └── main.jsx       # Entry point
-│   ├── public/            # Static assets
-│   └── vite.config.js     # Vite config
-├── routes/
-│   └── api.js            # API routes
-├── models/                # MongoDB models
-├── middleware/            # Express middleware
-├── utils/                 # Utilities
-├── config/                # Configuration
-├── server.js             # Express server
-└── package.json          # Dependencies
-```
-
-## 📚 Documentation
-
-- 📖 [React Migration Guide](REACT-MIGRATION.md) - Migration details
-- 🎯 [Features Guide](docs/FEATURES-GUIDE.md) - Complete feature list
-- 🔐 [Privacy & Data Protection](docs/PRIVACY-AND-DATA-PROTECTION.md) - Privacy system
-- 📦 [Installation Guide](docs/INSTALLATION-GUIDE.md) - Detailed setup
-- 🔧 [Function Reference](docs/FUNCTION-REFERENCE.md) - API reference
-
-## 🔐 Default Credentials
-
-**Admin Portal:**
-- Username: `admin`
-- Password: `admin123`
-
-⚠️ **Change these credentials immediately after first login!**
-
-## 🌐 Access URLs
-
-- **Student Portal:** `http://localhost:3000/student/login`
-- **Admin Portal:** `http://localhost:3000/admin/login`
-- **API Health Check:** `http://localhost:3000/api/health`
-
-## 🎨 Key Features in Detail
-
-### Auto-Save System
-- Saves every 2 seconds automatically
-- Stores in browser localStorage
-- Resume anytime
-- Clear draft option
-- Ctrl+S manual save
-
-### Progress Tracking
-- Visual progress bar
-- Percentage completion  
-- Section-by-section status
-- Color-coded indicators
-
-### Privacy Protection
-1. **Cryptographic anonymization** (SHA-512)
-2. **Timing decorrelation** (random delays)
-3. **IP anonymization**
-4. **Automatic decoupling** (24h)
-5. **Differential privacy**
-6. **K-anonymity** (k=5)
-7. **Session security**
-8. **Data minimization**
-9. **Audit logging**
-10. **FERPA/GDPR compliance**
-
-## 🐛 Troubleshooting
-
-### Frontend Issues
-```bash
-cd client
-rm -rf node_modules package-lock.json
+composer install
 npm install
-npm run dev
 ```
 
-### Backend Issues
+2. Create environment file and app key
+
 ```bash
-rm -rf node_modules package-lock.json
-npm install
-npm run dev
+cp .env.example .env
+php artisan key:generate
 ```
 
-### Database Issues
+3. Prepare database and seed data
+
 ```bash
-npm run setup-db
+php artisan migrate:fresh --seed
 ```
 
-## 🤝 Contributing
+4. Generate Wayfinder files (routes/actions TS helpers)
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+```bash
+php artisan wayfinder:generate
+```
 
-## 📄 License
+5. Start development servers
 
-[MIT License](LICENSE)
+```bash
+composer run dev
+```
 
-## 👥 Support
+Then open `http://127.0.0.1:8000`.
 
-For issues and questions:
-- Create an issue on GitHub
-- Contact the development team
-- Check documentation in `/docs`
+## Railway Deployment
 
-## 🙏 Acknowledgments
+Use two Railway services for production:
 
-- UPHSD for project requirements
-- React community for excellent tools
-- MongoDB team for database solutions
-- All contributors and testers
+- `web` service (serves HTTP traffic)
+- `worker` service (processes queued jobs)
 
----
+### 1) Create the `web` service
 
-**Version 2.0** - React + Vite Architecture  
-Built with ❤️ for UPHSD
+- Source: this repository
+- Build command:
+
+```bash
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build
+```
+
+- Start command:
+
+```bash
+php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+```
+
+### 2) Add required environment variables
+
+Set these in Railway service variables:
+
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_KEY` (generate once using `php artisan key:generate --show`)
+- `APP_URL` (your Railway public URL, must start with `https://`)
+- `ASSET_URL` (optional; set to the same `https://` public URL if you still see mixed-content assets)
+- `DB_CONNECTION=mysql`
+- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Railway MySQL)
+- `SESSION_DRIVER=database`
+- `CACHE_STORE=database`
+- `QUEUE_CONNECTION=database` (or `sync` if you do not run a worker service)
+- `SESSION_SECURE_COOKIE=true`
+
+### 3) Create the `worker` service (recommended)
+
+- Same repo and build command as `web`
+- Start command:
+
+```bash
+php artisan queue:work --tries=1 --timeout=0
+```
+
+### 4) First deploy notes
+
+- `npm run build` now generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
+- If Railway build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.cache'`, use `npm install` (not `npm ci`) in the build command.
+- If deployment cache is stale, trigger a clear rebuild in Railway and redeploy.
+
+## Seeded Demo Accounts
+
+See `database/seeders/DatabaseSeeder.php` for current values. Default accounts include:
+
+- Student:
+  - Login: seeded `student_id` value
+  - Password: same as seeded `student_id`
+- Faculty:
+  - Emails: `ada.faculty@example.com`, `alan.faculty@example.com`
+  - Password: `password`
+- Dean:
+  - Email: `dean@example.com`
+  - Password: `password`
+- Staff:
+  - Email: `staff@example.com`
+  - Password: `password`
+- System Admin:
+  - Email: `sysadmin@example.com`
+  - Password: `password`
+
+## Important Notes
+
+- The root path `/` redirects to login for guests and dashboard for authenticated users.
+- If you see frontend import errors like `Cannot find module '@/routes'`, run:
+
+```bash
+php artisan wayfinder:generate
+```
+
+- If `composer run dev` fails with `vendor/autoload.php` missing, run:
+
+```bash
+composer install
+```
+
+- In non-interactive root/container environments, set `COMPOSER_ALLOW_SUPERUSER=1` when running Composer commands.
+- `phpoffice/phpspreadsheet` expects PHP `gd`. Install/enable `ext-gd` for production-like environments.
+- `phpoffice/phpspreadsheet` also expects PHP `zip` for full XLSX support.
+- This repository includes Composer platform overrides for `ext-gd` and `ext-zip` so locked dependencies can still install in constrained CI images.
+- For build daemons, use:
+
+```bash
+COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip
+```
+
+## Useful Commands
+
+```bash
+# Frontend type-check
+npm run types:check
+
+# Lint JS/TS
+npm run lint:check
+
+# Run PHP tests
+php artisan test
+
+# Run a focused test file
+php artisan test tests/Feature
+```
+
+## Project Structure (High-Level)
+
+- `app/Http/Controllers/` - module controllers and settings controllers
+- `app/Models/` - domain models (`ClassSection`, `Evaluation`, `Subject`, etc.)
+- `database/migrations/` - schema for users, sections, assignments, evaluations
+- `database/seeders/DatabaseSeeder.php` - demo data
+- `resources/js/pages/` - Inertia pages for auth, student, faculty, dean
+- `routes/web.php` - role-based web routes
+
+## License
+
+This project follows the repository's existing licensing terms.
