@@ -51,23 +51,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/summaries', [DeanEvaluationSummaryController::class, 'index'])
             ->name('dean.summaries.index');
 
-        Route::post('dean/summaries/template', [DeanEvaluationSummaryController::class, 'storeTemplate'])
-            ->name('dean.summaries.template.store');
-
-        Route::post('dean/summaries/template/preview', [DeanEvaluationSummaryController::class, 'previewTemplateImport'])
-            ->name('dean.summaries.template.preview');
-
-        Route::post('dean/summaries/template/manual', [DeanEvaluationSummaryController::class, 'storeTemplateManual'])
-            ->name('dean.summaries.template.manual.store');
-
-        Route::get('dean/summaries/preview', [DeanEvaluationSummaryController::class, 'previewOverall'])
-            ->name('dean.summaries.preview-overall');
-
         Route::get('dean/summaries/export', [DeanEvaluationSummaryController::class, 'exportOverall'])
             ->name('dean.summaries.export-overall');
-
-        Route::get('dean/summaries/class-sections/{classSection}/preview', [DeanEvaluationSummaryController::class, 'previewClassSection'])
-            ->name('dean.summaries.preview-class-section');
 
         Route::get('dean/summaries/class-sections/{classSection}/export', [DeanEvaluationSummaryController::class, 'exportClassSection'])
             ->name('dean.summaries.export-class-section');
