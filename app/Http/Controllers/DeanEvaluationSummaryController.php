@@ -23,6 +23,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
@@ -38,6 +39,10 @@ class DeanEvaluationSummaryController extends Controller
     private const MAX_TEMPLATE_TEXT_LENGTH = 5000;
 
     private const TEMPLATE_DOCX_STORAGE_PATH = 'dean-summary-templates/current-template.docx';
+
+    private const DOCX_FACULTY_SIGNATURE_TOKEN = '__FACULTY_SIGNATURE_IMAGE__';
+
+    private const DOCX_DEAN_SIGNATURE_TOKEN = '__DEAN_SIGNATURE_IMAGE__';
 
     public function index(): Response
     {
@@ -410,12 +415,8 @@ class DeanEvaluationSummaryController extends Controller
                 $data['overallAverage'],
                 $data['questionRows'],
                 $data['comments'],
+                $data['signoff'],
             );
-
-            $continuationSheet = new Worksheet($spreadsheet, 'Comments & Plan');
-            $spreadsheet->addSheet($continuationSheet);
-            $this->applyTemplateHeaderFooterToSheet($continuationSheet, $template->header_text, $template->footer_text);
-            $this->buildCommentsAndPlanSheet($continuationSheet, $data['comments'], $data['questionRows']);
 
             $writer = new Xlsx($spreadsheet);
             $writer->save('php://output');
@@ -664,7 +665,12 @@ class DeanEvaluationSummaryController extends Controller
         @rename($tempOutput, $outputPath);
 
         $cloner = app(WordDocumentCloner::class);
-        $cloner->cloneWithBodyXml($templatePath, $outputPath, $this->buildClassSectionWordBodyXml($data));
+        $cloner->cloneWithBodyXmlAndMedia(
+            $templatePath,
+            $outputPath,
+            $this->buildClassSectionWordBodyXml($data),
+            $this->buildDocxSignatureMediaMap($data['signoff']),
+        );
 
         $fileName = sprintf(
             'evaluation-summary-%s-%s.docx',
@@ -756,6 +762,13 @@ class DeanEvaluationSummaryController extends Controller
             ],
         ];
 
+        $facultySignatureTokenOrFallback = $data['signoff']['facultySignatureDataUri'] !== null
+            ? self::DOCX_FACULTY_SIGNATURE_TOKEN
+            : 'No faculty e-sign yet';
+        $deanSignatureTokenOrFallback = $data['signoff']['deanSignatureDataUri'] !== null
+            ? self::DOCX_DEAN_SIGNATURE_TOKEN
+            : 'No dean e-sign yet';
+
         return
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION SUMMARY').
             $this->buildWordTableXml(['Field', 'Value'], $metaRows).
@@ -764,7 +777,92 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
-            $this->buildWordTableXml(['Label', 'Name', 'Signed At'], $signoffRows);
+            $this->buildWordTableXml(['Label', 'Name', 'Signed At'], $signoffRows).
+            $this->buildWordHeadingParagraphXml('E-SIGN IMAGES').
+            $this->buildWordParagraphXmlFromLines([
+                'Signed by',
+                (string) ($data['signoff']['facultySignedBy'] ?? 'Faculty'),
+                $facultySignatureTokenOrFallback,
+                '',
+                'Signed by',
+                (string) ($data['signoff']['deanSignedBy'] ?? 'Dean'),
+                $deanSignatureTokenOrFallback,
+            ]);
+    }
+
+    /**
+     * @param  array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}  $signoff
+     * @return array<string, array{bytes:string,extension:string,mimeType:string}>
+     */
+    private function buildDocxSignatureMediaMap(array $signoff): array
+    {
+        $media = [];
+
+        $facultyImage = $this->decodeSignatureDataUriForDocx($signoff['facultySignatureDataUri']);
+        if ($facultyImage !== null) {
+            $media[self::DOCX_FACULTY_SIGNATURE_TOKEN] = $facultyImage;
+        }
+
+        $deanImage = $this->decodeSignatureDataUriForDocx($signoff['deanSignatureDataUri']);
+        if ($deanImage !== null) {
+            $media[self::DOCX_DEAN_SIGNATURE_TOKEN] = $deanImage;
+        }
+
+        return $media;
+    }
+
+    /**
+     * @return array{bytes:string,extension:string,mimeType:string}|null
+     */
+    private function decodeSignatureDataUriForDocx(?string $dataUri): ?array
+    {
+        if (! is_string($dataUri) || $dataUri === '') {
+            return null;
+        }
+
+        if (! preg_match('/^data:(?<mime>[a-z0-9.+\/-]+);base64,(?<data>.+)$/i', $dataUri, $matches)) {
+            return null;
+        }
+
+        $mimeType = strtolower((string) ($matches['mime'] ?? 'image/png'));
+        $bytes = base64_decode((string) ($matches['data'] ?? ''), true);
+
+        if (! is_string($bytes) || $bytes === '') {
+            return null;
+        }
+
+        if ($mimeType === 'image/png' || $mimeType === 'image/jpeg') {
+            return [
+                'bytes' => $bytes,
+                'extension' => $mimeType === 'image/png' ? 'png' : 'jpg',
+                'mimeType' => $mimeType,
+            ];
+        }
+
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
+            return null;
+        }
+
+        $imageResource = @imagecreatefromstring($bytes);
+
+        if ($imageResource === false) {
+            return null;
+        }
+
+        ob_start();
+        imagepng($imageResource);
+        $pngBytes = ob_get_clean();
+        imagedestroy($imageResource);
+
+        if (! is_string($pngBytes) || $pngBytes === '') {
+            return null;
+        }
+
+        return [
+            'bytes' => $pngBytes,
+            'extension' => 'png',
+            'mimeType' => 'image/png',
+        ];
     }
 
     /**
@@ -932,6 +1030,7 @@ class DeanEvaluationSummaryController extends Controller
     /**
      * @param  array<int, array{number:int,category:string,text:string,average:float|null}>  $questionRows
      * @param  array<int, string>  $comments
+     * @param  array{facultySignedAt:?string,facultySignedBy:?string,facultySignatureDataUri:?string,deanSignedAt:?string,deanSignedBy:?string,deanSignatureDataUri:?string}  $signoff
      */
     private function buildClassSummarySheet(
         Worksheet $sheet,
@@ -940,6 +1039,7 @@ class DeanEvaluationSummaryController extends Controller
         ?float $overallAverage,
         array $questionRows,
         array $comments,
+        array $signoff,
     ): void {
         $this->initializeDocumentSheet($sheet);
 
@@ -999,7 +1099,56 @@ class DeanEvaluationSummaryController extends Controller
 
         $commentEndRow = $row - 1;
 
-        $footerRow = max($row + 2, 45);
+        $row += 2;
+        $sheet->setCellValue("A{$row}", 'E-SIGN STATUS');
+        $sheet->mergeCells("A{$row}:D{$row}");
+        $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEDEDED');
+        $sheet->getStyle("A{$row}:D{$row}")->getFont()->setBold(true);
+        $row++;
+
+        $sheet->setCellValue("A{$row}", 'Label');
+        $sheet->setCellValue("B{$row}", 'Name');
+        $sheet->setCellValue("D{$row}", 'Signed At');
+        $sheet->mergeCells("B{$row}:C{$row}");
+        $sheet->getStyle("A{$row}:D{$row}")->getFont()->setBold(true);
+        $row++;
+
+        $sheet->setCellValue("A{$row}", 'Signed by');
+        $sheet->setCellValue("B{$row}", $signoff['facultySignedBy'] ?? 'Faculty (not signed)');
+        $sheet->setCellValue("D{$row}", $signoff['facultySignedAt'] ?? 'Pending');
+        $sheet->mergeCells("B{$row}:C{$row}");
+        $row++;
+
+        $sheet->setCellValue("A{$row}", 'Signed by');
+        $sheet->setCellValue("B{$row}", $signoff['deanSignedBy'] ?? 'Dean (not signed)');
+        $sheet->setCellValue("D{$row}", $signoff['deanSignedAt'] ?? 'Pending');
+        $sheet->mergeCells("B{$row}:C{$row}");
+        $row++;
+
+        $signStatusEndRow = $row - 1;
+
+        $row += 2;
+        $sheet->setCellValue("A{$row}", 'E-SIGN IMAGES');
+        $sheet->mergeCells("A{$row}:D{$row}");
+        $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEDEDED');
+        $sheet->getStyle("A{$row}:D{$row}")->getFont()->setBold(true);
+        $row++;
+
+        $sheet->setCellValue("A{$row}", 'Signed by');
+        $sheet->setCellValue("B{$row}", $signoff['facultySignedBy'] ?? 'Faculty');
+        $sheet->mergeCells("B{$row}:D{$row}");
+        $row++;
+        $this->addSignatureImageToSheet($sheet, $signoff['facultySignatureDataUri'] ?? null, "A{$row}");
+        $row += 4;
+
+        $sheet->setCellValue("A{$row}", 'Signed by');
+        $sheet->setCellValue("B{$row}", $signoff['deanSignedBy'] ?? 'Dean');
+        $sheet->mergeCells("B{$row}:D{$row}");
+        $row++;
+        $this->addSignatureImageToSheet($sheet, $signoff['deanSignatureDataUri'] ?? null, "A{$row}");
+        $row += 4;
+
+        $footerRow = max($row + 2, 55);
         $sheet->setCellValue("A{$footerRow}", 'Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602');
         $sheet->mergeCells("A{$footerRow}:D{$footerRow}");
         $sheet->setCellValue("A".($footerRow + 1), 'www.perpetualdalta.edu.ph Molino Campus');
@@ -1012,10 +1161,57 @@ class DeanEvaluationSummaryController extends Controller
         $sheet->getStyle('A8:D8')->getFont()->setBold(true);
         $sheet->getStyle("A8:D{$lastCriteriaRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         $sheet->getStyle("A".($lastCriteriaRow + 2).":D{$commentEndRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("A".($commentEndRow + 3).":D{$signStatusEndRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         $sheet->getStyle("C8:C{$lastCriteriaRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         $sheet->getStyle("D8:D{$lastCriteriaRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle("A{$footerRow}:D".($footerRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("A{$footerRow}:D".($footerRow + 1))->getFont()->setSize(9)->getColor()->setARGB('FF666666');
+    }
+
+    private function addSignatureImageToSheet(Worksheet $sheet, ?string $dataUri, string $coordinates): void
+    {
+        $imageResource = $this->createImageResourceFromDataUri($dataUri);
+
+        if ($imageResource === null) {
+            $sheet->setCellValue($coordinates, 'No signature image');
+
+            return;
+        }
+
+        $drawing = new MemoryDrawing();
+        $drawing->setName('Signature');
+        $drawing->setDescription('E-sign');
+        $drawing->setImageResource($imageResource);
+        $drawing->setRenderingFunction(MemoryDrawing::RENDERING_PNG);
+        $drawing->setMimeType(MemoryDrawing::MIMETYPE_PNG);
+        $drawing->setCoordinates($coordinates);
+        $drawing->setHeight(50);
+        $drawing->setWorksheet($sheet);
+    }
+
+    private function createImageResourceFromDataUri(?string $dataUri): mixed
+    {
+        if (! is_string($dataUri) || $dataUri === '') {
+            return null;
+        }
+
+        if (! preg_match('/^data:[a-z0-9.+\/-]+;base64,(?<data>.+)$/i', $dataUri, $matches)) {
+            return null;
+        }
+
+        $bytes = base64_decode((string) ($matches['data'] ?? ''), true);
+
+        if (! is_string($bytes) || $bytes === '') {
+            return null;
+        }
+
+        if (! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $resource = @imagecreatefromstring($bytes);
+
+        return $resource === false ? null : $resource;
     }
 
     /**

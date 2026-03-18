@@ -12,6 +12,8 @@ use ZipArchive;
 class WordDocumentCloner
 {
     private const WORD_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    private const WORD_RELATIONSHIPS_NAMESPACE = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    private const WORD_IMAGE_RELATIONSHIP_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 
     /**
      * Clone an existing DOCX and replace only the body with plain text.
@@ -34,6 +36,16 @@ class WordDocumentCloner
      */
     public function cloneWithBodyXml(string $inputDocxPath, string $outputDocxPath, string $newBodyXmlFragment): void
     {
+        $this->cloneWithBodyXmlAndMedia($inputDocxPath, $outputDocxPath, $newBodyXmlFragment, []);
+    }
+
+    /**
+     * Clone an existing DOCX, replace body XML, and embed additional media.
+     *
+     * @param  array<string, array{bytes:string,extension:string,mimeType:string}>  $mediaByToken
+     */
+    public function cloneWithBodyXmlAndMedia(string $inputDocxPath, string $outputDocxPath, string $newBodyXmlFragment, array $mediaByToken): void
+    {
         $this->assertInputDocxReadable($inputDocxPath);
         $this->ensureOutputDirectoryExists($outputDocxPath);
 
@@ -50,7 +62,27 @@ class WordDocumentCloner
                 throw new RuntimeException('The input DOCX is missing word/document.xml.');
             }
 
-            $updatedDocumentXml = $this->replaceBodyXmlPreservingSectionProperties($documentXml, $newBodyXmlFragment);
+            $documentRelsXml = $sourceZip->getFromName('word/_rels/document.xml.rels');
+            if ($documentRelsXml === false || trim($documentRelsXml) === '') {
+                throw new RuntimeException('The input DOCX is missing word/_rels/document.xml.rels.');
+            }
+
+            $existingEntryNames = [];
+            for ($index = 0; $index < $sourceZip->numFiles; $index++) {
+                $entryName = $sourceZip->getNameIndex($index);
+                if ($entryName !== false) {
+                    $existingEntryNames[$entryName] = true;
+                }
+            }
+
+            [$bodyXmlWithMedia, $updatedRelsXml, $mediaEntries] = $this->prepareBodyXmlWithEmbeddedMedia(
+                $newBodyXmlFragment,
+                $documentRelsXml,
+                $mediaByToken,
+                $existingEntryNames,
+            );
+
+            $updatedDocumentXml = $this->replaceBodyXmlPreservingSectionProperties($documentXml, $bodyXmlWithMedia);
 
             $destinationZip = new ZipArchive();
             $openDestinationResult = $destinationZip->open($outputDocxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
@@ -77,12 +109,21 @@ class WordDocumentCloner
                         continue;
                     }
 
+                    if ($entryName === 'word/_rels/document.xml.rels') {
+                        $destinationZip->addFromString($entryName, $updatedRelsXml);
+                        continue;
+                    }
+
                     $entryBytes = $sourceZip->getFromIndex($index);
                     if ($entryBytes === false) {
                         throw new RuntimeException('Failed to read archive entry: '.$entryName);
                     }
 
                     $destinationZip->addFromString($entryName, $entryBytes);
+                }
+
+                foreach ($mediaEntries as $mediaEntry) {
+                    $destinationZip->addFromString($mediaEntry['path'], $mediaEntry['bytes']);
                 }
             } finally {
                 $destinationZip->close();
@@ -189,5 +230,138 @@ class WordDocumentCloner
         }
 
         return implode('', $paragraphs);
+    }
+
+    /**
+     * @param  array<string, array{bytes:string,extension:string,mimeType:string}>  $mediaByToken
+     * @param  array<string, bool>  $existingEntryNames
+     * @return array{0:string,1:string,2:array<int, array{path:string,bytes:string,mimeType:string}>}
+     */
+    private function prepareBodyXmlWithEmbeddedMedia(string $bodyXmlFragment, string $documentRelsXml, array $mediaByToken, array $existingEntryNames): array
+    {
+        if ($mediaByToken === []) {
+            return [$bodyXmlFragment, $documentRelsXml, []];
+        }
+
+        $mediaEntries = [];
+        $rIdByToken = $this->appendDocumentImageRelationships($documentRelsXml, $mediaByToken, $existingEntryNames, $mediaEntries);
+
+        foreach ($rIdByToken as $token => $relationshipId) {
+            $bodyXmlFragment = str_replace($token, $this->buildWordDrawingXml($relationshipId), $bodyXmlFragment);
+        }
+
+        return [$bodyXmlFragment, $documentRelsXml, $mediaEntries];
+    }
+
+    /**
+     * @param  array<string, array{bytes:string,extension:string,mimeType:string}>  $mediaByToken
+     * @param  array<string, bool>  $existingEntryNames
+     * @param  array<int, array{path:string,bytes:string,mimeType:string}>  $mediaEntries
+     * @return array<string, string>
+     */
+    private function appendDocumentImageRelationships(string &$documentRelsXml, array $mediaByToken, array &$existingEntryNames, array &$mediaEntries): array
+    {
+        $document = new DOMDocument('1.0', 'UTF-8');
+        $document->preserveWhiteSpace = false;
+        $document->formatOutput = false;
+
+        $loaded = $document->loadXML($documentRelsXml, LIBXML_NONET);
+        if (! $loaded) {
+            throw new RuntimeException('Unable to parse word/_rels/document.xml.rels.');
+        }
+
+        $root = $document->documentElement;
+        if ($root === null) {
+            throw new RuntimeException('The DOCX relationships XML has no root element.');
+        }
+
+        $nextRelationshipId = $this->nextRelationshipIdNumber($documentRelsXml);
+        $tokenRelationshipMap = [];
+
+        foreach ($mediaByToken as $token => $media) {
+            $extension = strtolower(trim($media['extension']));
+            if ($extension === '') {
+                $extension = 'png';
+            }
+
+            $baseName = 'signature-'.substr(sha1($token.'-'.$media['bytes']), 0, 12);
+            $relativePath = 'media/'.$baseName.'.'.$extension;
+            $fullPath = 'word/'.$relativePath;
+            $suffix = 1;
+
+            while (isset($existingEntryNames[$fullPath])) {
+                $relativePath = 'media/'.$baseName.'-'.$suffix.'.'.$extension;
+                $fullPath = 'word/'.$relativePath;
+                $suffix++;
+            }
+
+            $existingEntryNames[$fullPath] = true;
+
+            $relationshipId = 'rId'.$nextRelationshipId;
+            $nextRelationshipId++;
+
+            $relationshipNode = $document->createElementNS(self::WORD_RELATIONSHIPS_NAMESPACE, 'Relationship');
+            $relationshipNode->setAttribute('Id', $relationshipId);
+            $relationshipNode->setAttribute('Type', self::WORD_IMAGE_RELATIONSHIP_TYPE);
+            $relationshipNode->setAttribute('Target', $relativePath);
+            $root->appendChild($relationshipNode);
+
+            $tokenRelationshipMap[$token] = $relationshipId;
+            $mediaEntries[] = [
+                'path' => $fullPath,
+                'bytes' => $media['bytes'],
+                'mimeType' => $media['mimeType'],
+            ];
+        }
+
+        $serialized = $document->saveXML();
+        if ($serialized === false) {
+            throw new RuntimeException('Failed to serialize updated document relationships XML.');
+        }
+
+        $documentRelsXml = $serialized;
+
+        return $tokenRelationshipMap;
+    }
+
+    private function nextRelationshipIdNumber(string $relsXml): int
+    {
+        preg_match_all('/Id="rId(\d+)"/i', $relsXml, $matches);
+        $existing = $matches[1] ?? [];
+
+        if ($existing === []) {
+            return 1;
+        }
+
+        $max = 0;
+        foreach ($existing as $id) {
+            $value = (int) $id;
+            if ($value > $max) {
+                $max = $value;
+            }
+        }
+
+        return $max + 1;
+    }
+
+    private function buildWordDrawingXml(string $relationshipId): string
+    {
+        return '<w:r><w:drawing>'
+            .'<wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+            .'<wp:extent cx="1800000" cy="540000"/>'
+            .'<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+            .'<wp:docPr id="1" name="Signature"/>'
+            .'<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"/></wp:cNvGraphicFramePr>'
+            .'<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            .'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            .'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            .'<pic:nvPicPr><pic:cNvPr id="0" name="Signature"/><pic:cNvPicPr/></pic:nvPicPr>'
+            .'<pic:blipFill><a:blip r:embed="'.$relationshipId.'" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            .'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="540000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            .'</pic:pic>'
+            .'</a:graphicData>'
+            .'</a:graphic>'
+            .'</wp:inline>'
+            .'</w:drawing></w:r>';
     }
 }
