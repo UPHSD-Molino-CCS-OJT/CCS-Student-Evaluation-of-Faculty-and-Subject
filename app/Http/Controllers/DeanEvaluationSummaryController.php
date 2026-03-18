@@ -21,6 +21,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Throwable;
 use ZipArchive;
 
 class DeanEvaluationSummaryController extends Controller
@@ -104,7 +106,15 @@ class DeanEvaluationSummaryController extends Controller
         ]);
 
         $templateFile = $payload['template_file'];
-        $fragments = $this->extractHeaderFooterFromDocx($templateFile->getRealPath());
+        try {
+            $fragments = $this->extractHeaderFooterFromDocx((string) $templateFile->getRealPath());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'template_file' => 'Unable to read the uploaded DOCX template on this server. Ensure the file is a valid .docx and the PHP zip extension is enabled.',
+            ]);
+        }
 
         if ($fragments['header_html'] === null && $fragments['footer_html'] === null) {
             return back()->withErrors([
@@ -864,16 +874,19 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function extractHeaderFooterFromDocx(string $filePath): array
     {
+        if (! class_exists(ZipArchive::class)) {
+            throw new RuntimeException('PHP zip extension is not available.');
+        }
+
+        if ($filePath === '' || ! is_file($filePath)) {
+            throw new RuntimeException('Uploaded DOCX temporary file is not accessible.');
+        }
+
         $zip = new ZipArchive();
         $openResult = $zip->open($filePath);
 
         if ($openResult !== true) {
-            return [
-                'header_html' => null,
-                'footer_html' => null,
-                'header_text' => null,
-                'footer_text' => null,
-            ];
+            throw new RuntimeException('Unable to open DOCX archive.');
         }
 
         $headerXml = $this->collectDocxPartXml($zip, '/^word\/header\d+\.xml$/');

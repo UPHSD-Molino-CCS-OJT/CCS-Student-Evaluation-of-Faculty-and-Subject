@@ -160,6 +160,7 @@ composer install
 - In non-interactive root/container environments, set `COMPOSER_ALLOW_SUPERUSER=1` when running Composer commands.
 - `phpoffice/phpspreadsheet` expects PHP `gd`. Install/enable `ext-gd` for production-like environments.
 - `phpoffice/phpspreadsheet` also expects PHP `zip` for full XLSX support.
+- DOCX header/footer template import also requires PHP `zip` (`ZipArchive`) at runtime. Without it, template import fails.
 - This repository includes Composer platform overrides for `ext-gd` and `ext-zip` so locked dependencies can still install in constrained CI images.
 - For build daemons, use:
 
