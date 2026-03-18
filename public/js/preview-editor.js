@@ -2,58 +2,66 @@
     const page = document.querySelector('.page');
     const toolbar = document.querySelector('.toolbar');
     const toggleEditButton = document.getElementById('toggle-edit');
+    const templateRegionSelect = document.getElementById('template-target-region');
     const uploadImageInput = document.getElementById('upload-image');
     const uploadImageLabel = document.getElementById('upload-image-label');
+    const replaceImageInput = document.getElementById('replace-image-input');
     const addTextButton = document.getElementById('add-text-block');
+    const deleteSelectedButton = document.getElementById('delete-selected');
+    const replaceImageButton = document.getElementById('replace-image');
+    const imageWidthLabel = document.getElementById('image-width-label');
+    const imageWidthInput = document.getElementById('image-width');
     const saveTemplateButton = document.getElementById('save-template-fragments');
     const config = window.previewEditorConfig || {};
 
-    if (!page || !toolbar || !toggleEditButton || !uploadImageInput || !uploadImageLabel || !addTextButton || !saveTemplateButton) {
+    if (
+        !page ||
+        !toolbar ||
+        !toggleEditButton ||
+        !templateRegionSelect ||
+        !uploadImageInput ||
+        !uploadImageLabel ||
+        !replaceImageInput ||
+        !addTextButton ||
+        !deleteSelectedButton ||
+        !replaceImageButton ||
+        !imageWidthLabel ||
+        !imageWidthInput ||
+        !saveTemplateButton
+    ) {
         return;
     }
 
-    const editableSelectors = [
-        'h1',
-        '.sub',
-        '.meta div',
-        '.section-title',
-        'th',
-        'td',
-        '.footer',
-    ];
-
     const style = document.createElement('style');
     style.textContent = `
-        .page { position: relative; }
-        .edit-mode .editable-target[contenteditable="true"] {
+        .template-region {
+            min-height: 24px;
+        }
+
+        .edit-mode .template-region {
+            outline: 1px dashed #b7b7b7;
+            outline-offset: 2px;
+            padding: 3px;
+        }
+
+        .edit-mode .template-region [contenteditable="true"] {
             outline: 1px dashed #8e5757;
             outline-offset: 2px;
             cursor: text;
         }
-        .draggable-item {
-            position: absolute;
-            border: 1px dashed #b7b7b7;
-            background: rgba(255, 255, 255, 0.92);
-            padding: 4px;
-            user-select: none;
-            z-index: 6;
-            min-width: 48px;
-            min-height: 28px;
+
+        .template-selected {
+            outline: 2px solid #8e5757;
+            outline-offset: 2px;
         }
-        .edit-mode .draggable-item { cursor: move; }
-        .draggable-item img {
+
+        .template-image {
             display: block;
-            max-width: 220px;
+            max-width: 100%;
             height: auto;
-            pointer-events: none;
+            cursor: pointer;
         }
-        .draggable-text {
-            font: 14px Arial, sans-serif;
-            color: #111;
-        }
-        .template-region {
-            min-height: 26px;
-        }
+
         .edit-status {
             margin-left: auto;
             font: 12px Arial, sans-serif;
@@ -64,12 +72,19 @@
     document.head.appendChild(style);
 
     let editMode = false;
-    let dragState = null;
+    let selectedNode = null;
 
     const statusEl = document.createElement('span');
     statusEl.className = 'edit-status';
     statusEl.textContent = '';
     toolbar.appendChild(statusEl);
+
+    const templateRegions = () => Array.from(page.querySelectorAll('.template-region'));
+
+    const getActiveRegion = () => {
+        const value = templateRegionSelect.value || 'header';
+        return page.querySelector(`.template-region[data-template-region="${value}"]`);
+    };
 
     const ensureTemplateFragment = (region) => {
         if (!region) {
@@ -84,104 +99,128 @@
         }
     };
 
-    const setEditableState = (enabled) => {
-        const nodes = page.querySelectorAll(editableSelectors.join(','));
-        nodes.forEach((node) => {
-            node.classList.add('editable-target');
+    const clearSelectedNode = () => {
+        if (selectedNode) {
+            selectedNode.classList.remove('template-selected');
+        }
+
+        selectedNode = null;
+        replaceImageButton.style.display = 'none';
+        imageWidthLabel.style.display = 'none';
+        imageWidthInput.style.display = 'none';
+        imageWidthInput.value = '';
+    };
+
+    const setSelectedNode = (node) => {
+        clearSelectedNode();
+
+        if (!node || !editMode) {
+            return;
+        }
+
+        selectedNode = node;
+        selectedNode.classList.add('template-selected');
+
+        if (selectedNode.tagName === 'IMG') {
+            replaceImageButton.style.display = 'inline-flex';
+            imageWidthLabel.style.display = 'inline-flex';
+            imageWidthInput.style.display = 'inline-flex';
+            const currentWidth = selectedNode.style.width
+                ? parseInt(selectedNode.style.width, 10)
+                : Math.round(selectedNode.getBoundingClientRect().width || selectedNode.naturalWidth || 0);
+            imageWidthInput.value = Number.isFinite(currentWidth) && currentWidth > 0 ? String(currentWidth) : '';
+        }
+    };
+
+    const makeRegionEditable = (region, enabled) => {
+        ensureTemplateFragment(region);
+        const editableNodes = region.querySelectorAll('div, p, span, strong, em, b, i, u, small, li, a, td, th');
+        editableNodes.forEach((node) => {
             node.contentEditable = enabled ? 'true' : 'false';
         });
+    };
 
-        const templateRegions = page.querySelectorAll('.template-region');
-        templateRegions.forEach((region) => {
-            ensureTemplateFragment(region);
-            const fragment = region.querySelector('.template-fragment');
-            if (fragment) {
-                fragment.classList.add('editable-target');
-                fragment.contentEditable = enabled ? 'true' : 'false';
-            }
+    const setEditableState = (enabled) => {
+        templateRegions().forEach((region) => {
+            makeRegionEditable(region, enabled);
         });
 
         page.classList.toggle('edit-mode', enabled);
+        templateRegionSelect.style.display = enabled ? 'inline-flex' : 'none';
         uploadImageLabel.style.display = enabled ? 'inline-flex' : 'none';
         addTextButton.style.display = enabled ? 'inline-flex' : 'none';
+        deleteSelectedButton.style.display = enabled ? 'inline-flex' : 'none';
         saveTemplateButton.style.display = enabled ? 'inline-flex' : 'none';
         toggleEditButton.textContent = enabled ? 'Done' : 'Edit';
         statusEl.textContent = enabled ? 'Edit mode enabled' : '';
+
+        if (!enabled) {
+            clearSelectedNode();
+        }
     };
 
-    const startDrag = (target, event) => {
-        const pageRect = page.getBoundingClientRect();
-        const targetRect = target.getBoundingClientRect();
-
-        dragState = {
-            target,
-            offsetX: event.clientX - targetRect.left,
-            offsetY: event.clientY - targetRect.top,
-            pageRect,
-        };
-    };
-
-    document.addEventListener('pointermove', (event) => {
-        if (!dragState || !editMode) {
+    const addTextBlock = () => {
+        const region = getActiveRegion();
+        if (!region) {
             return;
         }
 
-        const { target, offsetX, offsetY, pageRect } = dragState;
-        const maxLeft = Math.max(0, pageRect.width - target.offsetWidth);
-        const maxTop = Math.max(0, pageRect.height - target.offsetHeight);
-
-        let left = event.clientX - pageRect.left - offsetX;
-        let top = event.clientY - pageRect.top - offsetY;
-        left = Math.max(0, Math.min(maxLeft, left));
-        top = Math.max(0, Math.min(maxTop, top));
-
-        target.style.left = `${left}px`;
-        target.style.top = `${top}px`;
-    });
-
-    document.addEventListener('pointerup', () => {
-        dragState = null;
-    });
-
-    page.addEventListener('pointerdown', (event) => {
-        if (!editMode) {
-            return;
-        }
-
-        const target = event.target.closest('.draggable-item');
-        if (!target) {
-            return;
-        }
-
-        event.preventDefault();
-        startDrag(target, event);
-    });
-
-    const addDraggableText = () => {
         const textItem = document.createElement('div');
-        textItem.className = 'draggable-item draggable-text editable-target';
+        textItem.className = 'template-item';
         textItem.contentEditable = 'true';
         textItem.textContent = 'Edit text';
-        textItem.style.left = '40px';
-        textItem.style.top = '40px';
-        page.appendChild(textItem);
+        region.appendChild(textItem);
+        textItem.focus();
+        setSelectedNode(textItem);
     };
 
-    const addDraggableImage = (file) => {
+    const addImageToRegion = (file) => {
+        const region = getActiveRegion();
+        if (!region) {
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
-            const imageItem = document.createElement('div');
-            imageItem.className = 'draggable-item';
-            imageItem.style.left = '40px';
-            imageItem.style.top = '40px';
-
             const image = document.createElement('img');
+            image.className = 'template-image template-item';
             image.src = String(reader.result || '');
             image.alt = file.name;
-            imageItem.appendChild(image);
-            page.appendChild(imageItem);
+            image.style.width = '220px';
+            image.style.maxWidth = '100%';
+            region.appendChild(image);
+            setSelectedNode(image);
         };
         reader.readAsDataURL(file);
+    };
+
+    const replaceSelectedImage = (file) => {
+        if (!selectedNode || selectedNode.tagName !== 'IMG') {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            selectedNode.src = String(reader.result || '');
+            selectedNode.alt = file.name;
+            statusEl.textContent = 'Image replaced.';
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const deleteSelectedNode = () => {
+        if (!selectedNode) {
+            statusEl.textContent = 'Select an item in header/footer first.';
+            return;
+        }
+
+        if (!selectedNode.closest('.template-region')) {
+            return;
+        }
+
+        selectedNode.remove();
+        clearSelectedNode();
+        statusEl.textContent = 'Selected item deleted.';
     };
 
     const collectText = (regionName) => {
@@ -191,7 +230,7 @@
         }
 
         const text = (region.textContent || '').trim();
-        return text === '' ? null : text.slice(0, 1000);
+        return text === '' ? null : text.slice(0, 5000);
     };
 
     const collectHtml = (regionName) => {
@@ -230,7 +269,17 @@
             });
 
             if (!response.ok) {
-                statusEl.textContent = 'Save failed. Check your changes and try again.';
+                let errorMessage = 'Save failed. Check your changes and try again.';
+                try {
+                    const payload = await response.json();
+                    if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
+                        errorMessage = payload.message;
+                    }
+                } catch (error) {
+                    // keep fallback error text
+                }
+
+                statusEl.textContent = errorMessage;
                 return;
             }
 
@@ -247,13 +296,79 @@
         setEditableState(editMode);
     });
 
-    addTextButton.addEventListener('click', addDraggableText);
+    addTextButton.addEventListener('click', addTextBlock);
+
+    deleteSelectedButton.addEventListener('click', deleteSelectedNode);
+
+    replaceImageButton.addEventListener('click', () => {
+        if (!selectedNode || selectedNode.tagName !== 'IMG') {
+            statusEl.textContent = 'Select an image first.';
+            return;
+        }
+
+        replaceImageInput.click();
+    });
 
     uploadImageInput.addEventListener('change', (event) => {
         const target = event.target;
         const files = target && target.files ? Array.from(target.files) : [];
-        files.forEach(addDraggableImage);
+        files.forEach(addImageToRegion);
         uploadImageInput.value = '';
+    });
+
+    replaceImageInput.addEventListener('change', (event) => {
+        const target = event.target;
+        const files = target && target.files ? Array.from(target.files) : [];
+        if (files[0]) {
+            replaceSelectedImage(files[0]);
+        }
+        replaceImageInput.value = '';
+    });
+
+    imageWidthInput.addEventListener('input', () => {
+        if (!selectedNode || selectedNode.tagName !== 'IMG') {
+            return;
+        }
+
+        const width = parseInt(imageWidthInput.value, 10);
+        if (!Number.isFinite(width) || width < 20) {
+            return;
+        }
+
+        selectedNode.style.width = `${width}px`;
+        selectedNode.style.height = 'auto';
+    });
+
+    page.addEventListener('click', (event) => {
+        if (!editMode) {
+            return;
+        }
+
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+
+        const selected = target.closest('.template-region img, .template-region [contenteditable="true"], .template-region .template-item');
+        if (selected) {
+            setSelectedNode(selected);
+            return;
+        }
+
+        if (!target.closest('.template-region')) {
+            clearSelectedNode();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (!editMode || event.key !== 'Delete') {
+            return;
+        }
+
+        if (selectedNode) {
+            event.preventDefault();
+            deleteSelectedNode();
+        }
     });
 
     saveTemplateButton.addEventListener('click', saveTemplateFragments);

@@ -802,9 +802,18 @@ class DeanEvaluationSummaryController extends Controller
         <a class=\"btn primary\" href=\"{$baseExportUrl}?format=xlsx\">Download Excel</a>
         <a class=\"btn\" href=\"{$baseExportUrl}?format=doc\">Download DOC</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
+        <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
+            <option value=\"header\">Header</option>
+            <option value=\"footer\">Footer</option>
+        </select>
         <label id=\"upload-image-label\" class=\"btn\" for=\"upload-image\" style=\"display:none\">Upload Image</label>
         <input id=\"upload-image\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
+        <input id=\"replace-image-input\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
         <button id=\"add-text-block\" class=\"btn\" type=\"button\" style=\"display:none\">Add Text</button>
+        <button id=\"delete-selected\" class=\"btn\" type=\"button\" style=\"display:none\">Delete Selected</button>
+        <button id=\"replace-image\" class=\"btn\" type=\"button\" style=\"display:none\">Replace Image</button>
+        <label id=\"image-width-label\" class=\"btn\" for=\"image-width\" style=\"display:none\">Image Width</label>
+        <input id=\"image-width\" type=\"number\" min=\"20\" max=\"1200\" step=\"1\" style=\"display:none;width:90px\" />
         <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
@@ -912,9 +921,18 @@ class DeanEvaluationSummaryController extends Controller
         <a class=\"btn primary\" href=\"/dean/summaries/export?format=xlsx\">Download Excel</a>
         <a class=\"btn\" href=\"/dean/summaries/export?format=doc\">Download DOC</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
+        <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
+            <option value=\"header\">Header</option>
+            <option value=\"footer\">Footer</option>
+        </select>
         <label id=\"upload-image-label\" class=\"btn\" for=\"upload-image\" style=\"display:none\">Upload Image</label>
         <input id=\"upload-image\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
+        <input id=\"replace-image-input\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
         <button id=\"add-text-block\" class=\"btn\" type=\"button\" style=\"display:none\">Add Text</button>
+        <button id=\"delete-selected\" class=\"btn\" type=\"button\" style=\"display:none\">Delete Selected</button>
+        <button id=\"replace-image\" class=\"btn\" type=\"button\" style=\"display:none\">Replace Image</button>
+        <label id=\"image-width-label\" class=\"btn\" for=\"image-width\" style=\"display:none\">Image Width</label>
+        <input id=\"image-width\" type=\"number\" min=\"20\" max=\"1200\" step=\"1\" style=\"display:none;width:90px\" />
         <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
@@ -1155,24 +1173,13 @@ class DeanEvaluationSummaryController extends Controller
                 continue;
             }
 
-            $imageTags = $this->extractDocxImageTags($zip, $partName, $partXml);
-            $textLines = $this->extractDocxTextLines($partXml);
+            $partHtml = $this->buildDocxPartHtml($zip, $partName, $partXml);
 
-            if ($imageTags === [] && $textLines === []) {
+            if ($partHtml['html'] === null) {
                 continue;
             }
 
-            $fragment = '<div class="template-fragment">';
-
-            foreach ($imageTags as $imageTag) {
-                $fragment .= $imageTag;
-            }
-
-            foreach ($textLines as $line) {
-                $fragment .= '<div>'.htmlspecialchars($line).'</div>';
-            }
-
-            $fragment .= '</div>';
+            $fragment = '<div class="template-fragment">'.$partHtml['html'].'</div>';
             $fragmentHash = sha1($fragment);
 
             if (isset($seenFragmentHashes[$fragmentHash])) {
@@ -1185,7 +1192,7 @@ class DeanEvaluationSummaryController extends Controller
             // with identical content. Keep the first unique fragment to avoid duplicates.
             if ($selectedHtml === null) {
                 $selectedHtml = $fragment;
-                $selectedImageCount = count($imageTags);
+                $selectedImageCount = $partHtml['image_count'];
             }
         }
 
@@ -1200,6 +1207,153 @@ class DeanEvaluationSummaryController extends Controller
             'html' => $selectedHtml,
             'image_count' => $selectedImageCount,
         ];
+    }
+
+    /**
+     * @return array{html:string|null,image_count:int}
+     */
+    private function buildDocxPartHtml(ZipArchive $zip, string $partName, string $partXml): array
+    {
+        $relationshipMap = $this->extractDocxImageRelationships($zip, $partName);
+        $paragraphMatches = [];
+        preg_match_all('/<w:p\b[^>]*>.*?<\/w:p>/is', $partXml, $paragraphMatches);
+
+        $paragraphXmlChunks = $paragraphMatches[0] ?? [];
+
+        if ($paragraphXmlChunks === []) {
+            $paragraphXmlChunks = [$partXml];
+        }
+
+        $blocks = [];
+        $imageCount = 0;
+        $usedImagePaths = [];
+
+        foreach ($paragraphXmlChunks as $paragraphXml) {
+            $paragraphHtml = $this->buildDocxParagraphHtml($zip, $relationshipMap, $paragraphXml, $usedImagePaths, $imageCount);
+            if ($paragraphHtml === '') {
+                continue;
+            }
+
+            $blocks[] = '<div>'.$paragraphHtml.'</div>';
+        }
+
+        if ($blocks === []) {
+            return [
+                'html' => null,
+                'image_count' => 0,
+            ];
+        }
+
+        return [
+            'html' => implode('', $blocks),
+            'image_count' => $imageCount,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $relationshipMap
+     * @param  array<string, bool>  $usedImagePaths
+     */
+    private function buildDocxParagraphHtml(ZipArchive $zip, array $relationshipMap, string $paragraphXml, array &$usedImagePaths, int &$imageCount): string
+    {
+        $tokens = [];
+        preg_match_all('/(<w:drawing\b.*?<\/w:drawing>|<w:pict\b.*?<\/w:pict>|<w:br\b[^>]*\/?>|<w:tab\b[^>]*\/?>|<w:t\b[^>]*>.*?<\/w:t>)/is', $paragraphXml, $tokens);
+        $orderedTokens = $tokens[0] ?? [];
+
+        if ($orderedTokens === []) {
+            return '';
+        }
+
+        $html = '';
+
+        foreach ($orderedTokens as $token) {
+            if (preg_match('/^<w:t\b/i', $token) === 1) {
+                $text = preg_replace('/^<w:t\b[^>]*>|<\/w:t>$/i', '', $token) ?? '';
+                $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $html .= htmlspecialchars($text);
+                continue;
+            }
+
+            if (preg_match('/^<w:tab\b/i', $token) === 1) {
+                $html .= '&nbsp;&nbsp;&nbsp;&nbsp;';
+                continue;
+            }
+
+            if (preg_match('/^<w:br\b/i', $token) === 1) {
+                $html .= '<br />';
+                continue;
+            }
+
+            $relationshipId = $this->extractDocxImageRelationshipId($token);
+            if ($relationshipId === null) {
+                continue;
+            }
+
+            $imageTag = $this->buildDocxImageTag($zip, $relationshipMap, $relationshipId, $token, $usedImagePaths);
+            if ($imageTag === null) {
+                continue;
+            }
+
+            $imageCount++;
+            $html .= $imageTag;
+        }
+
+        return trim($html);
+    }
+
+    private function extractDocxImageRelationshipId(string $token): ?string
+    {
+        $embedMatches = [];
+        preg_match('/\br:embed="([^"]+)"/i', $token, $embedMatches);
+        if (($embedMatches[1] ?? '') !== '') {
+            return $embedMatches[1];
+        }
+
+        $legacyMatches = [];
+        preg_match('/\br:id="([^"]+)"/i', $token, $legacyMatches);
+
+        return ($legacyMatches[1] ?? '') !== '' ? $legacyMatches[1] : null;
+    }
+
+    /**
+     * @param  array<string, string>  $relationshipMap
+     * @param  array<string, bool>  $usedImagePaths
+     */
+    private function buildDocxImageTag(ZipArchive $zip, array $relationshipMap, string $relationshipId, string $xmlContext, array &$usedImagePaths): ?string
+    {
+        if (! isset($relationshipMap[$relationshipId])) {
+            return null;
+        }
+
+        $imagePath = $this->normalizeDocxPath($relationshipMap[$relationshipId]);
+
+        if (isset($usedImagePaths[$imagePath])) {
+            return null;
+        }
+
+        $imageBinary = $zip->getFromName($imagePath);
+
+        if ($imageBinary === false) {
+            return null;
+        }
+
+        $mimeType = $this->mimeTypeFromPath($imagePath);
+        if ($mimeType === null) {
+            return null;
+        }
+
+        $usedImagePaths[$imagePath] = true;
+
+        $style = '';
+        $extentMatches = [];
+        preg_match('/(?:wp:extent|a:ext)\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/i', $xmlContext, $extentMatches);
+        if (($extentMatches[1] ?? '') !== '' && ($extentMatches[2] ?? '') !== '') {
+            $widthPx = max(1, (int) round(((int) $extentMatches[1]) / 9525));
+            $heightPx = max(1, (int) round(((int) $extentMatches[2]) / 9525));
+            $style = ' style="width:'.$widthPx.'px;height:'.$heightPx.'px;max-width:100%;"';
+        }
+
+        return '<img src="data:'.$mimeType.';base64,'.base64_encode($imageBinary).'" alt="Template image"'.$style.' />';
     }
 
     /**
@@ -1405,7 +1559,7 @@ class DeanEvaluationSummaryController extends Controller
         $plain = preg_replace('/\n\s*\n+/', "\n", $plain) ?? $plain;
         $plain = trim($plain);
 
-        return $plain === '' ? null : Str::limit($plain, 250);
+        return $plain === '' ? null : Str::limit($plain, self::MAX_TEMPLATE_TEXT_LENGTH);
     }
 
     private function sanitizeTemplateHtmlFragment(?string $html): string
