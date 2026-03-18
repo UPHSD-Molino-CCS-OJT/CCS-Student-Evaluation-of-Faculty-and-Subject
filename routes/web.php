@@ -51,6 +51,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/summaries', [DeanEvaluationSummaryController::class, 'index'])
             ->name('dean.summaries.index');
 
+        Route::post('dean/summaries/template', [DeanEvaluationSummaryController::class, 'storeTemplate'])
+            ->name('dean.summaries.template.store');
+
         Route::get('dean/summaries/preview', [DeanEvaluationSummaryController::class, 'previewOverall'])
             ->name('dean.summaries.preview-overall');
 

@@ -6,6 +6,8 @@ use App\Models\EvaluationResponse;
 use App\Models\Section;
 use App\Models\Subject;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use ZipArchive;
 
 function createClassSectionWithEvaluation(): ClassSection
 {
@@ -52,6 +54,34 @@ function createClassSectionWithEvaluation(): ClassSection
     }
 
     return $classSection;
+}
+
+function createDocxTemplateUpload(string $headerText, string $footerText): UploadedFile
+{
+    $tempPath = tempnam(sys_get_temp_dir(), 'template-');
+
+    if ($tempPath === false) {
+        throw new RuntimeException('Failed to create temporary file for DOCX template.');
+    }
+
+    $docxPath = $tempPath.'.docx';
+    rename($tempPath, $docxPath);
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($docxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+    if ($opened !== true) {
+        throw new RuntimeException('Failed to open DOCX archive for writing.');
+    }
+
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+    $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:body></w:document>');
+    $zip->addFromString('word/header1.xml', '<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>'.htmlspecialchars($headerText, ENT_QUOTES).'</w:t></w:r></w:p></w:hdr>');
+    $zip->addFromString('word/footer1.xml', '<?xml version="1.0" encoding="UTF-8"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>'.htmlspecialchars($footerText, ENT_QUOTES).'</w:t></w:r></w:p></w:ftr>');
+    $zip->close();
+
+    return new UploadedFile($docxPath, 'template.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
 }
 
 test('dean staff and system admin can export overall summary', function (string $role) {
@@ -138,6 +168,34 @@ test('dean can export overall and class section as doc', function () {
     ]));
     $classResponse->assertOk();
     $classResponse->assertHeader('content-type', 'application/msword');
+});
+
+test('dean can import docx template header and footer and they appear in doc export', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $templateFile = createDocxTemplateUpload('MY CUSTOM HEADER', 'MY CUSTOM FOOTER');
+
+    $uploadResponse = $this->actingAs($dean)->post(route('dean.summaries.template.store'), [
+        'template_file' => $templateFile,
+    ]);
+
+    $uploadResponse->assertRedirect();
+    $uploadResponse->assertSessionHas('status', 'Document header/footer template imported successfully.');
+
+    $docResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'doc',
+    ]));
+
+    $docResponse->assertOk();
+    $docResponse->assertHeader('content-type', 'application/msword');
+    $docResponse->assertSee('MY CUSTOM HEADER', false);
+    $docResponse->assertSee('MY CUSTOM FOOTER', false);
 });
 
 test('faculty cannot export dean summaries', function () {

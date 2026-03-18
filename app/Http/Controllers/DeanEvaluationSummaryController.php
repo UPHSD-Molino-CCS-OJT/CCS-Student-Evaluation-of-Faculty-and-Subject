@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
 use App\Models\Evaluation;
+use App\Models\ExportDocumentTemplate;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -17,6 +20,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use ZipArchive;
 
 class DeanEvaluationSummaryController extends Controller
 {
@@ -92,6 +96,35 @@ class DeanEvaluationSummaryController extends Controller
         ]);
     }
 
+    public function storeTemplate(Request $request): RedirectResponse
+    {
+        $payload = $request->validate([
+            'template_file' => ['required', 'file', 'mimes:docx'],
+        ]);
+
+        $templateFile = $payload['template_file'];
+        $fragments = $this->extractHeaderFooterFromDocx($templateFile->getRealPath());
+
+        if ($fragments['header_html'] === null && $fragments['footer_html'] === null) {
+            return back()->withErrors([
+                'template_file' => 'No header/footer was found in the uploaded .docx template.',
+            ]);
+        }
+
+        $template = ExportDocumentTemplate::current();
+        $template->fill([
+            'header_html' => $fragments['header_html'],
+            'footer_html' => $fragments['footer_html'],
+            'header_text' => $fragments['header_text'],
+            'footer_text' => $fragments['footer_text'],
+            'source_filename' => $templateFile->getClientOriginalName(),
+            'updated_by' => $request->user()?->id,
+        ]);
+        $template->save();
+
+        return back()->with('status', 'Document header/footer template imported successfully.');
+    }
+
     public function exportClassSection(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
     {
         $data = $this->buildClassSectionSummaryData($classSection);
@@ -121,6 +154,9 @@ class DeanEvaluationSummaryController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Summary');
 
+            $template = ExportDocumentTemplate::current();
+            $this->applyTemplateHeaderFooterToSheet($sheet, $template->header_text, $template->footer_text);
+
             $this->buildClassSummarySheet(
                 $sheet,
                 $data['classSection'],
@@ -132,6 +168,7 @@ class DeanEvaluationSummaryController extends Controller
 
             $continuationSheet = new Worksheet($spreadsheet, 'Comments & Plan');
             $spreadsheet->addSheet($continuationSheet);
+            $this->applyTemplateHeaderFooterToSheet($continuationSheet, $template->header_text, $template->footer_text);
             $this->buildCommentsAndPlanSheet($continuationSheet, $data['comments'], $data['questionRows']);
 
             $writer = new Xlsx($spreadsheet);
@@ -162,10 +199,14 @@ class DeanEvaluationSummaryController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Overall Summary');
 
+            $template = ExportDocumentTemplate::current();
+            $this->applyTemplateHeaderFooterToSheet($sheet, $template->header_text, $template->footer_text);
+
             $this->buildOverallSummarySheet($sheet, $data['classSections'], $data['summaryMap']);
 
             $questionSheet = new Worksheet($spreadsheet, 'Question Averages');
             $spreadsheet->addSheet($questionSheet);
+            $this->applyTemplateHeaderFooterToSheet($questionSheet, $template->header_text, $template->footer_text);
             $this->buildOverallQuestionAveragesSheet($questionSheet, $data['overallQuestionRows']);
 
             $writer = new Xlsx($spreadsheet);
@@ -585,6 +626,9 @@ class DeanEvaluationSummaryController extends Controller
         $term = htmlspecialchars((string) ($classSection->term ?? ''));
         $schoolYear = htmlspecialchars((string) ($classSection->school_year ?? ''));
         $baseExportUrl = '/dean/summaries/class-sections/'.$classSection->id.'/export';
+        $template = ExportDocumentTemplate::current();
+        $templateHeader = $this->sanitizeTemplateHtmlFragment($template->header_html);
+        $templateFooter = $this->sanitizeTemplateHtmlFragment($template->footer_html);
 
         $rowsHtml = '';
         foreach ($data['questionRows'] as $row) {
@@ -621,6 +665,7 @@ class DeanEvaluationSummaryController extends Controller
         h1{margin:0;font-size:34px;line-height:1;color:#b06464;font-weight:800}
         .sub{font-size:14px;color:#555;margin-top:4px}
         .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
+        .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
         table{width:100%;border-collapse:collapse}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
@@ -638,6 +683,7 @@ class DeanEvaluationSummaryController extends Controller
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
     <div class=\"page\">
+        {$templateHeader}
         <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
         <div class=\"sub\">College of Computer Studies</div>
         <div class=\"meta\">
@@ -656,6 +702,7 @@ class DeanEvaluationSummaryController extends Controller
         <div class=\"section-title\">COMMENTS</div>
         <table><tbody>{$commentsHtml}</tbody></table>
 
+        {$templateFooter}
         <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
 </body>
@@ -667,6 +714,10 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function renderOverallPreviewHtml(array $data): string
     {
+        $template = ExportDocumentTemplate::current();
+        $templateHeader = $this->sanitizeTemplateHtmlFragment($template->header_html);
+        $templateFooter = $this->sanitizeTemplateHtmlFragment($template->footer_html);
+
         $rowsHtml = '';
         foreach ($data['classSections'] as $classSection) {
             $summary = $data['summaryMap'][$classSection->id] ?? null;
@@ -701,6 +752,7 @@ class DeanEvaluationSummaryController extends Controller
         .page{max-width:980px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
         h1{margin:0;font-size:30px;line-height:1;color:#b06464;font-weight:800}
         .sub{font-size:14px;color:#555;margin-top:4px}
+        .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
         table{width:100%;border-collapse:collapse;margin-top:10px}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
@@ -717,6 +769,7 @@ class DeanEvaluationSummaryController extends Controller
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
     <div class=\"page\">
+        {$templateHeader}
         <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
         <div class=\"sub\">College of Computer Studies - Overall Evaluation Summary</div>
 
@@ -736,10 +789,130 @@ class DeanEvaluationSummaryController extends Controller
             <tbody>{$questionRowsHtml}</tbody>
         </table>
 
+        {$templateFooter}
         <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
 </body>
 </html>";
+    }
+
+    private function applyTemplateHeaderFooterToSheet(Worksheet $sheet, ?string $headerText, ?string $footerText): void
+    {
+        $header = $headerText !== null && trim($headerText) !== ''
+            ? '&L'.str_replace('&', '&&', trim($headerText))
+            : '';
+        $footer = $footerText !== null && trim($footerText) !== ''
+            ? '&L'.str_replace('&', '&&', trim($footerText))
+            : '';
+
+        $sheet->getHeaderFooter()->setOddHeader($header);
+        $sheet->getHeaderFooter()->setOddFooter($footer);
+    }
+
+    /**
+     * @return array{header_html:string|null,footer_html:string|null,header_text:string|null,footer_text:string|null}
+     */
+    private function extractHeaderFooterFromDocx(string $filePath): array
+    {
+        $zip = new ZipArchive();
+        $openResult = $zip->open($filePath);
+
+        if ($openResult !== true) {
+            return [
+                'header_html' => null,
+                'footer_html' => null,
+                'header_text' => null,
+                'footer_text' => null,
+            ];
+        }
+
+        $headerXml = $this->collectDocxPartXml($zip, '/^word\/header\d+\.xml$/');
+        $footerXml = $this->collectDocxPartXml($zip, '/^word\/footer\d+\.xml$/');
+        $zip->close();
+
+        $headerHtml = $this->xmlToSimpleHtml($headerXml);
+        $footerHtml = $this->xmlToSimpleHtml($footerXml);
+
+        return [
+            'header_html' => $headerHtml,
+            'footer_html' => $footerHtml,
+            'header_text' => $this->htmlToPlainText($headerHtml),
+            'footer_text' => $this->htmlToPlainText($footerHtml),
+        ];
+    }
+
+    private function collectDocxPartXml(ZipArchive $zip, string $pattern): ?string
+    {
+        $xmlParts = [];
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+
+            if ($name === false || preg_match($pattern, $name) !== 1) {
+                continue;
+            }
+
+            $content = $zip->getFromIndex($index);
+            if ($content !== false) {
+                $xmlParts[] = $content;
+            }
+        }
+
+        if ($xmlParts === []) {
+            return null;
+        }
+
+        return implode("\n", $xmlParts);
+    }
+
+    private function xmlToSimpleHtml(?string $xml): ?string
+    {
+        if ($xml === null || trim($xml) === '') {
+            return null;
+        }
+
+        $text = $xml;
+        $text = preg_replace('/<w:tab\/?\s*>/i', ' ', $text) ?? $text;
+        $text = preg_replace('/<w:br\/?\s*>/i', "\n", $text) ?? $text;
+        $text = preg_replace('/<w:p[^>]*>/i', '', $text) ?? $text;
+        $text = preg_replace('/<\/w:p>/i', "\n", $text) ?? $text;
+        $text = preg_replace('/<[^>]+>/', '', $text) ?? $text;
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $lines = collect(preg_split('/\R/u', $text) ?: [])
+            ->map(fn (string $line): string => trim($line))
+            ->filter(fn (string $line): bool => $line !== '')
+            ->values();
+
+        if ($lines->isEmpty()) {
+            return null;
+        }
+
+        return '<div class="template-fragment">'.$lines
+            ->map(fn (string $line): string => '<div>'.htmlspecialchars($line).'</div>')
+            ->implode('').'</div>';
+    }
+
+    private function htmlToPlainText(?string $html): ?string
+    {
+        if ($html === null || trim($html) === '') {
+            return null;
+        }
+
+        $plain = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $html));
+        $plain = preg_replace('/\n\s*\n+/', "\n", $plain) ?? $plain;
+        $plain = trim($plain);
+
+        return $plain === '' ? null : Str::limit($plain, 250);
+    }
+
+    private function sanitizeTemplateHtmlFragment(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        return $html;
     }
 
     /**

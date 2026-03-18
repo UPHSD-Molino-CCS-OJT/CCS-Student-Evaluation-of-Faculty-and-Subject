@@ -42,7 +42,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function DeanSummaries({ questions, rows, evaluationOpen }: Props) {
     const page = usePage();
     const [file, setFile] = useState<File | null>(null);
+    const [templateFile, setTemplateFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [isImportingTemplate, setIsImportingTemplate] = useState(false);
     const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
     const [overallFormat, setOverallFormat] = useState<'xlsx' | 'doc'>('xlsx');
     const [classFormats, setClassFormats] = useState<Record<number, 'xlsx' | 'doc'>>({});
@@ -75,6 +77,23 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                 preserveScroll: true,
                 onStart: () => setIsImporting(true),
                 onFinish: () => setIsImporting(false),
+            },
+        );
+    };
+
+    const importTemplate = () => {
+        if (!templateFile) {
+            return;
+        }
+
+        router.post(
+            '/dean/summaries/template',
+            { template_file: templateFile },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setIsImportingTemplate(true),
+                onFinish: () => setIsImportingTemplate(false),
             },
         );
     };
@@ -152,6 +171,30 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             </LoadingButton>
                         </div>
                         {errors.file && <p className="text-sm font-medium text-red-600">{errors.file}</p>}
+                    </div>
+
+                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
+                        <p className="text-sm text-muted-foreground">
+                            Import a DOCX template with header/footer. Exported preview, DOC, and Excel files will reuse
+                            the imported header and footer.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input
+                                type="file"
+                                accept=".docx"
+                                onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)}
+                            />
+                            <LoadingButton
+                                type="button"
+                                onClick={importTemplate}
+                                disabled={!templateFile}
+                                loading={isImportingTemplate}
+                                loadingText="Importing template..."
+                            >
+                                Import Header/Footer Template
+                            </LoadingButton>
+                        </div>
+                        {errors.template_file && <p className="text-sm font-medium text-red-600">{errors.template_file}</p>}
                     </div>
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
