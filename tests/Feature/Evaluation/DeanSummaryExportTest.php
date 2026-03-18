@@ -185,7 +185,7 @@ test('dean can import docx template header and footer and they appear in doc exp
     ]);
 
     $uploadResponse->assertRedirect();
-    $uploadResponse->assertSessionHas('status', 'Document header/footer template imported successfully.');
+    $uploadResponse->assertSessionHas('status', 'Template imported successfully and set as default for all previews and exports.');
 
     $docResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
         'classSection' => $classSection,

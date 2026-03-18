@@ -74,10 +74,16 @@ class DeanEvaluationSummaryController extends Controller
             ];
         });
 
+        $template = ExportDocumentTemplate::current();
+
         return Inertia::render('dean/summaries/index', [
             'questions' => config('evaluation.questions'),
             'rows' => $rows,
             'evaluationOpen' => EvaluationSetting::isOpen(),
+            'currentTemplate' => [
+                'sourceFilename' => $template->source_filename,
+                'updatedAt' => $template->updated_at?->toDateTimeString(),
+            ],
         ]);
     }
 
@@ -141,7 +147,14 @@ class DeanEvaluationSummaryController extends Controller
         ]);
         $template->save();
 
-        return back()->with('status', 'Document header/footer template imported successfully.');
+        $imageCount = (int) ($fragments['header_image_count'] ?? 0) + (int) ($fragments['footer_image_count'] ?? 0);
+        $status = 'Template imported successfully and set as default for all previews and exports.';
+
+        if ($imageCount > 0) {
+            $status .= ' Imported '.$imageCount.' image(s) from header/footer.';
+        }
+
+        return back()->with('status', $status);
     }
 
     public function storeTemplateManual(Request $request): JsonResponse
@@ -710,6 +723,7 @@ class DeanEvaluationSummaryController extends Controller
         .sub{font-size:14px;color:#555;margin-top:4px}
         .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
         .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
+        .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
         table{width:100%;border-collapse:collapse}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
@@ -809,6 +823,7 @@ class DeanEvaluationSummaryController extends Controller
         h1{margin:0;font-size:30px;line-height:1;color:#b06464;font-weight:800}
         .sub{font-size:14px;color:#555;margin-top:4px}
         .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
+        .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
         table{width:100%;border-collapse:collapse;margin-top:10px}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
@@ -878,7 +893,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @return array{header_html:string|null,footer_html:string|null,header_text:string|null,footer_text:string|null}
+     * @return array{header_html:string|null,footer_html:string|null,header_text:string|null,footer_text:string|null,header_image_count:int,footer_image_count:int}
      */
     private function extractHeaderFooterFromDocx(string $filePath): array
     {
@@ -897,24 +912,29 @@ class DeanEvaluationSummaryController extends Controller
             throw new RuntimeException('Unable to open DOCX archive: '.$this->zipOpenErrorToMessage($openResult));
         }
 
-        $headerXml = $this->collectDocxPartXml($zip, '/^word\/header\d+\.xml$/');
-        $footerXml = $this->collectDocxPartXml($zip, '/^word\/footer\d+\.xml$/');
+        $headerPartNames = $this->collectDocxPartNames($zip, '/^word\/header\d+\.xml$/');
+        $footerPartNames = $this->collectDocxPartNames($zip, '/^word\/footer\d+\.xml$/');
+
+        $headerFragment = $this->buildDocxTemplateFragment($zip, $headerPartNames);
+        $footerFragment = $this->buildDocxTemplateFragment($zip, $footerPartNames);
         $zip->close();
 
-        $headerHtml = $this->xmlToSimpleHtml($headerXml);
-        $footerHtml = $this->xmlToSimpleHtml($footerXml);
-
         return [
-            'header_html' => $headerHtml,
-            'footer_html' => $footerHtml,
-            'header_text' => $this->htmlToPlainText($headerHtml),
-            'footer_text' => $this->htmlToPlainText($footerHtml),
+            'header_html' => $headerFragment['html'],
+            'footer_html' => $footerFragment['html'],
+            'header_text' => $this->htmlToPlainText($headerFragment['html']),
+            'footer_text' => $this->htmlToPlainText($footerFragment['html']),
+            'header_image_count' => $headerFragment['image_count'],
+            'footer_image_count' => $footerFragment['image_count'],
         ];
     }
 
-    private function collectDocxPartXml(ZipArchive $zip, string $pattern): ?string
+    /**
+     * @return array<int, string>
+     */
+    private function collectDocxPartNames(ZipArchive $zip, string $pattern): array
     {
-        $xmlParts = [];
+        $partNames = [];
 
         for ($index = 0; $index < $zip->numFiles; $index++) {
             $name = $zip->getNameIndex($index);
@@ -923,45 +943,233 @@ class DeanEvaluationSummaryController extends Controller
                 continue;
             }
 
-            $content = $zip->getFromIndex($index);
-            if ($content !== false) {
-                $xmlParts[] = $content;
+            $partNames[] = $name;
+        }
+
+        return $partNames;
+    }
+
+    /**
+     * @param  array<int, string>  $partNames
+     * @return array{html:string|null,image_count:int}
+     */
+    private function buildDocxTemplateFragment(ZipArchive $zip, array $partNames): array
+    {
+        $htmlFragments = [];
+        $imageCount = 0;
+
+        foreach ($partNames as $partName) {
+            $partXml = $zip->getFromName($partName);
+
+            if ($partXml === false || trim($partXml) === '') {
+                continue;
+            }
+
+            $imageTags = $this->extractDocxImageTags($zip, $partName, $partXml);
+            $textLines = $this->extractDocxTextLines($partXml);
+
+            if ($imageTags === [] && $textLines === []) {
+                continue;
+            }
+
+            $imageCount += count($imageTags);
+
+            $fragment = '<div class="template-fragment">';
+
+            foreach ($imageTags as $imageTag) {
+                $fragment .= $imageTag;
+            }
+
+            foreach ($textLines as $line) {
+                $fragment .= '<div>'.htmlspecialchars($line).'</div>';
+            }
+
+            $fragment .= '</div>';
+            $htmlFragments[] = $fragment;
+        }
+
+        if ($htmlFragments === []) {
+            return [
+                'html' => null,
+                'image_count' => 0,
+            ];
+        }
+
+        return [
+            'html' => implode('', $htmlFragments),
+            'image_count' => $imageCount,
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractDocxTextLines(string $partXml): array
+    {
+        $paragraphMatches = [];
+        preg_match_all('/<w:p\b[^>]*>(.*?)<\/w:p>/is', $partXml, $paragraphMatches);
+
+        $paragraphBodies = $paragraphMatches[1] ?? [];
+
+        if ($paragraphBodies === []) {
+            $paragraphBodies = [$partXml];
+        }
+
+        $lines = [];
+
+        foreach ($paragraphBodies as $paragraphBody) {
+            $textMatches = [];
+            preg_match_all('/<w:t\b[^>]*>(.*?)<\/w:t>/is', $paragraphBody, $textMatches);
+
+            $segments = $textMatches[1] ?? [];
+
+            if ($segments === []) {
+                continue;
+            }
+
+            $line = collect($segments)
+                ->map(fn (string $segment): string => html_entity_decode($segment, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                ->implode('');
+
+            $line = trim($line);
+
+            if ($line !== '') {
+                $lines[] = $line;
             }
         }
 
-        if ($xmlParts === []) {
-            return null;
-        }
-
-        return implode("\n", $xmlParts);
+        return $lines;
     }
 
-    private function xmlToSimpleHtml(?string $xml): ?string
+    /**
+     * @return array<int, string>
+     */
+    private function extractDocxImageTags(ZipArchive $zip, string $partName, string $partXml): array
     {
-        if ($xml === null || trim($xml) === '') {
-            return null;
+        $relationshipMap = $this->extractDocxImageRelationships($zip, $partName);
+
+        if ($relationshipMap === []) {
+            return [];
         }
 
-        $text = $xml;
-        $text = preg_replace('/<w:tab\/?\s*>/i', ' ', $text) ?? $text;
-        $text = preg_replace('/<w:br\/?\s*>/i', "\n", $text) ?? $text;
-        $text = preg_replace('/<w:p[^>]*>/i', '', $text) ?? $text;
-        $text = preg_replace('/<\/w:p>/i', "\n", $text) ?? $text;
-        $text = preg_replace('/<[^>]+>/', '', $text) ?? $text;
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $embedMatches = [];
+        preg_match_all('/r:embed="([^"]+)"/i', $partXml, $embedMatches);
+        $orderedRelationshipIds = $embedMatches[1] ?? [];
 
-        $lines = collect(preg_split('/\R/u', $text) ?: [])
-            ->map(fn (string $line): string => trim($line))
-            ->filter(fn (string $line): bool => $line !== '')
-            ->values();
-
-        if ($lines->isEmpty()) {
-            return null;
+        if ($orderedRelationshipIds === []) {
+            $legacyMatches = [];
+            preg_match_all('/r:id="([^"]+)"/i', $partXml, $legacyMatches);
+            $orderedRelationshipIds = $legacyMatches[1] ?? [];
         }
 
-        return '<div class="template-fragment">'.$lines
-            ->map(fn (string $line): string => '<div>'.htmlspecialchars($line).'</div>')
-            ->implode('').'</div>';
+        if ($orderedRelationshipIds === []) {
+            return [];
+        }
+
+        $imageTags = [];
+        $usedRelationshipIds = [];
+
+        foreach ($orderedRelationshipIds as $relationshipId) {
+            if (isset($usedRelationshipIds[$relationshipId]) || ! isset($relationshipMap[$relationshipId])) {
+                continue;
+            }
+
+            $usedRelationshipIds[$relationshipId] = true;
+
+            $imagePath = $this->normalizeDocxPath($relationshipMap[$relationshipId]);
+            $imageBinary = $zip->getFromName($imagePath);
+
+            if ($imageBinary === false) {
+                continue;
+            }
+
+            $mimeType = $this->mimeTypeFromPath($imagePath);
+            if ($mimeType === null) {
+                continue;
+            }
+
+            $imageTags[] = '<img src="data:'.$mimeType.';base64,'.base64_encode($imageBinary).'" alt="Template image" />';
+        }
+
+        return $imageTags;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractDocxImageRelationships(ZipArchive $zip, string $partName): array
+    {
+        $directory = dirname($partName);
+        $baseName = basename($partName);
+        $relationshipsPath = $directory.'/_rels/'.$baseName.'.rels';
+        $relationshipsXml = $zip->getFromName($relationshipsPath);
+
+        if ($relationshipsXml === false || trim($relationshipsXml) === '') {
+            return [];
+        }
+
+        $relationshipMatches = [];
+        preg_match_all('/<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bType="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*\/?>/i', $relationshipsXml, $relationshipMatches, PREG_SET_ORDER);
+
+        if ($relationshipMatches === []) {
+            return [];
+        }
+
+        $relationshipMap = [];
+
+        foreach ($relationshipMatches as $match) {
+            $relationshipId = $match[1] ?? '';
+            $relationshipType = $match[2] ?? '';
+            $relationshipTarget = $match[3] ?? '';
+
+            if ($relationshipId === '' || $relationshipTarget === '' || ! str_contains($relationshipType, '/image')) {
+                continue;
+            }
+
+            if (str_starts_with($relationshipTarget, '/')) {
+                $relationshipMap[$relationshipId] = ltrim($relationshipTarget, '/');
+                continue;
+            }
+
+            $relationshipMap[$relationshipId] = $directory.'/'.$relationshipTarget;
+        }
+
+        return $relationshipMap;
+    }
+
+    private function normalizeDocxPath(string $path): string
+    {
+        $segments = preg_split('#/+?#', str_replace('\\', '/', $path)) ?: [];
+        $normalized = [];
+
+        foreach ($segments as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                array_pop($normalized);
+                continue;
+            }
+
+            $normalized[] = $segment;
+        }
+
+        return implode('/', $normalized);
+    }
+
+    private function mimeTypeFromPath(string $path): ?string
+    {
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'bmp' => 'image/bmp',
+            'webp' => 'image/webp',
+            default => null,
+        };
     }
 
     private function htmlToPlainText(?string $html): ?string

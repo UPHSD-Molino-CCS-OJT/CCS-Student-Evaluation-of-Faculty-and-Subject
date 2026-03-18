@@ -30,6 +30,10 @@ type Props = {
     questions: Question[];
     rows: Row[];
     evaluationOpen: boolean;
+    currentTemplate?: {
+        sourceFilename?: string | null;
+        updatedAt?: string | null;
+    };
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -39,7 +43,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function DeanSummaries({ questions, rows, evaluationOpen }: Props) {
+export default function DeanSummaries({ questions, rows, evaluationOpen, currentTemplate }: Props) {
     const page = usePage();
     const [file, setFile] = useState<File | null>(null);
     const [templateFile, setTemplateFile] = useState<File | null>(null);
@@ -178,6 +182,13 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             Import a DOCX template with header/footer. Exported preview, DOC, and Excel files will reuse
                             the imported header and footer. If DOCX import fails, open Preview and use the Edit button
                             to update and save header/footer directly.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Default template:{' '}
+                            <span className="font-medium text-foreground">
+                                {currentTemplate?.sourceFilename ?? 'None imported yet'}
+                            </span>
+                            {currentTemplate?.updatedAt ? ` (updated ${currentTemplate.updatedAt})` : ''}
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
                             <input
