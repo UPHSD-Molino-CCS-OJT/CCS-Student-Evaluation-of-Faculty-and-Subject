@@ -121,6 +121,8 @@ php artisan queue:work --tries=1 --timeout=0
 - `npm run build` now generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
 - If Railway build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.cache'`, use `npm install` (not `npm ci`) in the build command.
 - If deployment cache is stale, trigger a clear rebuild in Railway and redeploy.
+- If you see `Vite manifest not found at /app/public/build/manifest.json`, your deploy skipped frontend build. This repo includes `railway.toml` to force `npm run build` during Railway builds.
+- Railway config-as-code files are `railway.toml` or `railway.json` (not `railpack.toml`).
 
 ## Seeded Demo Accounts
 
