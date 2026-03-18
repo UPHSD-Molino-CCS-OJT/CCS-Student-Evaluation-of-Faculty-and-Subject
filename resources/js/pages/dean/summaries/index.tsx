@@ -68,9 +68,31 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
 
-    const csrfToken = document
-        .querySelector('meta[name="csrf-token"]')
-        ?.getAttribute('content');
+    const resolveCsrfToken = (): string | null => {
+        const metaToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content');
+
+        if (metaToken && metaToken.trim() !== '') {
+            return metaToken;
+        }
+
+        const xsrfCookie = document.cookie
+            .split('; ')
+            .find((entry) => entry.startsWith('XSRF-TOKEN='));
+
+        if (!xsrfCookie) {
+            return null;
+        }
+
+        const cookieValue = xsrfCookie.slice('XSRF-TOKEN='.length);
+
+        try {
+            return decodeURIComponent(cookieValue);
+        } catch {
+            return cookieValue;
+        }
+    };
 
     const toggleEvaluation = (nextState: boolean) => {
         router.patch(
@@ -126,10 +148,25 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
         try {
             const formData = new FormData();
             formData.append('template_file', selectedFile);
+            const csrfToken = resolveCsrfToken();
+
+            if (csrfToken) {
+                formData.append('_token', csrfToken);
+            }
 
             const response = await fetch('/dean/summaries/template/preview', {
                 method: 'POST',
-                headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' } : { Accept: 'application/json' },
+                headers: csrfToken
+                    ? {
+                          'X-CSRF-TOKEN': csrfToken,
+                          'X-XSRF-TOKEN': csrfToken,
+                          'X-Requested-With': 'XMLHttpRequest',
+                          Accept: 'application/json',
+                      }
+                    : {
+                          'X-Requested-With': 'XMLHttpRequest',
+                          Accept: 'application/json',
+                      },
                 body: formData,
             });
 
