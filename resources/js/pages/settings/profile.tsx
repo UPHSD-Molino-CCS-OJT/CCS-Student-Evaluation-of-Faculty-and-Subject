@@ -32,7 +32,16 @@ export default function Profile({
     canManageEsign?: boolean;
     esignImageUrl?: string | null;
 }) {
-    const { auth } = usePage().props;
+    const { auth, errors } = usePage().props as {
+        auth: {
+            user: {
+                name: string;
+                email: string;
+                email_verified_at: string | null;
+            };
+        };
+        errors: Record<string, string | undefined>;
+    };
     const [esignFile, setEsignFile] = useState<File | null>(null);
     const [isUploadingEsign, setIsUploadingEsign] = useState(false);
 
@@ -209,9 +218,10 @@ export default function Profile({
                                     <Input
                                         id="esign_image"
                                         type="file"
-                                        accept="image/png,image/jpeg"
+                                        accept="image/png,image/jpeg,image/webp"
                                         onChange={(event) => setEsignFile(event.target.files?.[0] ?? null)}
                                     />
+                                    <InputError className="mt-1" message={errors.esign_image} />
                                 </div>
 
                                 <Button type="submit" disabled={!esignFile || isUploadingEsign}>

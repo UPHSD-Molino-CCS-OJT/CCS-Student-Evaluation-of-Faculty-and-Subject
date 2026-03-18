@@ -45,7 +45,7 @@ class ProfileController extends Controller
         }
 
         $payload = $request->validate([
-            'esign_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+            'esign_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_esign' => ['nullable', 'boolean'],
         ]);
 
@@ -56,7 +56,7 @@ class ProfileController extends Controller
             $user->esign_image_path = null;
             $user->save();
 
-            return to_route('profile.edit')->with('status', 'E-sign removed successfully.');
+            return back()->with('status', 'E-sign removed successfully.');
         }
 
         if ($request->hasFile('esign_image')) {
@@ -68,10 +68,10 @@ class ProfileController extends Controller
             $user->esign_image_path = $path;
             $user->save();
 
-            return to_route('profile.edit')->with('status', 'E-sign uploaded successfully.');
+            return back()->with('status', 'E-sign uploaded successfully.');
         }
 
-        return to_route('profile.edit')->withErrors([
+        return back()->withErrors([
             'esign_image' => 'Please select an image to upload.',
         ]);
     }

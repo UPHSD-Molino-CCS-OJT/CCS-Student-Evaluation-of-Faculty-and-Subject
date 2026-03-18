@@ -1,5 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -40,11 +42,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function FacultyReports({ questions, rows }: Props) {
     const page = usePage();
+    const [esignFile, setEsignFile] = useState<File | null>(null);
+    const [isImportingEsign, setIsImportingEsign] = useState(false);
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
 
     const signAndSubmit = (classSectionId: number) => {
         router.post(`/faculty/reports/${classSectionId}/sign`, {}, { preserveScroll: true });
+    };
+
+    const importEsign = () => {
+        if (!esignFile) {
+            return;
+        }
+
+        router.patch(
+            '/settings/esign',
+            { esign_image: esignFile },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onStart: () => setIsImportingEsign(true),
+                onFinish: () => setIsImportingEsign(false),
+            },
+        );
     };
 
     return (
@@ -57,6 +78,28 @@ export default function FacultyReports({ questions, rows }: Props) {
                     <p className="mt-1 text-sm text-muted-foreground">
                         This report shows your average rating for each question and class assignment.
                     </p>
+                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
+                        <p className="text-sm text-muted-foreground">
+                            Import your e-sign so you can sign and submit reports to the dean.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                onChange={(event) => setEsignFile(event.target.files?.[0] ?? null)}
+                            />
+                            <LoadingButton
+                                type="button"
+                                onClick={importEsign}
+                                disabled={!esignFile}
+                                loading={isImportingEsign}
+                                loadingText="Importing E-sign..."
+                            >
+                                Import E-sign
+                            </LoadingButton>
+                        </div>
+                        {errors.esign_image && <p className="text-sm font-medium text-red-600">{errors.esign_image}</p>}
+                    </div>
                     {errors.esign && <p className="mt-2 text-sm font-medium text-red-600">{errors.esign}</p>}
                     {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
