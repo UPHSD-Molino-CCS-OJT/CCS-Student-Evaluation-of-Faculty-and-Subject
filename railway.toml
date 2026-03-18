@@ -1,2 +1,7 @@
 [variables]
 NIXPACKS_PHP_EXTENSIONS = "zip,gd"
+NIXPACKS_NODE_VERSION = "22"
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install -g n && n 22.12.0 && hash -r && node -v && npm -v && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules node_modules/.cache || true) && npm install --include=dev --include=optional --no-audit --no-fund && npm run build"
