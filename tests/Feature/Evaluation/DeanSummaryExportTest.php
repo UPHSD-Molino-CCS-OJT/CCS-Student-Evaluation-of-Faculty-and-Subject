@@ -198,6 +198,37 @@ test('dean can import docx template header and footer and they appear in doc exp
     $docResponse->assertSee('MY CUSTOM FOOTER', false);
 });
 
+test('dean can save header and footer from preview editor and they appear in doc export', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $saveResponse = $this->actingAs($dean)->postJson(route('dean.summaries.template.manual.store'), [
+        'header_html' => '<div class="template-fragment"><div>MANUAL HEADER</div></div>',
+        'footer_html' => '<div class="template-fragment"><div>MANUAL FOOTER</div></div>',
+        'header_text' => 'MANUAL HEADER',
+        'footer_text' => 'MANUAL FOOTER',
+    ]);
+
+    $saveResponse->assertOk();
+    $saveResponse->assertJson([
+        'status' => 'Template header/footer saved from preview editor.',
+    ]);
+
+    $docResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'doc',
+    ]));
+
+    $docResponse->assertOk();
+    $docResponse->assertHeader('content-type', 'application/msword');
+    $docResponse->assertSee('MANUAL HEADER', false);
+    $docResponse->assertSee('MANUAL FOOTER', false);
+});
+
 test('faculty cannot export dean summaries', function () {
     $classSection = createClassSectionWithEvaluation();
 

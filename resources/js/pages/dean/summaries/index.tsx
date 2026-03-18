@@ -176,7 +176,8 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                     <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
                         <p className="text-sm text-muted-foreground">
                             Import a DOCX template with header/footer. Exported preview, DOC, and Excel files will reuse
-                            the imported header and footer.
+                            the imported header and footer. If DOCX import fails, open Preview and use the Edit button
+                            to update and save header/footer directly.
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
                             <input

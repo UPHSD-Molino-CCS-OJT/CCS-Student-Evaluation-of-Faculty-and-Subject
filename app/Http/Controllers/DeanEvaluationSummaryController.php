@@ -7,6 +7,7 @@ use App\Models\Evaluation;
 use App\Models\ExportDocumentTemplate;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -123,6 +124,31 @@ class DeanEvaluationSummaryController extends Controller
         $template->save();
 
         return back()->with('status', 'Document header/footer template imported successfully.');
+    }
+
+    public function storeTemplateManual(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'header_html' => ['nullable', 'string', 'max:20000'],
+            'footer_html' => ['nullable', 'string', 'max:20000'],
+            'header_text' => ['nullable', 'string', 'max:1000'],
+            'footer_text' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $template = ExportDocumentTemplate::current();
+        $template->fill([
+            'header_html' => $payload['header_html'] ?? null,
+            'footer_html' => $payload['footer_html'] ?? null,
+            'header_text' => $payload['header_text'] ?? null,
+            'footer_text' => $payload['footer_text'] ?? null,
+            'source_filename' => 'manual-preview-edit',
+            'updated_by' => $request->user()?->id,
+        ]);
+        $template->save();
+
+        return response()->json([
+            'status' => 'Template header/footer saved from preview editor.',
+        ]);
     }
 
     public function exportClassSection(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
@@ -680,10 +706,15 @@ class DeanEvaluationSummaryController extends Controller
     <div class=\"toolbar\">
         <a class=\"btn primary\" href=\"{$baseExportUrl}?format=xlsx\">Download Excel</a>
         <a class=\"btn\" href=\"{$baseExportUrl}?format=doc\">Download DOC</a>
+        <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
+        <label id=\"upload-image-label\" class=\"btn\" for=\"upload-image\" style=\"display:none\">Upload Image</label>
+        <input id=\"upload-image\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
+        <button id=\"add-text-block\" class=\"btn\" type=\"button\" style=\"display:none\">Add Text</button>
+        <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
     <div class=\"page\">
-        {$templateHeader}
+        <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
         <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
         <div class=\"sub\">College of Computer Studies</div>
         <div class=\"meta\">
@@ -702,9 +733,16 @@ class DeanEvaluationSummaryController extends Controller
         <div class=\"section-title\">COMMENTS</div>
         <table><tbody>{$commentsHtml}</tbody></table>
 
-        {$templateFooter}
+        <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
         <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
+    <script>
+        window.previewEditorConfig = {
+            saveTemplateUrl: '/dean/summaries/template/manual',
+            csrfToken: '".csrf_token()."'
+        };
+    </script>
+    <script src=\"/js/preview-editor.js\"></script>
 </body>
 </html>";
     }
@@ -766,10 +804,15 @@ class DeanEvaluationSummaryController extends Controller
     <div class=\"toolbar\">
         <a class=\"btn primary\" href=\"/dean/summaries/export?format=xlsx\">Download Excel</a>
         <a class=\"btn\" href=\"/dean/summaries/export?format=doc\">Download DOC</a>
+        <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
+        <label id=\"upload-image-label\" class=\"btn\" for=\"upload-image\" style=\"display:none\">Upload Image</label>
+        <input id=\"upload-image\" type=\"file\" accept=\"image/*\" style=\"display:none\" />
+        <button id=\"add-text-block\" class=\"btn\" type=\"button\" style=\"display:none\">Add Text</button>
+        <button id=\"save-template-fragments\" class=\"btn\" type=\"button\" style=\"display:none\">Save Header/Footer</button>
         <button class=\"btn\" onclick=\"window.print()\">Print</button>
     </div>
     <div class=\"page\">
-        {$templateHeader}
+        <div class=\"template-region\" data-template-region=\"header\">{$templateHeader}</div>
         <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
         <div class=\"sub\">College of Computer Studies - Overall Evaluation Summary</div>
 
@@ -789,9 +832,16 @@ class DeanEvaluationSummaryController extends Controller
             <tbody>{$questionRowsHtml}</tbody>
         </table>
 
-        {$templateFooter}
+        <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
         <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
+    <script>
+        window.previewEditorConfig = {
+            saveTemplateUrl: '/dean/summaries/template/manual',
+            csrfToken: '".csrf_token()."'
+        };
+    </script>
+    <script src=\"/js/preview-editor.js\"></script>
 </body>
 </html>";
     }
