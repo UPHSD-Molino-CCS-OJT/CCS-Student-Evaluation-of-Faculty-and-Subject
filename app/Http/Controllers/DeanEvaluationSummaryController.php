@@ -7,6 +7,7 @@ use App\Models\Evaluation;
 use App\Models\ExportDocumentTemplate;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,10 @@ use ZipArchive;
 
 class DeanEvaluationSummaryController extends Controller
 {
+    private const MAX_TEMPLATE_HTML_LENGTH = 1000000;
+
+    private const MAX_TEMPLATE_TEXT_LENGTH = 5000;
+
     public function index(): Response
     {
         $classSections = ClassSection::query()
@@ -141,6 +146,14 @@ class DeanEvaluationSummaryController extends Controller
             ]);
         }
 
+        $htmlLengthError = $this->validateTemplateFragmentLengths($headerHtml, $footerHtml, $headerText, $footerText);
+
+        if ($htmlLengthError !== null) {
+            return back()->withErrors([
+                'template_file' => $htmlLengthError,
+            ]);
+        }
+
         $template = ExportDocumentTemplate::current();
         $template->fill([
             'header_html' => $headerHtml,
@@ -150,7 +163,16 @@ class DeanEvaluationSummaryController extends Controller
             'source_filename' => $templateFile->getClientOriginalName(),
             'updated_by' => $request->user()?->id,
         ]);
-        $template->save();
+
+        try {
+            $template->save();
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'template_file' => 'The extracted header/footer is too large to save. Reduce embedded images or simplify template formatting, then try again.',
+            ]);
+        }
 
         $imageCount = (int) ($fragments['header_image_count'] ?? 0) + (int) ($fragments['footer_image_count'] ?? 0);
         $status = 'Template imported successfully and set as default for all previews and exports.';
@@ -165,10 +187,10 @@ class DeanEvaluationSummaryController extends Controller
     public function storeTemplateManual(Request $request): JsonResponse
     {
         $payload = $request->validate([
-            'header_html' => ['nullable', 'string', 'max:20000'],
-            'footer_html' => ['nullable', 'string', 'max:20000'],
-            'header_text' => ['nullable', 'string', 'max:1000'],
-            'footer_text' => ['nullable', 'string', 'max:1000'],
+            'header_html' => ['nullable', 'string', 'max:'.self::MAX_TEMPLATE_HTML_LENGTH],
+            'footer_html' => ['nullable', 'string', 'max:'.self::MAX_TEMPLATE_HTML_LENGTH],
+            'header_text' => ['nullable', 'string', 'max:'.self::MAX_TEMPLATE_TEXT_LENGTH],
+            'footer_text' => ['nullable', 'string', 'max:'.self::MAX_TEMPLATE_TEXT_LENGTH],
         ]);
 
         $template = ExportDocumentTemplate::current();
@@ -180,11 +202,35 @@ class DeanEvaluationSummaryController extends Controller
             'source_filename' => 'manual-preview-edit',
             'updated_by' => $request->user()?->id,
         ]);
-        $template->save();
+
+        try {
+            $template->save();
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Template content is too large to save. Reduce content size and try again.',
+            ], 422);
+        }
 
         return response()->json([
             'status' => 'Template header/footer saved from preview editor.',
         ]);
+    }
+
+    private function validateTemplateFragmentLengths(?string $headerHtml, ?string $footerHtml, ?string $headerText, ?string $footerText): ?string
+    {
+        if (($headerHtml !== null && Str::length($headerHtml) > self::MAX_TEMPLATE_HTML_LENGTH)
+            || ($footerHtml !== null && Str::length($footerHtml) > self::MAX_TEMPLATE_HTML_LENGTH)) {
+            return 'The DOCX header/footer HTML is too large. Reduce embedded images or simplify template formatting before importing.';
+        }
+
+        if (($headerText !== null && Str::length($headerText) > self::MAX_TEMPLATE_TEXT_LENGTH)
+            || ($footerText !== null && Str::length($footerText) > self::MAX_TEMPLATE_TEXT_LENGTH)) {
+            return 'The DOCX header/footer text is too large. Shorten text content and try importing again.';
+        }
+
+        return null;
     }
 
     public function exportClassSection(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
@@ -917,8 +963,8 @@ class DeanEvaluationSummaryController extends Controller
             throw new RuntimeException('Unable to open DOCX archive: '.$this->zipOpenErrorToMessage($openResult));
         }
 
-        $headerPartNames = $this->collectDocxPartNames($zip, '/^word\/header\d+\.xml$/');
-        $footerPartNames = $this->collectDocxPartNames($zip, '/^word\/footer\d+\.xml$/');
+        $headerPartNames = $this->collectDocxPartNames($zip, '/^word\/header[^\/]*\.xml$/i');
+        $footerPartNames = $this->collectDocxPartNames($zip, '/^word\/footer[^\/]*\.xml$/i');
 
         $headerFragment = $this->buildDocxTemplateFragment($zip, $headerPartNames);
         $footerFragment = $this->buildDocxTemplateFragment($zip, $footerPartNames);
@@ -1114,7 +1160,7 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         $relationshipMatches = [];
-        preg_match_all('/<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bType="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*\/?>/i', $relationshipsXml, $relationshipMatches, PREG_SET_ORDER);
+        preg_match_all('/<Relationship\b[^>]*>/i', $relationshipsXml, $relationshipMatches, PREG_SET_ORDER);
 
         if ($relationshipMatches === []) {
             return [];
@@ -1123,11 +1169,17 @@ class DeanEvaluationSummaryController extends Controller
         $relationshipMap = [];
 
         foreach ($relationshipMatches as $match) {
-            $relationshipId = $match[1] ?? '';
-            $relationshipType = $match[2] ?? '';
-            $relationshipTarget = $match[3] ?? '';
+            $tag = $match[0] ?? '';
+            $relationshipId = $this->extractXmlAttributeValue($tag, 'Id');
+            $relationshipType = $this->extractXmlAttributeValue($tag, 'Type');
+            $relationshipTarget = $this->extractXmlAttributeValue($tag, 'Target');
+            $targetMode = $this->extractXmlAttributeValue($tag, 'TargetMode');
 
             if ($relationshipId === '' || $relationshipTarget === '' || ! str_contains($relationshipType, '/image')) {
+                continue;
+            }
+
+            if (strtolower($targetMode) === 'external') {
                 continue;
             }
 
@@ -1140,6 +1192,14 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return $relationshipMap;
+    }
+
+    private function extractXmlAttributeValue(string $tag, string $attributeName): string
+    {
+        $matches = [];
+        preg_match('/\b'.preg_quote($attributeName, '/').'\s*=\s*(["\'])(.*?)\1/i', $tag, $matches);
+
+        return $matches[2] ?? '';
     }
 
     private function normalizeDocxPath(string $path): string

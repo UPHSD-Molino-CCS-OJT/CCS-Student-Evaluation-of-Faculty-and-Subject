@@ -7,7 +7,6 @@ use App\Models\Section;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
-use ZipArchive;
 
 function createClassSectionWithEvaluation(): ClassSection
 {
@@ -82,6 +81,36 @@ function createDocxTemplateUpload(string $headerText, string $footerText): Uploa
     $zip->close();
 
     return new UploadedFile($docxPath, 'template.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
+}
+
+function createDocxTemplateUploadWithHeaderImage(string $headerText, string $footerText): UploadedFile
+{
+    $tempPath = tempnam(sys_get_temp_dir(), 'template-img-');
+
+    if ($tempPath === false) {
+        throw new RuntimeException('Failed to create temporary file for DOCX template with image.');
+    }
+
+    $docxPath = $tempPath.'.docx';
+    rename($tempPath, $docxPath);
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($docxPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+    if ($opened !== true) {
+        throw new RuntimeException('Failed to open DOCX archive for writing image template.');
+    }
+
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>');
+    $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p></w:body></w:document>');
+    $zip->addFromString('word/header1.xml', '<?xml version="1.0" encoding="UTF-8"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:p><w:r><w:drawing><wp:inline><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p><w:p><w:r><w:t>'.htmlspecialchars($headerText, ENT_QUOTES).'</w:t></w:r></w:p></w:hdr>');
+    $zip->addFromString('word/_rels/header1.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="media/image1.png" Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"/></Relationships>');
+    $zip->addFromString('word/media/image1.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7Yb9QAAAAASUVORK5CYII=', true) ?: '');
+    $zip->addFromString('word/footer1.xml', '<?xml version="1.0" encoding="UTF-8"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>'.htmlspecialchars($footerText, ENT_QUOTES).'</w:t></w:r></w:p></w:ftr>');
+    $zip->close();
+
+    return new UploadedFile($docxPath, 'template-with-image.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
 }
 
 test('dean staff and system admin can export overall summary', function (string $role) {
@@ -198,6 +227,34 @@ test('dean can import docx template header and footer and they appear in doc exp
     $docResponse->assertSee('MY CUSTOM FOOTER', false);
 });
 
+test('dean can import docx template header image and it appears in doc export', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $templateFile = createDocxTemplateUploadWithHeaderImage('IMAGE HEADER', 'IMAGE FOOTER');
+
+    $uploadResponse = $this->actingAs($dean)->post(route('dean.summaries.template.store'), [
+        'template_file' => $templateFile,
+    ]);
+
+    $uploadResponse->assertRedirect();
+    $uploadResponse->assertSessionHas('status', 'Template imported successfully and set as default for all previews and exports. Imported 1 image(s) from header/footer.');
+
+    $docResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'doc',
+    ]));
+
+    $docResponse->assertOk();
+    $docResponse->assertHeader('content-type', 'application/msword');
+    $docResponse->assertSee('data:image/png;base64,', false);
+    $docResponse->assertSee('IMAGE HEADER', false);
+});
+
 test('dean can save header and footer from preview editor and they appear in doc export', function () {
     $classSection = createClassSectionWithEvaluation();
 
@@ -227,6 +284,46 @@ test('dean can save header and footer from preview editor and they appear in doc
     $docResponse->assertHeader('content-type', 'application/msword');
     $docResponse->assertSee('MANUAL HEADER', false);
     $docResponse->assertSee('MANUAL FOOTER', false);
+});
+
+test('dean can save large header and footer html from preview editor', function () {
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $largeHtml = '<div class="template-fragment">'.str_repeat('A', 30000).'</div>';
+
+    $saveResponse = $this->actingAs($dean)->postJson(route('dean.summaries.template.manual.store'), [
+        'header_html' => $largeHtml,
+        'footer_html' => $largeHtml,
+        'header_text' => 'Large header',
+        'footer_text' => 'Large footer',
+    ]);
+
+    $saveResponse->assertOk();
+    $saveResponse->assertJson([
+        'status' => 'Template header/footer saved from preview editor.',
+    ]);
+});
+
+test('dean receives validation error when manual template fragments are too large', function () {
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $tooLargeHtml = '<div class="template-fragment">'.str_repeat('X', 1000001).'</div>';
+
+    $uploadResponse = $this->actingAs($dean)->postJson(route('dean.summaries.template.manual.store'), [
+        'header_html' => $tooLargeHtml,
+        'footer_html' => $tooLargeHtml,
+        'header_text' => 'Header',
+        'footer_text' => 'Footer',
+    ]);
+
+    $uploadResponse->assertStatus(422);
+    $uploadResponse->assertJsonValidationErrors(['header_html', 'footer_html']);
 });
 
 test('faculty cannot export dean summaries', function () {
