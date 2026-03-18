@@ -15,7 +15,7 @@ type Row = {
     term?: string | null;
     schoolYear?: string | null;
     respondents: number;
-    overallAverage?: number | null;
+    overallAverage?: number | string | null;
     questionAverages: Array<{
         questionNumber: number;
         averageRating: number;
@@ -51,6 +51,10 @@ export default function FacultyReports({ questions, rows }: Props) {
                     const averageMap = Object.fromEntries(
                         row.questionAverages.map((entry) => [entry.questionNumber, entry.averageRating]),
                     );
+                    const overallAverage =
+                        row.overallAverage === null || row.overallAverage === undefined
+                            ? null
+                            : Number(row.overallAverage);
 
                     return (
                         <section key={row.classSectionId} className="overflow-hidden rounded-xl border">
@@ -61,7 +65,9 @@ export default function FacultyReports({ questions, rows }: Props) {
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                     Respondents: {row.respondents} | Overall Average:{' '}
-                                    {row.overallAverage ? row.overallAverage.toFixed(2) : '-'}
+                                    {overallAverage !== null && Number.isFinite(overallAverage)
+                                        ? overallAverage.toFixed(2)
+                                        : '-'}
                                 </p>
                             </div>
                             <div className="overflow-x-auto">
@@ -79,7 +85,9 @@ export default function FacultyReports({ questions, rows }: Props) {
                                                     {question.number}. {question.text}
                                                 </td>
                                                 <td className="px-4 py-3 font-medium">
-                                                    {averageMap[question.number]
+                                                    {averageMap[question.number] !== null &&
+                                                    averageMap[question.number] !== undefined &&
+                                                    Number.isFinite(Number(averageMap[question.number]))
                                                         ? Number(averageMap[question.number]).toFixed(2)
                                                         : '-'}
                                                 </td>

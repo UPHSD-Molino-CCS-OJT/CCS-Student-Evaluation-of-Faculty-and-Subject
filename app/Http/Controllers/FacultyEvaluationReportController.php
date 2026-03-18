@@ -47,7 +47,9 @@ class FacultyEvaluationReportController extends Controller
                 'term' => $assignment->term,
                 'schoolYear' => $assignment->school_year,
                 'respondents' => (int) ($summary->respondents ?? 0),
-                'overallAverage' => $summary->overall_average,
+                'overallAverage' => $summary?->overall_average !== null
+                    ? (float) $summary->overall_average
+                    : null,
                 'questionAverages' => ($questionMap->get($assignment->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
