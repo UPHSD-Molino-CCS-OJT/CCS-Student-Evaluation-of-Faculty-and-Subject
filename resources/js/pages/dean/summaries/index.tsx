@@ -100,6 +100,11 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         <p className="text-sm text-muted-foreground">
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
+                        <a href="/dean/summaries/export" className="inline-flex">
+                            <Button type="button" variant="outline">
+                                Export Overall Summary
+                            </Button>
+                        </a>
                     </div>
                     <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
                         <p className="text-sm text-muted-foreground">
@@ -144,19 +149,28 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                     return (
                         <section key={row.classSectionId} className="overflow-hidden rounded-xl border">
                             <div className="border-b bg-muted/30 px-4 py-3">
-                                <h2 className="font-semibold">{row.subject}</h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Faculty: {row.faculty} | Section: {row.section}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    Respondents: {row.respondents} | Overall Average:{' '}
-                                    {overallAverage !== null && Number.isFinite(overallAverage)
-                                        ? overallAverage.toFixed(2)
-                                        : '-'}
-                                </p>
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h2 className="font-semibold">{row.subject}</h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Faculty: {row.faculty} | Section: {row.section}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            Respondents: {row.respondents} | Overall Average:{' '}
+                                            {overallAverage !== null && Number.isFinite(overallAverage)
+                                                ? overallAverage.toFixed(2)
+                                                : '-'}
+                                        </p>
+                                    </div>
+                                    <a href={`/dean/summaries/class-sections/${row.classSectionId}/export`} className="inline-flex">
+                                        <Button type="button" variant="outline" size="sm">
+                                            Export Course Summary
+                                        </Button>
+                                    </a>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-border text-sm">

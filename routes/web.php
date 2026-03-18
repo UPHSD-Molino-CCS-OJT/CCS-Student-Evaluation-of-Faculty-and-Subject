@@ -51,6 +51,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/summaries', [DeanEvaluationSummaryController::class, 'index'])
             ->name('dean.summaries.index');
 
+        Route::get('dean/summaries/export', [DeanEvaluationSummaryController::class, 'exportOverall'])
+            ->name('dean.summaries.export-overall');
+
+        Route::get('dean/summaries/class-sections/{classSection}/export', [DeanEvaluationSummaryController::class, 'exportClassSection'])
+            ->name('dean.summaries.export-class-section');
+
         Route::get('dean/program-courses', [DeanProgramCoursesController::class, 'index'])
             ->name('dean.program-courses.index');
 
