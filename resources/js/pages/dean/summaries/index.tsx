@@ -44,6 +44,8 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
     const [file, setFile] = useState<File | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
+    const [overallFormat, setOverallFormat] = useState<'xlsx' | 'doc'>('xlsx');
+    const [classFormats, setClassFormats] = useState<Record<number, 'xlsx' | 'doc'>>({});
 
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
@@ -77,6 +79,10 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         );
     };
 
+    const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' => {
+        return classFormats[classSectionId] ?? 'xlsx';
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Summary" />
@@ -100,9 +106,22 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         <p className="text-sm text-muted-foreground">
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
-                        <a href="/dean/summaries/export" className="inline-flex">
+                        <a href="/dean/summaries/preview" target="_blank" rel="noreferrer" className="inline-flex">
                             <Button type="button" variant="outline">
-                                Export Overall Summary
+                                Preview Overall Document
+                            </Button>
+                        </a>
+                        <select
+                            value={overallFormat}
+                            onChange={(event) => setOverallFormat(event.target.value as 'xlsx' | 'doc')}
+                            className="h-9 rounded-md border bg-background px-3 text-sm"
+                        >
+                            <option value="xlsx">Excel (.xlsx)</option>
+                            <option value="doc">DOC (.doc)</option>
+                        </select>
+                        <a href={`/dean/summaries/export?format=${overallFormat}`} className="inline-flex">
+                            <Button type="button" variant="outline">
+                                Download Overall Summary
                             </Button>
                         </a>
                     </div>
@@ -165,11 +184,39 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                                 : '-'}
                                         </p>
                                     </div>
-                                    <a href={`/dean/summaries/class-sections/${row.classSectionId}/export`} className="inline-flex">
-                                        <Button type="button" variant="outline" size="sm">
-                                            Export Course Summary
-                                        </Button>
-                                    </a>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <a
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex"
+                                        >
+                                            <Button type="button" variant="outline" size="sm">
+                                                Preview Document
+                                            </Button>
+                                        </a>
+                                        <select
+                                            value={resolveClassFormat(row.classSectionId)}
+                                            onChange={(event) =>
+                                                setClassFormats((previous) => ({
+                                                    ...previous,
+                                                    [row.classSectionId]: event.target.value as 'xlsx' | 'doc',
+                                                }))
+                                            }
+                                            className="h-8 rounded-md border bg-background px-2 text-xs"
+                                        >
+                                            <option value="xlsx">Excel</option>
+                                            <option value="doc">DOC</option>
+                                        </select>
+                                        <a
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=${resolveClassFormat(row.classSectionId)}`}
+                                            className="inline-flex"
+                                        >
+                                            <Button type="button" variant="outline" size="sm">
+                                                Download
+                                            </Button>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">

@@ -6,6 +6,8 @@ use App\Models\ClassSection;
 use App\Models\Evaluation;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -72,7 +74,117 @@ class DeanEvaluationSummaryController extends Controller
         ]);
     }
 
-    public function exportClassSection(ClassSection $classSection): StreamedResponse
+    public function previewClassSection(ClassSection $classSection): HttpResponse
+    {
+        $data = $this->buildClassSectionSummaryData($classSection);
+
+        return response($this->renderClassPreviewHtml($data), HttpResponse::HTTP_OK, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+        ]);
+    }
+
+    public function previewOverall(): HttpResponse
+    {
+        $data = $this->buildOverallSummaryData();
+
+        return response($this->renderOverallPreviewHtml($data), HttpResponse::HTTP_OK, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+        ]);
+    }
+
+    public function exportClassSection(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
+    {
+        $data = $this->buildClassSectionSummaryData($classSection);
+        $format = $this->resolveExportFormat($request);
+
+        if ($format === 'doc') {
+            $fileName = sprintf(
+                'evaluation-summary-%s-%s.doc',
+                $data['classSection']->subject?->code ?? 'subject',
+                now()->format('Ymd-His')
+            );
+
+            return response($this->renderClassDocHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'application/msword',
+                'Content-Disposition' => 'attachment; filename='.$fileName,
+            ]);
+        }
+
+        $fileName = sprintf(
+            'evaluation-summary-%s-%s.xlsx',
+            $data['classSection']->subject?->code ?? 'subject',
+            now()->format('Ymd-His')
+        );
+
+        return response()->streamDownload(function () use ($data): void {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Summary');
+
+            $this->buildClassSummarySheet(
+                $sheet,
+                $data['classSection'],
+                $data['respondents'],
+                $data['overallAverage'],
+                $data['questionRows'],
+                $data['comments'],
+            );
+
+            $continuationSheet = new Worksheet($spreadsheet, 'Comments & Plan');
+            $spreadsheet->addSheet($continuationSheet);
+            $this->buildCommentsAndPlanSheet($continuationSheet, $data['comments'], $data['questionRows']);
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function exportOverall(Request $request): StreamedResponse|HttpResponse
+    {
+        $data = $this->buildOverallSummaryData();
+        $format = $this->resolveExportFormat($request);
+
+        if ($format === 'doc') {
+            $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.doc';
+
+            return response($this->renderOverallDocHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'application/msword',
+                'Content-Disposition' => 'attachment; filename='.$fileName,
+            ]);
+        }
+
+        $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.xlsx';
+
+        return response()->streamDownload(function () use ($data): void {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Overall Summary');
+
+            $this->buildOverallSummarySheet($sheet, $data['classSections'], $data['summaryMap']);
+
+            $questionSheet = new Worksheet($spreadsheet, 'Question Averages');
+            $spreadsheet->addSheet($questionSheet);
+            $this->buildOverallQuestionAveragesSheet($questionSheet, $data['overallQuestionRows']);
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * @return array{
+     *   classSection:ClassSection,
+     *   respondents:int,
+     *   overallAverage:float|null,
+     *   questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,
+     *   comments:array<int, string>
+     * }
+     */
+    private function buildClassSectionSummaryData(ClassSection $classSection): array
     {
         $classSection->load(['subject', 'section', 'faculty']);
         $questions = collect(config('evaluation.questions'));
@@ -104,7 +216,7 @@ class DeanEvaluationSummaryController extends Controller
                 'text' => $question['text'] ?? '',
                 'average' => $average !== null ? (float) $average : null,
             ];
-        })->values();
+        })->values()->all();
 
         $comments = Evaluation::query()
             ->where('class_section_id', $classSection->id)
@@ -114,40 +226,26 @@ class DeanEvaluationSummaryController extends Controller
             ->pluck('comments')
             ->map(fn (string $comment): string => trim($comment))
             ->filter(fn (string $comment): bool => $comment !== '')
-            ->values();
+            ->values()
+            ->all();
 
-        $fileName = sprintf(
-            'evaluation-summary-%s-%s.xlsx',
-            $classSection->subject?->code ?? 'subject',
-            now()->format('Ymd-His')
-        );
-
-        return response()->streamDownload(function () use ($classSection, $questionRows, $summary, $comments): void {
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Summary');
-
-            $this->buildClassSummarySheet(
-                $sheet,
-                $classSection,
-                (int) ($summary?->respondents ?? 0),
-                $summary?->overall_average !== null ? (float) $summary->overall_average : null,
-                $questionRows->all(),
-                $comments->all(),
-            );
-
-            $continuationSheet = new Worksheet($spreadsheet, 'Comments & Plan');
-            $spreadsheet->addSheet($continuationSheet);
-            $this->buildCommentsAndPlanSheet($continuationSheet, $comments->all(), $questionRows->all());
-
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return [
+            'classSection' => $classSection,
+            'respondents' => (int) ($summary?->respondents ?? 0),
+            'overallAverage' => $summary?->overall_average !== null ? (float) $summary->overall_average : null,
+            'questionRows' => $questionRows,
+            'comments' => $comments,
+        ];
     }
 
-    public function exportOverall(): StreamedResponse
+    /**
+     * @return array{
+     *   classSections:array<int, ClassSection>,
+     *   summaryMap:array<int, object>,
+     *   overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>
+     * }
+     */
+    private function buildOverallSummaryData(): array
     {
         $classSections = ClassSection::query()
             ->with(['subject', 'section', 'faculty'])
@@ -170,8 +268,6 @@ class DeanEvaluationSummaryController extends Controller
             ->keyBy('question_number');
 
         $questions = collect(config('evaluation.questions'));
-        $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.xlsx';
-
         $overallQuestionRows = $questions->map(function (array $question) use ($overallQuestionAverages): array {
             $questionNumber = (int) ($question['number'] ?? 0);
             $average = $overallQuestionAverages->get($questionNumber)?->average_rating;
@@ -182,24 +278,20 @@ class DeanEvaluationSummaryController extends Controller
                 'text' => $question['text'] ?? '',
                 'average' => $average !== null ? (float) $average : null,
             ];
-        })->values();
+        })->values()->all();
 
-        return response()->streamDownload(function () use ($classSections, $summaryMap, $overallQuestionRows): void {
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Overall Summary');
+        return [
+            'classSections' => $classSections->all(),
+            'summaryMap' => $summaryMap->all(),
+            'overallQuestionRows' => $overallQuestionRows,
+        ];
+    }
 
-            $this->buildOverallSummarySheet($sheet, $classSections->all(), $summaryMap->all());
+    private function resolveExportFormat(Request $request): string
+    {
+        $format = strtolower($request->query('format', 'xlsx'));
 
-            $questionSheet = new Worksheet($spreadsheet, 'Question Averages');
-            $spreadsheet->addSheet($questionSheet);
-            $this->buildOverallQuestionAveragesSheet($questionSheet, $overallQuestionRows->all());
-
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
-        }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+        return in_array($format, ['xlsx', 'doc'], true) ? $format : 'xlsx';
     }
 
     /**
@@ -480,5 +572,189 @@ class DeanEvaluationSummaryController extends Controller
         return $lowestThree
             ->map(fn (array $row): string => 'Enhance '.$row['text'])
             ->all();
+    }
+
+    /**
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     */
+    private function renderClassPreviewHtml(array $data): string
+    {
+        $classSection = $data['classSection'];
+        $subject = htmlspecialchars(($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? ''));
+        $faculty = htmlspecialchars((string) ($classSection->faculty?->name ?? ''));
+        $term = htmlspecialchars((string) ($classSection->term ?? ''));
+        $schoolYear = htmlspecialchars((string) ($classSection->school_year ?? ''));
+        $baseExportUrl = '/dean/summaries/class-sections/'.$classSection->id.'/export';
+
+        $rowsHtml = '';
+        foreach ($data['questionRows'] as $row) {
+            $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
+            $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
+            $criteria = htmlspecialchars($row['text']);
+            $rowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+        }
+
+        $averageText = $data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-';
+        $averageRemark = htmlspecialchars($this->remarkFromAverage($data['overallAverage']));
+        $rowsHtml .= "<tr class=\"avg\"><td>AVERAGE</td><td class=\"right\">{$averageText}</td><td>{$averageRemark}</td></tr>";
+
+        $commentsHtml = '';
+        if ($data['comments'] === []) {
+            $commentsHtml = '<tr><td>No comments submitted.</td></tr>';
+        } else {
+            foreach ($data['comments'] as $comment) {
+                $commentsHtml .= '<tr><td>'.htmlspecialchars($comment).'</td></tr>';
+            }
+        }
+
+        return "<!doctype html>
+<html>
+<head>
+    <meta charset=\"utf-8\" />
+    <title>Evaluation Summary Preview</title>
+    <style>
+        body{font-family:Arial,sans-serif;background:#f3f3f3;margin:0;padding:0;color:#111}
+        .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;z-index:10}
+        .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
+        .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
+        .page{max-width:900px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        h1{margin:0;font-size:34px;line-height:1;color:#b06464;font-weight:800}
+        .sub{font-size:14px;color:#555;margin-top:4px}
+        .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
+        table{width:100%;border-collapse:collapse}
+        th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
+        th{background:#efefef;text-align:left}
+        .right{text-align:right}
+        .avg td{font-weight:700}
+        .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
+        .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
+        @media print{.toolbar{display:none}.page{box-shadow:none;margin:0;max-width:none}}
+    </style>
+</head>
+<body>
+    <div class=\"toolbar\">
+        <a class=\"btn primary\" href=\"{$baseExportUrl}?format=xlsx\">Download Excel</a>
+        <a class=\"btn\" href=\"{$baseExportUrl}?format=doc\">Download DOC</a>
+        <button class=\"btn\" onclick=\"window.print()\">Print</button>
+    </div>
+    <div class=\"page\">
+        <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
+        <div class=\"sub\">College of Computer Studies</div>
+        <div class=\"meta\">
+            <div>PERIOD : {$term} {$schoolYear}<br />NAME : {$faculty}</div>
+            <div>SUBJECT/S : {$subject}<br />EVALUATORS : {$data['respondents']} STUDENTS</div>
+        </div>
+
+        <div class=\"section-title\">STUDENT EVALUATION</div>
+        <table>
+            <thead>
+                <tr><th>CRITERIA</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+            </thead>
+            <tbody>{$rowsHtml}</tbody>
+        </table>
+
+        <div class=\"section-title\">COMMENTS</div>
+        <table><tbody>{$commentsHtml}</tbody></table>
+
+        <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
+    </div>
+</body>
+</html>";
+    }
+
+    /**
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     */
+    private function renderOverallPreviewHtml(array $data): string
+    {
+        $rowsHtml = '';
+        foreach ($data['classSections'] as $classSection) {
+            $summary = $data['summaryMap'][$classSection->id] ?? null;
+            $average = $summary?->overall_average !== null ? number_format((float) $summary->overall_average, 2) : '-';
+            $remarks = htmlspecialchars($this->remarkFromAverage($summary?->overall_average !== null ? (float) $summary->overall_average : null));
+            $subject = htmlspecialchars(($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? ''));
+            $faculty = htmlspecialchars((string) ($classSection->faculty?->name ?? ''));
+            $section = htmlspecialchars((string) ($classSection->section?->code ?? ''));
+            $term = htmlspecialchars((string) ($classSection->term ?? ''));
+            $sy = htmlspecialchars((string) ($classSection->school_year ?? ''));
+            $rowsHtml .= "<tr><td>{$subject}</td><td>{$faculty}</td><td>{$section}</td><td>{$term}</td><td>{$sy}</td><td class=\"right\">{$average}</td><td>{$remarks}</td></tr>";
+        }
+
+        $questionRowsHtml = '';
+        foreach ($data['overallQuestionRows'] as $row) {
+            $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
+            $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
+            $criteria = htmlspecialchars($row['text']);
+            $questionRowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+        }
+
+        return "<!doctype html>
+<html>
+<head>
+    <meta charset=\"utf-8\" />
+    <title>Overall Evaluation Summary Preview</title>
+    <style>
+        body{font-family:Arial,sans-serif;background:#f3f3f3;margin:0;padding:0;color:#111}
+        .toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;z-index:10}
+        .btn{display:inline-block;padding:8px 12px;border:1px solid #c8c8c8;background:#fff;text-decoration:none;color:#111;border-radius:6px;font-size:13px}
+        .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
+        .page{max-width:980px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        h1{margin:0;font-size:30px;line-height:1;color:#b06464;font-weight:800}
+        .sub{font-size:14px;color:#555;margin-top:4px}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
+        th{background:#efefef;text-align:left}
+        .right{text-align:right}
+        .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
+        .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
+        @media print{.toolbar{display:none}.page{box-shadow:none;margin:0;max-width:none}}
+    </style>
+</head>
+<body>
+    <div class=\"toolbar\">
+        <a class=\"btn primary\" href=\"/dean/summaries/export?format=xlsx\">Download Excel</a>
+        <a class=\"btn\" href=\"/dean/summaries/export?format=doc\">Download DOC</a>
+        <button class=\"btn\" onclick=\"window.print()\">Print</button>
+    </div>
+    <div class=\"page\">
+        <h1>UNIVERSITY OF PERPETUAL HELP SYSTEM DALTA</h1>
+        <div class=\"sub\">College of Computer Studies - Overall Evaluation Summary</div>
+
+        <div class=\"section-title\">CLASS EVALUATION SUMMARY</div>
+        <table>
+            <thead>
+                <tr><th>SUBJECT</th><th>FACULTY</th><th>SECTION</th><th>TERM</th><th>SCHOOL YEAR</th><th>AVERAGE</th><th>REMARKS</th></tr>
+            </thead>
+            <tbody>{$rowsHtml}</tbody>
+        </table>
+
+        <div class=\"section-title\">OVERALL QUESTION AVERAGES</div>
+        <table>
+            <thead>
+                <tr><th>CRITERIA</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+            </thead>
+            <tbody>{$questionRowsHtml}</tbody>
+        </table>
+
+        <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
+    </div>
+</body>
+</html>";
+    }
+
+    /**
+     * @param  array{classSection:ClassSection,respondents:int,overallAverage:float|null,questionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,comments:array<int, string>}  $data
+     */
+    private function renderClassDocHtml(array $data): string
+    {
+        return $this->renderClassPreviewHtml($data);
+    }
+
+    /**
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     */
+    private function renderOverallDocHtml(array $data): string
+    {
+        return $this->renderOverallPreviewHtml($data);
     }
 }

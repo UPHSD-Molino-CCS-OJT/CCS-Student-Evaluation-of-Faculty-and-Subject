@@ -72,6 +72,21 @@ test('dean staff and system admin can export overall summary', function (string 
     expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
+test('dean staff and system admin can preview overall summary', function (string $role) {
+    createClassSectionWithEvaluation();
+
+    $user = User::factory()->create([
+        'role' => $role,
+        'student_id' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('dean.summaries.preview-overall'));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'text/html; charset=UTF-8');
+    $response->assertSee('Overall Evaluation Summary', false);
+})->with(['dean', 'staff', 'system_admin']);
+
 test('dean staff and system admin can export class section summary', function (string $role) {
     $classSection = createClassSectionWithEvaluation();
 
@@ -90,6 +105,41 @@ test('dean staff and system admin can export class section summary', function (s
     expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
+test('dean staff and system admin can preview class section summary', function (string $role) {
+    $classSection = createClassSectionWithEvaluation();
+
+    $user = User::factory()->create([
+        'role' => $role,
+        'student_id' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('dean.summaries.preview-class-section', $classSection));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'text/html; charset=UTF-8');
+    $response->assertSee('STUDENT EVALUATION', false);
+})->with(['dean', 'staff', 'system_admin']);
+
+test('dean can export overall and class section as doc', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $overallResponse = $this->actingAs($dean)->get(route('dean.summaries.export-overall', ['format' => 'doc']));
+    $overallResponse->assertOk();
+    $overallResponse->assertHeader('content-type', 'application/msword');
+
+    $classResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'doc',
+    ]));
+    $classResponse->assertOk();
+    $classResponse->assertHeader('content-type', 'application/msword');
+});
+
 test('faculty cannot export dean summaries', function () {
     $classSection = createClassSectionWithEvaluation();
 
@@ -103,4 +153,10 @@ test('faculty cannot export dean summaries', function () {
 
     $classResponse = $this->actingAs($faculty)->get(route('dean.summaries.export-class-section', $classSection));
     $classResponse->assertForbidden();
+
+    $overallPreviewResponse = $this->actingAs($faculty)->get(route('dean.summaries.preview-overall'));
+    $overallPreviewResponse->assertForbidden();
+
+    $classPreviewResponse = $this->actingAs($faculty)->get(route('dean.summaries.preview-class-section', $classSection));
+    $classPreviewResponse->assertForbidden();
 });
