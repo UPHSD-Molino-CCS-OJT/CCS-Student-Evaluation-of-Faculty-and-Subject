@@ -9,7 +9,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::patch('settings/esign', [ProfileController::class, 'updateEsign'])->name('profile.esign.update');
+    Route::match(['patch', 'post'], 'settings/esign', [ProfileController::class, 'updateEsign'])->name('profile.esign.update');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -52,7 +52,7 @@ export default function Profile({
             return;
         }
 
-        router.patch(
+        router.post(
             '/settings/esign',
             { esign_image: esignFile },
             {
