@@ -130,7 +130,9 @@ class DeanEvaluationSummaryController extends Controller
             abort(403);
         }
 
-        if ($dean->esign_image_path === null || ! Storage::disk('public')->exists($dean->esign_image_path)) {
+        $deanEsignDataUri = $this->resolveUserEsignDataUri($dean);
+
+        if ($deanEsignDataUri === null) {
             return back()->withErrors([
                 'esign' => 'Upload your e-sign in Settings before signing a report.',
             ]);
@@ -150,6 +152,7 @@ class DeanEvaluationSummaryController extends Controller
             'dean_user_id' => $dean->id,
             'dean_signed_at' => now(),
             'dean_signature_path' => $dean->esign_image_path,
+            'dean_signature_data_uri' => $deanEsignDataUri,
         ]);
         $signoff->save();
 
@@ -539,11 +542,22 @@ class DeanEvaluationSummaryController extends Controller
         return [
             'facultySignedAt' => $signoff?->faculty_signed_at?->toDateTimeString(),
             'facultySignedBy' => $signoff?->facultySigner?->name,
-            'facultySignatureDataUri' => $this->signaturePathToDataUri($signoff?->faculty_signature_path),
+            'facultySignatureDataUri' => $signoff?->faculty_signature_data_uri
+                ?? $this->signaturePathToDataUri($signoff?->faculty_signature_path),
             'deanSignedAt' => $signoff?->dean_signed_at?->toDateTimeString(),
             'deanSignedBy' => $signoff?->deanSigner?->name,
-            'deanSignatureDataUri' => $this->signaturePathToDataUri($signoff?->dean_signature_path),
+            'deanSignatureDataUri' => $signoff?->dean_signature_data_uri
+                ?? $this->signaturePathToDataUri($signoff?->dean_signature_path),
         ];
+    }
+
+    private function resolveUserEsignDataUri(object $user): ?string
+    {
+        if (is_string($user->esign_image_data_uri ?? null) && $user->esign_image_data_uri !== '') {
+            return $user->esign_image_data_uri;
+        }
+
+        return $this->signaturePathToDataUri($user->esign_image_path ?? null);
     }
 
     private function signaturePathToDataUri(?string $path): ?string

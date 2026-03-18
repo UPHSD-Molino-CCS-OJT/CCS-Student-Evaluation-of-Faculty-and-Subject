@@ -18,9 +18,11 @@ class EvaluationReportSignoff extends Model
         'faculty_user_id',
         'faculty_signed_at',
         'faculty_signature_path',
+        'faculty_signature_data_uri',
         'dean_user_id',
         'dean_signed_at',
         'dean_signature_path',
+        'dean_signature_data_uri',
     ];
 
     /**

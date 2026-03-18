@@ -31,6 +31,7 @@ type Row = {
 type Props = {
     questions: Question[];
     rows: Row[];
+    hasDatabaseEsign: boolean;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -40,7 +41,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function FacultyReports({ questions, rows }: Props) {
+export default function FacultyReports({ questions, rows, hasDatabaseEsign }: Props) {
     const page = usePage();
     const [esignFile, setEsignFile] = useState<File | null>(null);
     const [isImportingEsign, setIsImportingEsign] = useState(false);
@@ -77,6 +78,15 @@ export default function FacultyReports({ questions, rows }: Props) {
                     <h1 className="text-xl font-semibold">Faculty View: Evaluation per Subject and Section</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         This report shows your average rating for each question and class assignment.
+                    </p>
+                    <p
+                        className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+                            hasDatabaseEsign
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : 'border-amber-200 bg-amber-50 text-amber-700'
+                        }`}
+                    >
+                        {hasDatabaseEsign ? 'E-sign saved in database' : 'E-sign not yet saved in database'}
                     </p>
                     <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
                         <p className="text-sm text-muted-foreground">

@@ -27,6 +27,8 @@ class User extends Authenticatable
         'password',
         'role',
         'esign_image_path',
+        'esign_image_data_uri',
+        'esign_image_hash',
     ];
 
     /**

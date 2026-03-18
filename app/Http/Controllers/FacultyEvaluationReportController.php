@@ -55,7 +55,7 @@ class FacultyEvaluationReportController extends Controller
                     : null,
                 'facultySignedAt' => $assignment->reportSignoff?->faculty_signed_at?->toDateTimeString(),
                 'deanSignedAt' => $assignment->reportSignoff?->dean_signed_at?->toDateTimeString(),
-                'canSign' => $faculty->esign_image_path !== null,
+                'canSign' => $this->resolveUserEsignDataUri($faculty) !== null,
                 'questionAverages' => ($questionMap->get($assignment->id) ?? collect())
                     ->map(fn ($row): array => [
                         'questionNumber' => (int) $row->question_number,
@@ -68,6 +68,7 @@ class FacultyEvaluationReportController extends Controller
         return Inertia::render('faculty/reports/index', [
             'questions' => config('evaluation.questions'),
             'rows' => $rows,
+            'hasDatabaseEsign' => $faculty->esign_image_data_uri !== null,
         ]);
     }
 
@@ -79,7 +80,9 @@ class FacultyEvaluationReportController extends Controller
             abort(403);
         }
 
-        if ($faculty->esign_image_path === null || ! Storage::disk('public')->exists($faculty->esign_image_path)) {
+        $facultyEsignDataUri = $this->resolveUserEsignDataUri($faculty);
+
+        if ($facultyEsignDataUri === null) {
             return back()->withErrors([
                 'esign' => 'Upload your e-sign in Settings before signing a report.',
             ]);
@@ -93,12 +96,39 @@ class FacultyEvaluationReportController extends Controller
             'faculty_user_id' => $faculty->id,
             'faculty_signed_at' => now(),
             'faculty_signature_path' => $faculty->esign_image_path,
+            'faculty_signature_data_uri' => $facultyEsignDataUri,
             'dean_user_id' => null,
             'dean_signed_at' => null,
             'dean_signature_path' => null,
+            'dean_signature_data_uri' => null,
         ]);
         $signoff->save();
 
         return back()->with('status', 'Report signed and submitted to dean.');
+    }
+
+    private function resolveUserEsignDataUri(object $user): ?string
+    {
+        if (is_string($user->esign_image_data_uri ?? null) && $user->esign_image_data_uri !== '') {
+            return $user->esign_image_data_uri;
+        }
+
+        if (! is_string($user->esign_image_path ?? null) || $user->esign_image_path === '') {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($user->esign_image_path)) {
+            return null;
+        }
+
+        $bytes = Storage::disk('public')->get($user->esign_image_path);
+
+        if ($bytes === '') {
+            return null;
+        }
+
+        $mimeType = Storage::disk('public')->mimeType($user->esign_image_path) ?: 'image/png';
+
+        return 'data:'.$mimeType.';base64,'.base64_encode($bytes);
     }
 }
