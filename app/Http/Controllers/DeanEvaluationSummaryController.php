@@ -102,6 +102,12 @@ class DeanEvaluationSummaryController extends Controller
             'template_file' => ['required', 'file', 'mimes:docx'],
         ]);
 
+        if (! class_exists(ZipArchive::class)) {
+            return back()->withErrors([
+                'template_file' => 'DOCX template import requires PHP zip extension (ZipArchive). Enable ext-zip on the server, then try again.',
+            ]);
+        }
+
         $templateFile = $payload['template_file'];
         $fragments = $this->extractHeaderFooterFromDocx($templateFile->getRealPath());
 
@@ -814,6 +820,15 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function extractHeaderFooterFromDocx(string $filePath): array
     {
+        if (! class_exists(ZipArchive::class)) {
+            return [
+                'header_html' => null,
+                'footer_html' => null,
+                'header_text' => null,
+                'footer_text' => null,
+            ];
+        }
+
         $zip = new ZipArchive();
         $openResult = $zip->open($filePath);
 
