@@ -82,7 +82,7 @@ Use two Railway services for production:
 - Build command:
 
 ```bash
-COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build
+COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build
 ```
 
 - Start command:
@@ -163,11 +163,11 @@ composer install
 - `phpoffice/phpspreadsheet` expects PHP `gd`. Install/enable `ext-gd` for production-like environments.
 - `phpoffice/phpspreadsheet` also expects PHP `zip` for full XLSX support.
 - DOCX header/footer template import also requires PHP `zip` (`ZipArchive`) at runtime. Without it, template import fails.
-- This repository includes Composer platform overrides for `ext-gd` and `ext-zip` so locked dependencies can still install in constrained CI images.
+- On Railpack/Nixpacks (Railway PHP runtime), declare required extensions in `composer.json` (`ext-gd`, `ext-zip`) so they are provisioned during build.
 - For build daemons, use:
 
 ```bash
-COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip
+COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction
 ```
 
 ## Useful Commands

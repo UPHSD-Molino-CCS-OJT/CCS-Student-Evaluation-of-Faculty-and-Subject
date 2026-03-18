@@ -1,6 +1,6 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build"
+buildCommand = "COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build"
 
 [deploy]
 preDeployCommand = ["php artisan migrate --force"]
