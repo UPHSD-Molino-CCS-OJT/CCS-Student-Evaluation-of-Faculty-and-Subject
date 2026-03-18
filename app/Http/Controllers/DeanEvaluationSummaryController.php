@@ -110,22 +110,24 @@ class DeanEvaluationSummaryController extends Controller
         ]);
     }
 
-    public function previewClassSection(ClassSection $classSection): HttpResponse
+    public function previewClassSection(ClassSection $classSection): StreamedResponse|HttpResponse
     {
-        $data = $this->buildClassSectionSummaryData($classSection);
-
-        return response($this->renderClassPreviewHtml($data), HttpResponse::HTTP_OK, [
-            'Content-Type' => 'text/html; charset=UTF-8',
+        $request = Request::create('/dean/summaries/class-sections/'.$classSection->id.'/export', 'GET', [
+            'format' => 'docx',
+            'disposition' => 'inline',
         ]);
+
+        return $this->exportClassSection($request, $classSection);
     }
 
-    public function previewOverall(): HttpResponse
+    public function previewOverall(): StreamedResponse|HttpResponse
     {
-        $data = $this->buildOverallSummaryData();
-
-        return response($this->renderOverallPreviewHtml($data), HttpResponse::HTTP_OK, [
-            'Content-Type' => 'text/html; charset=UTF-8',
+        $request = Request::create('/dean/summaries/export', 'GET', [
+            'format' => 'docx',
+            'disposition' => 'inline',
         ]);
+
+        return $this->exportOverall($request);
     }
 
     public function signClassSection(Request $request, ClassSection $classSection): RedirectResponse
@@ -636,9 +638,7 @@ class DeanEvaluationSummaryController extends Controller
 
     private function resolveExportFormat(Request $request): string
     {
-        $format = strtolower($request->query('format', 'xlsx'));
-
-        return in_array($format, ['xlsx', 'doc', 'docx', 'pdf'], true) ? $format : 'xlsx';
+        return 'docx';
     }
 
     /**
@@ -1511,8 +1511,7 @@ class DeanEvaluationSummaryController extends Controller
 </head>
 <body>
     <div class=\"toolbar\">
-        <a class=\"btn primary\" href=\"{$baseExportUrl}?format=xlsx\">Download Excel</a>
-        <a class=\"btn\" href=\"{$baseExportUrl}?format=doc\">Download DOC</a>
+        <a class=\"btn primary\" href=\"{$baseExportUrl}?format=docx\">Download DOCX</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
         <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
             <option value=\"header\">Header</option>
@@ -1651,8 +1650,7 @@ class DeanEvaluationSummaryController extends Controller
 </head>
 <body>
     <div class=\"toolbar\">
-        <a class=\"btn primary\" href=\"/dean/summaries/export?format=xlsx\">Download Excel</a>
-        <a class=\"btn\" href=\"/dean/summaries/export?format=doc\">Download DOC</a>
+        <a class=\"btn primary\" href=\"/dean/summaries/export?format=docx\">Download DOCX</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
         <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
             <option value=\"header\">Header</option>

@@ -51,8 +51,6 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
     const [isImporting, setIsImporting] = useState(false);
     const [isImportingTemplate, setIsImportingTemplate] = useState(false);
     const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
-    const [overallFormat, setOverallFormat] = useState<'xlsx' | 'doc' | 'docx' | 'pdf'>('xlsx');
-    const [classFormats, setClassFormats] = useState<Record<number, 'xlsx' | 'doc' | 'docx' | 'pdf'>>({});
 
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
@@ -107,10 +105,6 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         router.post(`/dean/summaries/class-sections/${classSectionId}/sign`, {}, { preserveScroll: true });
     };
 
-    const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' | 'docx' | 'pdf' => {
-        return classFormats[classSectionId] ?? 'xlsx';
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Summary" />
@@ -134,24 +128,19 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         <p className="text-sm text-muted-foreground">
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
-                        <select
-                            value={overallFormat}
-                            onChange={(event) => setOverallFormat(event.target.value as 'xlsx' | 'doc' | 'docx' | 'pdf')}
-                            className="h-9 rounded-md border bg-background px-3 text-sm"
+                        <a
+                            href="/dean/summaries/export?format=docx&disposition=inline"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex"
                         >
-                            <option value="xlsx">Excel (.xlsx)</option>
-                            <option value="doc">DOC (.doc)</option>
-                            <option value="docx">Word Template Clone (.docx)</option>
-                            <option value="pdf">PDF (.pdf)</option>
-                        </select>
-                        <a href="/dean/summaries/preview" target="_blank" rel="noreferrer" className="inline-flex">
                             <Button type="button" variant="outline">
-                                Preview Overall
+                                Preview Overall (DOCX)
                             </Button>
                         </a>
-                        <a href={`/dean/summaries/export?format=${overallFormat}`} className="inline-flex">
+                        <a href="/dean/summaries/export?format=docx" className="inline-flex">
                             <Button type="button" variant="outline">
-                                Download Overall Summary
+                                Download Overall Summary (DOCX)
                             </Button>
                         </a>
                     </div>
@@ -254,36 +243,21 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx&disposition=inline`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-flex"
                                         >
                                             <Button type="button" variant="outline" size="sm">
-                                                Preview
+                                                Preview DOCX
                                             </Button>
                                         </a>
-                                        <select
-                                            value={resolveClassFormat(row.classSectionId)}
-                                            onChange={(event) =>
-                                                setClassFormats((previous) => ({
-                                                    ...previous,
-                                                    [row.classSectionId]: event.target.value as 'xlsx' | 'doc' | 'docx' | 'pdf',
-                                                }))
-                                            }
-                                            className="h-8 rounded-md border bg-background px-2 text-xs"
-                                        >
-                                            <option value="xlsx">Excel</option>
-                                            <option value="doc">DOC</option>
-                                            <option value="docx">DOCX</option>
-                                            <option value="pdf">PDF</option>
-                                        </select>
                                         <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=${resolveClassFormat(row.classSectionId)}`}
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx`}
                                             className="inline-flex"
                                         >
                                             <Button type="button" variant="outline" size="sm">
-                                                Download
+                                                Download DOCX
                                             </Button>
                                         </a>
                                         <Button
