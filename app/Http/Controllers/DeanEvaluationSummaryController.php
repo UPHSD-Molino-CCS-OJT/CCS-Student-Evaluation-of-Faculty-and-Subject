@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -117,42 +118,19 @@ class DeanEvaluationSummaryController extends Controller
         ]);
 
         $templateFile = $payload['template_file'];
+
         try {
-            $fragments = $this->extractHeaderFooterFromDocx((string) $templateFile->getRealPath());
-        } catch (Throwable $exception) {
-            report($exception);
-
-            $errorMessage = 'Unable to read the uploaded DOCX template on this server. Ensure the file is a valid .docx and the PHP zip extension is enabled.';
-
-            if (str_contains($exception->getMessage(), 'zip extension is not available')) {
-                $errorMessage = 'DOCX import is not available on this Railway runtime because PHP zip (ZipArchive) is missing. Enable ext-zip in the deployment image or use Preview Edit mode to save header/footer manually.';
-            } elseif (str_contains($exception->getMessage(), 'Unable to open DOCX archive')) {
-                $errorMessage = 'The uploaded file could not be opened as a DOCX archive. Re-save it as Word .docx (not .doc or exported PDF) and try again.';
-            }
-
+            $parsedTemplate = $this->parseUploadedTemplateFile($templateFile);
+        } catch (RuntimeException $exception) {
             return back()->withErrors([
-                'template_file' => $errorMessage,
+                'template_file' => $exception->getMessage(),
             ]);
         }
 
-        $headerHtml = $fragments['header_html'] ?? null;
-        $footerHtml = $fragments['footer_html'] ?? null;
-        $headerText = $fragments['header_text'] ?? null;
-        $footerText = $fragments['footer_text'] ?? null;
-
-        if ($headerHtml === null && $footerHtml === null) {
-            return back()->withErrors([
-                'template_file' => 'No header/footer was found in the uploaded .docx template.',
-            ]);
-        }
-
-        $htmlLengthError = $this->validateTemplateFragmentLengths($headerHtml, $footerHtml, $headerText, $footerText);
-
-        if ($htmlLengthError !== null) {
-            return back()->withErrors([
-                'template_file' => $htmlLengthError,
-            ]);
-        }
+        $headerHtml = $parsedTemplate['header_html'];
+        $footerHtml = $parsedTemplate['footer_html'];
+        $headerText = $parsedTemplate['header_text'];
+        $footerText = $parsedTemplate['footer_text'];
 
         $template = ExportDocumentTemplate::current();
         $template->fill([
@@ -174,7 +152,7 @@ class DeanEvaluationSummaryController extends Controller
             ]);
         }
 
-        $imageCount = (int) ($fragments['header_image_count'] ?? 0) + (int) ($fragments['footer_image_count'] ?? 0);
+        $imageCount = $parsedTemplate['image_count'];
         $status = 'Template imported successfully and set as default for all previews and exports.';
 
         if ($imageCount > 0) {
@@ -182,6 +160,32 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return back()->with('status', $status);
+    }
+
+    public function previewTemplateImport(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'template_file' => ['required', 'file', 'mimes:docx'],
+        ]);
+
+        $templateFile = $payload['template_file'];
+
+        try {
+            $parsedTemplate = $this->parseUploadedTemplateFile($templateFile);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'header_html' => $parsedTemplate['header_html'],
+            'footer_html' => $parsedTemplate['footer_html'],
+            'header_text' => $parsedTemplate['header_text'],
+            'footer_text' => $parsedTemplate['footer_text'],
+            'source_filename' => $templateFile->getClientOriginalName(),
+            'image_count' => $parsedTemplate['image_count'],
+        ]);
     }
 
     public function storeTemplateManual(Request $request): JsonResponse
@@ -231,6 +235,55 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @return array{header_html:string|null,footer_html:string|null,header_text:string|null,footer_text:string|null,image_count:int}
+     */
+    private function parseUploadedTemplateFile(UploadedFile $templateFile): array
+    {
+        try {
+            $fragments = $this->extractHeaderFooterFromDocx((string) $templateFile->getRealPath());
+        } catch (Throwable $exception) {
+            report($exception);
+            throw new RuntimeException($this->templateReadErrorMessage($exception));
+        }
+
+        $headerHtml = $fragments['header_html'] ?? null;
+        $footerHtml = $fragments['footer_html'] ?? null;
+        $headerText = $fragments['header_text'] ?? null;
+        $footerText = $fragments['footer_text'] ?? null;
+
+        if ($headerHtml === null && $footerHtml === null) {
+            throw new RuntimeException('No header/footer was found in the uploaded .docx template.');
+        }
+
+        $htmlLengthError = $this->validateTemplateFragmentLengths($headerHtml, $footerHtml, $headerText, $footerText);
+
+        if ($htmlLengthError !== null) {
+            throw new RuntimeException($htmlLengthError);
+        }
+
+        return [
+            'header_html' => $headerHtml,
+            'footer_html' => $footerHtml,
+            'header_text' => $headerText,
+            'footer_text' => $footerText,
+            'image_count' => (int) ($fragments['header_image_count'] ?? 0) + (int) ($fragments['footer_image_count'] ?? 0),
+        ];
+    }
+
+    private function templateReadErrorMessage(Throwable $exception): string
+    {
+        $errorMessage = 'Unable to read the uploaded DOCX template on this server. Ensure the file is a valid .docx and the PHP zip extension is enabled.';
+
+        if (str_contains($exception->getMessage(), 'zip extension is not available')) {
+            $errorMessage = 'DOCX import is not available on this Railway runtime because PHP zip (ZipArchive) is missing. Enable ext-zip in the deployment image or use Preview Edit mode to save header/footer manually.';
+        } elseif (str_contains($exception->getMessage(), 'Unable to open DOCX archive')) {
+            $errorMessage = 'The uploaded file could not be opened as a DOCX archive. Re-save it as Word .docx (not .doc or exported PDF) and try again.';
+        }
+
+        return $errorMessage;
     }
 
     public function exportClassSection(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse

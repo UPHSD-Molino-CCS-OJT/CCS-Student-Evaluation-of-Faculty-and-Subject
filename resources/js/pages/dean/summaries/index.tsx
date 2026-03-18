@@ -36,6 +36,15 @@ type Props = {
     };
 };
 
+type TemplateImportPreview = {
+    header_html: string | null;
+    footer_html: string | null;
+    header_text: string | null;
+    footer_text: string | null;
+    source_filename: string;
+    image_count: number;
+};
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Dean Summary',
@@ -47,6 +56,9 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
     const page = usePage();
     const [file, setFile] = useState<File | null>(null);
     const [templateFile, setTemplateFile] = useState<File | null>(null);
+    const [templatePreview, setTemplatePreview] = useState<TemplateImportPreview | null>(null);
+    const [templatePreviewError, setTemplatePreviewError] = useState<string | null>(null);
+    const [isPreviewingTemplate, setIsPreviewingTemplate] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [isImportingTemplate, setIsImportingTemplate] = useState(false);
     const [isTogglingEvaluation, setIsTogglingEvaluation] = useState(false);
@@ -55,6 +67,10 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
 
     const status = (page.props as { flash?: { status?: string } }).flash?.status;
     const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
+
+    const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        ?.getAttribute('content');
 
     const toggleEvaluation = (nextState: boolean) => {
         router.patch(
@@ -100,6 +116,51 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
                 onFinish: () => setIsImportingTemplate(false),
             },
         );
+    };
+
+    const previewTemplateImport = async (selectedFile: File) => {
+        setIsPreviewingTemplate(true);
+        setTemplatePreviewError(null);
+        setTemplatePreview(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('template_file', selectedFile);
+
+            const response = await fetch('/dean/summaries/template/preview', {
+                method: 'POST',
+                headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken, Accept: 'application/json' } : { Accept: 'application/json' },
+                body: formData,
+            });
+
+            const payload = (await response.json()) as TemplateImportPreview | { message?: string };
+
+            if (!response.ok) {
+                const message = 'message' in payload && typeof payload.message === 'string'
+                    ? payload.message
+                    : 'Unable to preview this DOCX template.';
+                setTemplatePreviewError(message);
+                return;
+            }
+
+            setTemplatePreview(payload as TemplateImportPreview);
+        } catch {
+            setTemplatePreviewError('Unable to preview this DOCX template right now. Try again.');
+        } finally {
+            setIsPreviewingTemplate(false);
+        }
+    };
+
+    const handleTemplateFileChange = (selectedFile: File | null) => {
+        setTemplateFile(selectedFile);
+        setTemplatePreview(null);
+        setTemplatePreviewError(null);
+
+        if (!selectedFile) {
+            return;
+        }
+
+        void previewTemplateImport(selectedFile);
     };
 
     const resolveClassFormat = (classSectionId: number): 'xlsx' | 'doc' => {
@@ -179,9 +240,8 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
 
                     <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
                         <p className="text-sm text-muted-foreground">
-                            Import a DOCX template with header/footer. Exported preview, DOC, and Excel files will reuse
-                            the imported header and footer. If DOCX import fails, open Preview and use the Edit button
-                            to update and save header/footer directly.
+                            Import a DOCX template with header/footer. When you choose a DOCX file, it is automatically
+                            parsed and previewed below so you can check the output before applying it.
                         </p>
                         <p className="text-xs text-muted-foreground">
                             Default template:{' '}
@@ -194,12 +254,12 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
                             <input
                                 type="file"
                                 accept=".docx"
-                                onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)}
+                                onChange={(event) => handleTemplateFileChange(event.target.files?.[0] ?? null)}
                             />
                             <LoadingButton
                                 type="button"
                                 onClick={importTemplate}
-                                disabled={!templateFile}
+                                disabled={!templateFile || isPreviewingTemplate || !!templatePreviewError}
                                 loading={isImportingTemplate}
                                 loadingText="Importing template..."
                             >
@@ -207,6 +267,34 @@ export default function DeanSummaries({ questions, rows, evaluationOpen, current
                             </LoadingButton>
                         </div>
                         {errors.template_file && <p className="text-sm font-medium text-red-600">{errors.template_file}</p>}
+                        {isPreviewingTemplate && <p className="text-sm text-muted-foreground">Reading DOCX template preview...</p>}
+                        {templatePreviewError && <p className="text-sm font-medium text-red-600">{templatePreviewError}</p>}
+                        {templatePreview && (
+                            <div className="grid gap-3 rounded-md border bg-muted/20 p-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Preview loaded from: <span className="font-medium text-foreground">{templatePreview.source_filename}</span>
+                                    {templatePreview.image_count > 0
+                                        ? ` (images detected: ${templatePreview.image_count})`
+                                        : ' (no images detected)'}
+                                </p>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="rounded-md border bg-background p-3">
+                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Header Preview</p>
+                                        <div
+                                            className="text-sm"
+                                            dangerouslySetInnerHTML={{ __html: templatePreview.header_html ?? '<em>No header found.</em>' }}
+                                        />
+                                    </div>
+                                    <div className="rounded-md border bg-background p-3">
+                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Footer Preview</p>
+                                        <div
+                                            className="text-sm"
+                                            dangerouslySetInnerHTML={{ __html: templatePreview.footer_html ?? '<em>No footer found.</em>' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>

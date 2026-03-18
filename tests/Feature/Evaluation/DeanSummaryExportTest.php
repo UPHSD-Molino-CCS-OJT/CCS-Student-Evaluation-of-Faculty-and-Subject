@@ -265,6 +265,27 @@ test('dean can import docx template header and footer and they appear in doc exp
     $docResponse->assertSee('MY CUSTOM FOOTER', false);
 });
 
+test('dean can preview docx template import before saving', function () {
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $templateFile = createDocxTemplateUploadWithHeaderImage('PREVIEW HEADER', 'PREVIEW FOOTER');
+
+    $previewResponse = $this->actingAs($dean)->postJson(route('dean.summaries.template.preview'), [
+        'template_file' => $templateFile,
+    ]);
+
+    $previewResponse->assertOk();
+    $previewResponse->assertJsonPath('source_filename', 'template-with-image.docx');
+    $previewResponse->assertJsonPath('image_count', 1);
+    $previewResponse->assertJsonPath('header_text', 'PREVIEW HEADER');
+    $previewResponse->assertJsonPath('footer_text', 'PREVIEW FOOTER');
+    $previewResponse->assertJson(fn ($json) => $json->whereType('header_html', ['string', 'null'])->etc());
+    $previewResponse->assertJson(fn ($json) => $json->whereType('footer_html', ['string', 'null'])->etc());
+});
+
 test('dean can import docx template header image and it appears in doc export', function () {
     $classSection = createClassSectionWithEvaluation();
 
