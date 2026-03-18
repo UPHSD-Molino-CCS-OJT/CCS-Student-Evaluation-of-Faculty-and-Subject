@@ -237,6 +237,28 @@ test('dean can export overall and class section as doc', function () {
     $classResponse->assertHeader('content-type', 'application/msword');
 });
 
+test('dean can export overall and class section as pdf', function () {
+    $classSection = createClassSectionWithEvaluation();
+
+    $dean = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $overallResponse = $this->actingAs($dean)->get(route('dean.summaries.export-overall', ['format' => 'pdf']));
+    $overallResponse->assertOk();
+    $overallResponse->assertHeader('content-type', 'application/pdf');
+    $overallResponse->assertHeader('content-disposition');
+
+    $classResponse = $this->actingAs($dean)->get(route('dean.summaries.export-class-section', [
+        'classSection' => $classSection,
+        'format' => 'pdf',
+    ]));
+    $classResponse->assertOk();
+    $classResponse->assertHeader('content-type', 'application/pdf');
+    $classResponse->assertHeader('content-disposition');
+});
+
 test('dean can import docx template header and footer and they appear in doc export', function () {
     $classSection = createClassSectionWithEvaluation();
 

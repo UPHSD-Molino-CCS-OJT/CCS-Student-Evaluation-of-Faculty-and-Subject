@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Word\WordDocumentCloner;
 use App\Models\ClassSection;
 use App\Models\Evaluation;
@@ -326,6 +327,18 @@ class DeanEvaluationSummaryController extends Controller
             ]);
         }
 
+        if ($format === 'pdf') {
+            $fileName = sprintf(
+                'evaluation-summary-%s-%s.pdf',
+                $data['classSection']->subject?->code ?? 'subject',
+                now()->format('Ymd-His')
+            );
+
+            return Pdf::loadHTML($this->renderClassDocHtml($data))
+                ->setPaper('a4', 'portrait')
+                ->download($fileName);
+        }
+
         $fileName = sprintf(
             'evaluation-summary-%s-%s.xlsx',
             $data['classSection']->subject?->code ?? 'subject',
@@ -379,6 +392,14 @@ class DeanEvaluationSummaryController extends Controller
                 'Content-Type' => 'application/msword',
                 'Content-Disposition' => 'attachment; filename='.$fileName,
             ]);
+        }
+
+        if ($format === 'pdf') {
+            $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.pdf';
+
+            return Pdf::loadHTML($this->renderOverallDocHtml($data))
+                ->setPaper('a4', 'landscape')
+                ->download($fileName);
         }
 
         $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.xlsx';
@@ -521,7 +542,7 @@ class DeanEvaluationSummaryController extends Controller
     {
         $format = strtolower($request->query('format', 'xlsx'));
 
-        return in_array($format, ['xlsx', 'doc', 'docx'], true) ? $format : 'xlsx';
+        return in_array($format, ['xlsx', 'doc', 'docx', 'pdf'], true) ? $format : 'xlsx';
     }
 
     /**
