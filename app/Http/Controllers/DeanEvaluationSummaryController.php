@@ -741,7 +741,7 @@ class DeanEvaluationSummaryController extends Controller
             ? '<div class="print-header">'.$templateHeader.'</div>'
             : '';
         $printFooterHtml = $usePrintFixedHeaderFooter
-            ? '<div class="print-footer">'.$templateFooter.'<div class="footer">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div></div>'
+            ? '<div class="print-footer">'.$templateFooter.'</div>'
             : '';
 
         $rowsHtml = '';
@@ -778,15 +778,14 @@ class DeanEvaluationSummaryController extends Controller
         .print-header,.print-footer{display:none}
         .page{max-width:900px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
         .meta{display:flex;justify-content:space-between;margin:16px 0 18px;font-size:13px}
-        .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
-        .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
+        .template-fragment{border:0;padding:0;margin:0;background:transparent;font-size:inherit}
+        .template-fragment img{display:block;margin:0}
         table{width:100%;border-collapse:collapse}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
         .right{text-align:right}
         .avg td{font-weight:700}
         .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
-        .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -830,7 +829,6 @@ class DeanEvaluationSummaryController extends Controller
         <table><tbody>{$commentsHtml}</tbody></table>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
-        <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
     <script>
         window.previewEditorConfig = {
@@ -855,7 +853,7 @@ class DeanEvaluationSummaryController extends Controller
             ? '<div class="print-header">'.$templateHeader.'</div>'
             : '';
         $printFooterHtml = $usePrintFixedHeaderFooter
-            ? '<div class="print-footer">'.$templateFooter.'<div class="footer">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div></div>'
+            ? '<div class="print-footer">'.$templateFooter.'</div>'
             : '';
 
         $rowsHtml = '';
@@ -891,14 +889,13 @@ class DeanEvaluationSummaryController extends Controller
         .btn.primary{background:#8e5757;color:#fff;border-color:#8e5757}
         .print-header,.print-footer{display:none}
         .page{max-width:980px;margin:20px auto;background:#fff;padding:24px 28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-        .template-fragment{border:1px dashed #b8b8b8;padding:8px 10px;margin-bottom:10px;font-size:12px;background:#fafafa}
-        .template-fragment img{max-height:96px;max-width:100%;display:block;margin:0 0 6px}
+        .template-fragment{border:0;padding:0;margin:0;background:transparent;font-size:inherit}
+        .template-fragment img{display:block;margin:0}
         table{width:100%;border-collapse:collapse;margin-top:10px}
         th,td{border:1px solid #111;padding:6px 8px;font-size:12px;vertical-align:top}
         th{background:#efefef;text-align:left}
         .right{text-align:right}
         .section-title{margin:14px 0 6px;font-size:13px;font-weight:700}
-        .footer{margin-top:22px;padding-top:8px;border-top:2px solid #b06464;color:#666;text-align:center;font-size:11px}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -943,7 +940,6 @@ class DeanEvaluationSummaryController extends Controller
         </table>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>
-        <div class=\"footer\">Salawag-Zapote Road, Molino 3, City of Bacoor, 4102 Philippines • Tel. No.: (046) 477-0602<br />www.perpetualdalta.edu.ph Molino Campus</div>
     </div>
     <script>
         window.previewEditorConfig = {
