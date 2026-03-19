@@ -818,7 +818,7 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
-            $this->buildWordTableXml(['Signed By', 'Signature', 'Signed At'], $signoffRows);
+            $this->buildWordTableXml(['Signed By', 'Signature', 'Date'], $signoffRows);
     }
 
     /**
@@ -975,7 +975,7 @@ class DeanEvaluationSummaryController extends Controller
         $columnCount = max(1, count($headers));
         $colWidth = max(1200, (int) floor(9000 / $columnCount));
         $normalizedHeaders = array_map(static fn (string $header): string => strtolower(trim($header)), $headers);
-        $signedAtColumnIndex = array_search('signed at', $normalizedHeaders, true);
+        $signedAtColumnIndex = array_search('date', $normalizedHeaders, true);
         $signatureColumnIndex = array_search('signature', $normalizedHeaders, true);
 
         $gridCols = '';
@@ -988,7 +988,7 @@ class DeanEvaluationSummaryController extends Controller
             $alignment = 'left';
 
             if ($signedAtColumnIndex !== false && $index === $signedAtColumnIndex) {
-                $alignment = 'right';
+                $alignment = 'center';
             }
 
             if ($signatureColumnIndex !== false && $index === $signatureColumnIndex) {
@@ -1005,7 +1005,7 @@ class DeanEvaluationSummaryController extends Controller
                 $alignment = 'left';
 
                 if ($signedAtColumnIndex !== false && $index === $signedAtColumnIndex) {
-                    $alignment = 'right';
+                    $alignment = 'center';
                 }
 
                 if ($signatureColumnIndex !== false && $index === $signatureColumnIndex) {
@@ -1573,7 +1573,7 @@ class DeanEvaluationSummaryController extends Controller
         .esign-image{display:block;max-height:64px;max-width:100%;margin:0 auto 8px}
         .esign-placeholder{font-size:12px;color:#6b7280;border:1px dashed #d1d5db;border-radius:8px;padding:10px;margin-bottom:8px}
         .signature-cell{text-align:center}
-        .signed-at-cell{text-align:right}
+        .signed-at-cell{text-align:center}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1631,7 +1631,7 @@ class DeanEvaluationSummaryController extends Controller
             <div class=\"section-title\">E-Signatures</div>
             <table class=\"modern-table\">
                 <thead>
-                    <tr><th style=\"width:220px\">Signed By</th><th>Signature</th><th style=\"width:180px\">Signed At</th></tr>
+                    <tr><th style=\"width:220px\">Signed By</th><th>Signature</th><th style=\"width:180px\">Date</th></tr>
                 </thead>
                 <tbody>
                     <tr>
