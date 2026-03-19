@@ -69,8 +69,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/summaries/export', [DeanEvaluationSummaryController::class, 'exportOverall'])
             ->name('dean.summaries.export-overall');
 
+        Route::get('dean/summaries/export/pdf-office', [DeanEvaluationSummaryController::class, 'downloadOverallPdfOffice'])
+            ->name('dean.summaries.export-overall-pdf-office');
+
         Route::get('dean/summaries/class-sections/{classSection}/export', [DeanEvaluationSummaryController::class, 'exportClassSection'])
             ->name('dean.summaries.export-class-section');
+
+        Route::get('dean/summaries/class-sections/{classSection}/export/pdf-office', [DeanEvaluationSummaryController::class, 'downloadClassSectionPdfOffice'])
+            ->name('dean.summaries.export-class-section-pdf-office');
 
         Route::get('dean/summaries/class-sections/{classSection}/preview', [DeanEvaluationSummaryController::class, 'previewClassSection'])
             ->name('dean.summaries.preview-class-section');

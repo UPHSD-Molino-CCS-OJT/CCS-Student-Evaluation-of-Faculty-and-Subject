@@ -174,6 +174,43 @@ class DeanEvaluationSummaryController extends Controller
         return $this->exportOverall($exportRequest);
     }
 
+    public function downloadClassSectionPdfOffice(ClassSection $classSection): RedirectResponse|StreamedResponse|HttpResponse
+    {
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-class-section.docx-source',
+            now()->addMinutes(10),
+            ['classSection' => $classSection->id],
+        );
+
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $request = Request::create('/dean/summaries/class-sections/'.$classSection->id.'/export', 'GET', [
+                'format' => 'pdf',
+            ]);
+
+            return $this->exportClassSection($request, $classSection);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/view.aspx?src='.rawurlencode($sourceUrl));
+    }
+
+    public function downloadOverallPdfOffice(): RedirectResponse|StreamedResponse|HttpResponse
+    {
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-overall.docx-source',
+            now()->addMinutes(10),
+        );
+
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $request = Request::create('/dean/summaries/export', 'GET', [
+                'format' => 'pdf',
+            ]);
+
+            return $this->exportOverall($request);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/view.aspx?src='.rawurlencode($sourceUrl));
+    }
+
     public function signClassSection(Request $request, ClassSection $classSection): RedirectResponse
     {
         $dean = $request->user();
