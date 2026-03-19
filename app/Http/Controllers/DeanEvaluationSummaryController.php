@@ -752,14 +752,14 @@ class DeanEvaluationSummaryController extends Controller
         $signoffRows = [
             [
                 $data['signoff']['facultySignedBy'] ?? 'Faculty (not signed)',
-                $data['signoff']['facultySignedAt'] ?? 'Pending',
+                $this->formatSignedAtDate($data['signoff']['facultySignedAt']),
                 $data['signoff']['facultySignatureDataUri'] !== null
                     ? self::DOCX_FACULTY_SIGNATURE_TOKEN
                     : 'No signature',
             ],
             [
                 $data['signoff']['deanSignedBy'] ?? 'Dean (not signed)',
-                $data['signoff']['deanSignedAt'] ?? 'Pending',
+                $this->formatSignedAtDate($data['signoff']['deanSignedAt']),
                 $data['signoff']['deanSignatureDataUri'] !== null
                     ? self::DOCX_DEAN_SIGNATURE_TOKEN
                     : 'No signature',
@@ -975,11 +975,30 @@ class DeanEvaluationSummaryController extends Controller
     {
         $escaped = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $runProps = $bold ? '<w:rPr><w:b/></w:rPr>' : '';
+        $isSignatureCell = str_contains($text, self::DOCX_FACULTY_SIGNATURE_TOKEN)
+            || str_contains($text, self::DOCX_DEAN_SIGNATURE_TOKEN)
+            || $text === 'No signature';
+        $paragraphProps = $isSignatureCell ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : '';
 
         return '<w:tc>'
             .'<w:tcPr><w:tcW w:w="'.$widthDxa.'" w:type="dxa"/></w:tcPr>'
-            .'<w:p><w:r>'.$runProps.'<w:t xml:space="preserve">'.$escaped.'</w:t></w:r></w:p>'
+            .'<w:p>'.$paragraphProps.'<w:r>'.$runProps.'<w:t xml:space="preserve">'.$escaped.'</w:t></w:r></w:p>'
             .'</w:tc>';
+    }
+
+    private function formatSignedAtDate(?string $signedAt): string
+    {
+        if (! is_string($signedAt) || trim($signedAt) === '') {
+            return 'Pending';
+        }
+
+        $timestamp = strtotime($signedAt);
+
+        if ($timestamp === false) {
+            return 'Pending';
+        }
+
+        return date('F j, Y', $timestamp);
     }
 
     private function streamDocxFile(string $filePath, string $fileName, bool $inline): StreamedResponse
@@ -1435,13 +1454,9 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         $facultySignedBy = htmlspecialchars((string) ($data['signoff']['facultySignedBy'] ?? 'Not signed'));
-        $facultySignedAt = $data['signoff']['facultySignedAt'] !== null
-            ? htmlspecialchars((string) $data['signoff']['facultySignedAt'])
-            : 'Pending';
+        $facultySignedAt = htmlspecialchars($this->formatSignedAtDate($data['signoff']['facultySignedAt']));
         $deanSignedBy = htmlspecialchars((string) ($data['signoff']['deanSignedBy'] ?? 'Not signed'));
-        $deanSignedAt = $data['signoff']['deanSignedAt'] !== null
-            ? htmlspecialchars((string) $data['signoff']['deanSignedAt'])
-            : 'Pending';
+        $deanSignedAt = htmlspecialchars($this->formatSignedAtDate($data['signoff']['deanSignedAt']));
 
         $facultySignatureImage = $data['signoff']['facultySignatureDataUri'] !== null
             ? '<img class="esign-image" src="'.htmlspecialchars($data['signoff']['facultySignatureDataUri']).'" alt="Faculty e-sign" />'
@@ -1482,8 +1497,9 @@ class DeanEvaluationSummaryController extends Controller
         .esign-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
         .esign-card{border:1px solid #d1d5db;border-radius:10px;background:#fff;padding:10px}
         .esign-meta{font-size:12px;color:#374151;line-height:1.5}
-        .esign-image{display:block;max-height:64px;max-width:100%;margin:0 0 8px}
+        .esign-image{display:block;max-height:64px;max-width:100%;margin:0 auto 8px}
         .esign-placeholder{font-size:12px;color:#6b7280;border:1px dashed #d1d5db;border-radius:8px;padding:10px;margin-bottom:8px}
+        .signature-cell{text-align:center}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1547,12 +1563,12 @@ class DeanEvaluationSummaryController extends Controller
                     <tr>
                         <td>{$facultySignedBy}</td>
                         <td>{$facultySignedAt}</td>
-                        <td>{$facultySignatureImage}</td>
+                        <td class=\"signature-cell\">{$facultySignatureImage}</td>
                     </tr>
                     <tr>
                         <td>{$deanSignedBy}</td>
                         <td>{$deanSignedAt}</td>
-                        <td>{$deanSignatureImage}</td>
+                        <td class=\"signature-cell\">{$deanSignatureImage}</td>
                     </tr>
                 </tbody>
             </table>
