@@ -672,13 +672,14 @@ class DeanEvaluationSummaryController extends Controller
      * @return array{
      *   classSections:array<int, ClassSection>,
      *   summaryMap:array<int, object>,
-     *   overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>
+     *   overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,
+     *   overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>
      * }
      */
     private function buildOverallSummaryData(): array
     {
         $classSections = ClassSection::query()
-            ->with(['subject', 'section', 'faculty'])
+            ->with(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name'])
             ->get();
 
         $summaryMap = ClassSection::query()
@@ -710,10 +711,37 @@ class DeanEvaluationSummaryController extends Controller
             ];
         })->values()->all();
 
+        $overallSignoffRows = [];
+        foreach ($classSections as $classSection) {
+            $subjectLabel = trim((string) (($classSection->subject?->code ?? '').' '.($classSection->section?->code ?? '')));
+            $reportSignoff = $classSection->reportSignoff;
+
+            $facultyName = $reportSignoff?->facultySigner?->name;
+            $overallSignoffRows[] = [
+                'signedBy' => $facultyName !== null && $facultyName !== ''
+                    ? 'Faculty - '.$facultyName.($subjectLabel !== '' ? ' ('.$subjectLabel.')' : '')
+                    : 'Faculty (not signed)'.($subjectLabel !== '' ? ' - '.$subjectLabel : ''),
+                'signatureDataUri' => $reportSignoff?->faculty_signature_data_uri
+                    ?? $this->signaturePathToDataUri($reportSignoff?->faculty_signature_path),
+                'signedAt' => $reportSignoff?->faculty_signed_at?->toDateTimeString(),
+            ];
+
+            $deanName = $reportSignoff?->deanSigner?->name;
+            $overallSignoffRows[] = [
+                'signedBy' => $deanName !== null && $deanName !== ''
+                    ? 'Dean - '.$deanName.($subjectLabel !== '' ? ' ('.$subjectLabel.')' : '')
+                    : 'Dean (not signed)'.($subjectLabel !== '' ? ' - '.$subjectLabel : ''),
+                'signatureDataUri' => $reportSignoff?->dean_signature_data_uri
+                    ?? $this->signaturePathToDataUri($reportSignoff?->dean_signature_path),
+                'signedAt' => $reportSignoff?->dean_signed_at?->toDateTimeString(),
+            ];
+        }
+
         return [
             'classSections' => $classSections->all(),
             'summaryMap' => $summaryMap->all(),
             'overallQuestionRows' => $overallQuestionRows,
+            'overallSignoffRows' => $overallSignoffRows,
         ];
     }
 
@@ -765,7 +793,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>}  $data
      */
     private function exportOverallDocx(array $data, bool $inline = false): StreamedResponse|HttpResponse
     {
@@ -788,7 +816,12 @@ class DeanEvaluationSummaryController extends Controller
         @rename($tempOutput, $outputPath);
 
         $cloner = app(WordDocumentCloner::class);
-        $cloner->cloneWithBodyXml($templatePath, $outputPath, $this->buildOverallWordBodyXml($data));
+        $cloner->cloneWithBodyXmlAndMedia(
+            $templatePath,
+            $outputPath,
+            $this->buildOverallWordBodyXml($data),
+            $this->buildOverallDocxSignatureMediaMap($data['overallSignoffRows']),
+        );
 
         $fileName = 'evaluation-summary-overall-'.now()->format('Ymd-His').'.docx';
 
@@ -936,7 +969,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>}  $data
      */
     private function buildOverallWordBodyXml(array $data): string
     {
@@ -965,12 +998,58 @@ class DeanEvaluationSummaryController extends Controller
             ];
         }
 
+        $signoffRows = [];
+        foreach ($data['overallSignoffRows'] as $index => $row) {
+            $signoffRows[] = [
+                (string) $row['signedBy'],
+                $row['signatureDataUri'] !== null
+                    ? $this->buildOverallDocxSignatureToken($index)
+                    : 'No signature',
+                $this->formatSignedAtDate($row['signedAt']),
+            ];
+        }
+
+        if ($signoffRows === []) {
+            $signoffRows[] = ['No signatures yet', 'No signature', '-'];
+        }
+
         return
             $this->buildWordHeadingParagraphXml('OVERALL EVALUATION SUMMARY').
             $this->buildWordHeadingParagraphXml('CLASS EVALUATION SUMMARY').
             $this->buildWordTableXml(['Subject', 'Faculty', 'Section', 'Term', 'School Year', 'Average', 'Remarks'], $classRows).
             $this->buildWordHeadingParagraphXml('OVERALL QUESTION AVERAGES').
-            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $questionRows);
+            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $questionRows).
+            $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
+            $this->buildWordTableXml(['Signed By', 'Signature', 'Date'], $signoffRows);
+    }
+
+    /**
+     * @param  array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>  $overallSignoffRows
+     * @return array<string, array{bytes:string,extension:string,mimeType:string}>
+     */
+    private function buildOverallDocxSignatureMediaMap(array $overallSignoffRows): array
+    {
+        $media = [];
+
+        foreach ($overallSignoffRows as $index => $row) {
+            if ($row['signatureDataUri'] === null) {
+                continue;
+            }
+
+            $image = $this->decodeSignatureDataUriForDocx($row['signatureDataUri']);
+            if ($image === null) {
+                continue;
+            }
+
+            $media[$this->buildOverallDocxSignatureToken($index)] = $image;
+        }
+
+        return $media;
+    }
+
+    private function buildOverallDocxSignatureToken(int $index): string
+    {
+        return '__OVERALL_SIGNATURE_IMAGE_'.($index + 1).'__';
     }
 
     /**
@@ -1628,6 +1707,7 @@ class DeanEvaluationSummaryController extends Controller
 <body>
     <div class=\"toolbar\">
         <a class=\"btn primary\" href=\"{$baseExportUrl}?format=docx\">Download DOCX</a>
+        <a class=\"btn\" href=\"/dean/summaries/class-sections/{$classSection->id}/export/pdf-office\">PDF Download (Office)</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
         <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
             <option value=\"header\">Header</option>
@@ -1701,7 +1781,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>}  $data
      */
     private function renderOverallPreviewHtml(array $data, bool $usePrintFixedHeaderFooter = true): string
     {
@@ -1736,6 +1816,21 @@ class DeanEvaluationSummaryController extends Controller
             $questionRowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
         }
 
+        $signoffRowsHtml = '';
+        if ($data['overallSignoffRows'] === []) {
+            $signoffRowsHtml = '<tr><td>No signatures yet</td><td class="signature-cell"><div class="esign-placeholder">No signature</div></td><td class="signed-at-cell">-</td></tr>';
+        } else {
+            foreach ($data['overallSignoffRows'] as $row) {
+                $signedBy = htmlspecialchars($row['signedBy']);
+                $signedAt = htmlspecialchars($this->formatSignedAtDate($row['signedAt']));
+                $signatureCell = $row['signatureDataUri'] !== null
+                    ? '<img class="esign-image" src="'.htmlspecialchars($row['signatureDataUri']).'" alt="E-sign" />'
+                    : '<div class="esign-placeholder">No signature</div>';
+
+                $signoffRowsHtml .= "<tr><td>{$signedBy}</td><td class=\"signature-cell\">{$signatureCell}</td><td class=\"signed-at-cell\">{$signedAt}</td></tr>";
+            }
+        }
+
         return "<!doctype html>
 <html>
 <head>
@@ -1759,6 +1854,10 @@ class DeanEvaluationSummaryController extends Controller
         .modern-table tbody tr:nth-child(even){background:#fafafa}
         .right{text-align:right}
         .section-title{margin:14px 0 8px;font-size:13px;font-weight:700;color:#1f2937}
+        .esign-image{display:block;max-height:64px;max-width:100%;margin:0 auto}
+        .esign-placeholder{font-size:12px;color:#6b7280;border:1px dashed #d1d5db;border-radius:8px;padding:10px;margin:0 auto;text-align:center}
+        .signature-cell{text-align:center}
+        .signed-at-cell{text-align:center}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1774,6 +1873,7 @@ class DeanEvaluationSummaryController extends Controller
 <body>
     <div class=\"toolbar\">
         <a class=\"btn primary\" href=\"/dean/summaries/export?format=docx\">Download DOCX</a>
+        <a class=\"btn\" href=\"/dean/summaries/export/pdf-office\">PDF Download (Office)</a>
         <button id=\"toggle-edit\" class=\"btn\" type=\"button\">Edit</button>
         <select id=\"template-target-region\" class=\"btn\" style=\"display:none\" aria-label=\"Template region\">
             <option value=\"header\">Header</option>
@@ -1809,6 +1909,14 @@ class DeanEvaluationSummaryController extends Controller
                     <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
                 </thead>
                 <tbody>{$questionRowsHtml}</tbody>
+            </table>
+
+            <div class=\"section-title\">E-Signatures</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th style=\"width:320px\">Signed By</th><th>Signature</th><th style=\"width:180px\">Date</th></tr>
+                </thead>
+                <tbody>{$signoffRowsHtml}</tbody>
             </table>
         </div>
 
@@ -2452,7 +2560,7 @@ class DeanEvaluationSummaryController extends Controller
     }
 
     /**
-     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>}  $data
+     * @param  array{classSections:array<int, ClassSection>,summaryMap:array<int, object>,overallQuestionRows:array<int, array{number:int,category:string,text:string,average:float|null}>,overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>}  $data
      */
     private function renderOverallDocHtml(array $data): string
     {
