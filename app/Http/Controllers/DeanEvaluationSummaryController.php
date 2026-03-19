@@ -47,7 +47,7 @@ class DeanEvaluationSummaryController extends Controller
     public function index(): Response
     {
         $classSections = ClassSection::query()
-            ->with(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name'])
+                ->with(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name'])
             ->get();
 
         $questionMap = EvaluationResponse::query()
@@ -751,23 +751,20 @@ class DeanEvaluationSummaryController extends Controller
 
         $signoffRows = [
             [
-                'Signed by',
                 $data['signoff']['facultySignedBy'] ?? 'Faculty (not signed)',
                 $data['signoff']['facultySignedAt'] ?? 'Pending',
+                $data['signoff']['facultySignatureDataUri'] !== null
+                    ? self::DOCX_FACULTY_SIGNATURE_TOKEN
+                    : 'No signature',
             ],
             [
-                'Signed by',
                 $data['signoff']['deanSignedBy'] ?? 'Dean (not signed)',
                 $data['signoff']['deanSignedAt'] ?? 'Pending',
+                $data['signoff']['deanSignatureDataUri'] !== null
+                    ? self::DOCX_DEAN_SIGNATURE_TOKEN
+                    : 'No signature',
             ],
         ];
-
-        $facultySignatureTokenOrFallback = $data['signoff']['facultySignatureDataUri'] !== null
-            ? self::DOCX_FACULTY_SIGNATURE_TOKEN
-            : 'No faculty e-sign yet';
-        $deanSignatureTokenOrFallback = $data['signoff']['deanSignatureDataUri'] !== null
-            ? self::DOCX_DEAN_SIGNATURE_TOKEN
-            : 'No dean e-sign yet';
 
         return
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION SUMMARY').
@@ -777,17 +774,7 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
-            $this->buildWordTableXml(['Label', 'Name', 'Signed At'], $signoffRows).
-            $this->buildWordHeadingParagraphXml('E-SIGN IMAGES').
-            $this->buildWordParagraphXmlFromLines([
-                'Signed by',
-                (string) ($data['signoff']['facultySignedBy'] ?? 'Faculty'),
-                $facultySignatureTokenOrFallback,
-                '',
-                'Signed by',
-                (string) ($data['signoff']['deanSignedBy'] ?? 'Dean'),
-                $deanSignatureTokenOrFallback,
-            ]);
+            $this->buildWordTableXml(['Signed By', 'Signed At', 'Signature'], $signoffRows);
     }
 
     /**
@@ -1552,16 +1539,23 @@ class DeanEvaluationSummaryController extends Controller
             <table class=\"modern-table\"><tbody>{$commentsHtml}</tbody></table>
 
             <div class=\"section-title\">E-Signatures</div>
-            <div class=\"esign-grid\">
-                <div class=\"esign-card\">
-                    {$facultySignatureImage}
-                    <div class=\"esign-meta\"><strong>Signed by</strong><br />{$facultySignedBy}<br /><strong>Signed At:</strong> {$facultySignedAt}</div>
-                </div>
-                <div class=\"esign-card\">
-                    {$deanSignatureImage}
-                    <div class=\"esign-meta\"><strong>Signed by</strong><br />{$deanSignedBy}<br /><strong>Signed At:</strong> {$deanSignedAt}</div>
-                </div>
-            </div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th style=\"width:220px\">Signed By</th><th style=\"width:180px\">Signed At</th><th>Signature</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{$facultySignedBy}</td>
+                        <td>{$facultySignedAt}</td>
+                        <td>{$facultySignatureImage}</td>
+                    </tr>
+                    <tr>
+                        <td>{$deanSignedBy}</td>
+                        <td>{$deanSignedAt}</td>
+                        <td>{$deanSignatureImage}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <div class=\"template-region\" data-template-region=\"footer\">{$templateFooter}</div>

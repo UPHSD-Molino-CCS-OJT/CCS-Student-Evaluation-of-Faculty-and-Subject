@@ -247,7 +247,11 @@ class WordDocumentCloner
         $rIdByToken = $this->appendDocumentImageRelationships($documentRelsXml, $mediaByToken, $existingEntryNames, $mediaEntries);
 
         foreach ($rIdByToken as $token => $relationshipId) {
-            $bodyXmlFragment = str_replace($token, $this->buildWordDrawingXml($relationshipId), $bodyXmlFragment);
+            $drawingXml = $this->buildWordDrawingXml($relationshipId);
+            $tokenPattern = preg_quote($token, '/');
+            $runPattern = '/<w:r>\s*<w:t(?:\s+xml:space="preserve")?>'.$tokenPattern.'<\/w:t>\s*<\/w:r>/';
+            $bodyXmlFragment = preg_replace($runPattern, $drawingXml, $bodyXmlFragment) ?? $bodyXmlFragment;
+            $bodyXmlFragment = str_replace($token, $drawingXml, $bodyXmlFragment);
         }
 
         return [$bodyXmlFragment, $documentRelsXml, $mediaEntries];
