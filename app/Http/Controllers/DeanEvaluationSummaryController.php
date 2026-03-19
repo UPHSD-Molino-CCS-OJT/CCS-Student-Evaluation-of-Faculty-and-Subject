@@ -111,7 +111,7 @@ class DeanEvaluationSummaryController extends Controller
         ]);
     }
 
-    public function previewClassSection(ClassSection $classSection): StreamedResponse|HttpResponse
+    public function previewClassSection(ClassSection $classSection): StreamedResponse|HttpResponse|RedirectResponse
     {
         $sourceUrl = URL::temporarySignedRoute(
             'dean.summaries.preview-class-section.docx-source',
@@ -131,7 +131,7 @@ class DeanEvaluationSummaryController extends Controller
         return redirect()->away('https://view.officeapps.live.com/op/embed.aspx?src='.rawurlencode($sourceUrl));
     }
 
-    public function previewOverall(): StreamedResponse|HttpResponse
+    public function previewOverall(): StreamedResponse|HttpResponse|RedirectResponse
     {
         $sourceUrl = URL::temporarySignedRoute(
             'dean.summaries.preview-overall.docx-source',
