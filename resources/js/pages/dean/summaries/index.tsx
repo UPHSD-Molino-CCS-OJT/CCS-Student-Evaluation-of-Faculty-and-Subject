@@ -129,7 +129,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             Status: <span className="font-medium">{evaluationOpen ? 'Open' : 'Closed'}</span>
                         </p>
                         <a
-                            href="/dean/summaries/export?format=docx&disposition=inline"
+                            href="/dean/summaries/preview"
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex"
@@ -243,7 +243,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx&disposition=inline`}
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-flex"

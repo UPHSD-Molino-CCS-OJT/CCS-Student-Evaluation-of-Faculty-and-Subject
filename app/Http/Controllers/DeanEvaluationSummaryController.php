@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -112,22 +113,65 @@ class DeanEvaluationSummaryController extends Controller
 
     public function previewClassSection(ClassSection $classSection): StreamedResponse|HttpResponse
     {
-        $request = Request::create('/dean/summaries/class-sections/'.$classSection->id.'/export', 'GET', [
-            'format' => 'docx',
-            'disposition' => 'inline',
-        ]);
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-class-section.docx-source',
+            now()->addMinutes(10),
+            ['classSection' => $classSection->id],
+        );
 
-        return $this->exportClassSection($request, $classSection);
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $request = Request::create('/dean/summaries/class-sections/'.$classSection->id.'/export', 'GET', [
+                'format' => 'docx',
+                'disposition' => 'inline',
+            ]);
+
+            return $this->exportClassSection($request, $classSection);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/embed.aspx?src='.rawurlencode($sourceUrl));
     }
 
     public function previewOverall(): StreamedResponse|HttpResponse
     {
-        $request = Request::create('/dean/summaries/export', 'GET', [
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-overall.docx-source',
+            now()->addMinutes(10),
+        );
+
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $request = Request::create('/dean/summaries/export', 'GET', [
+                'format' => 'docx',
+                'disposition' => 'inline',
+            ]);
+
+            return $this->exportOverall($request);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/embed.aspx?src='.rawurlencode($sourceUrl));
+    }
+
+    public function previewClassSectionDocxSource(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
+    {
+        abort_unless($request->hasValidSignature(), 403);
+
+        $exportRequest = Request::create('/dean/summaries/class-sections/'.$classSection->id.'/export', 'GET', [
             'format' => 'docx',
             'disposition' => 'inline',
         ]);
 
-        return $this->exportOverall($request);
+        return $this->exportClassSection($exportRequest, $classSection);
+    }
+
+    public function previewOverallDocxSource(Request $request): StreamedResponse|HttpResponse
+    {
+        abort_unless($request->hasValidSignature(), 403);
+
+        $exportRequest = Request::create('/dean/summaries/export', 'GET', [
+            'format' => 'docx',
+            'disposition' => 'inline',
+        ]);
+
+        return $this->exportOverall($exportRequest);
     }
 
     public function signClassSection(Request $request, ClassSection $classSection): RedirectResponse
@@ -752,17 +796,17 @@ class DeanEvaluationSummaryController extends Controller
         $signoffRows = [
             [
                 $data['signoff']['facultySignedBy'] ?? 'Faculty (not signed)',
-                $this->formatSignedAtDate($data['signoff']['facultySignedAt']),
                 $data['signoff']['facultySignatureDataUri'] !== null
                     ? self::DOCX_FACULTY_SIGNATURE_TOKEN
                     : 'No signature',
+                $this->formatSignedAtDate($data['signoff']['facultySignedAt']),
             ],
             [
                 $data['signoff']['deanSignedBy'] ?? 'Dean (not signed)',
-                $this->formatSignedAtDate($data['signoff']['deanSignedAt']),
                 $data['signoff']['deanSignatureDataUri'] !== null
                     ? self::DOCX_DEAN_SIGNATURE_TOKEN
                     : 'No signature',
+                $this->formatSignedAtDate($data['signoff']['deanSignedAt']),
             ],
         ];
 
@@ -774,7 +818,7 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
-            $this->buildWordTableXml(['Signed By', 'Signed At', 'Signature'], $signoffRows);
+            $this->buildWordTableXml(['Signed By', 'Signature', 'Signed At'], $signoffRows);
     }
 
     /**
@@ -930,6 +974,9 @@ class DeanEvaluationSummaryController extends Controller
     {
         $columnCount = max(1, count($headers));
         $colWidth = max(1200, (int) floor(9000 / $columnCount));
+        $normalizedHeaders = array_map(static fn (string $header): string => strtolower(trim($header)), $headers);
+        $signedAtColumnIndex = array_search('signed at', $normalizedHeaders, true);
+        $signatureColumnIndex = array_search('signature', $normalizedHeaders, true);
 
         $gridCols = '';
         for ($i = 0; $i < $columnCount; $i++) {
@@ -937,15 +984,35 @@ class DeanEvaluationSummaryController extends Controller
         }
 
         $headerCells = '';
-        foreach ($headers as $header) {
-            $headerCells .= $this->buildWordTableCellXml($header, $colWidth, true);
+        foreach ($headers as $index => $header) {
+            $alignment = 'left';
+
+            if ($signedAtColumnIndex !== false && $index === $signedAtColumnIndex) {
+                $alignment = 'right';
+            }
+
+            if ($signatureColumnIndex !== false && $index === $signatureColumnIndex) {
+                $alignment = 'center';
+            }
+
+            $headerCells .= $this->buildWordTableCellXml($header, $colWidth, true, $alignment);
         }
 
         $bodyRows = '';
         foreach ($rows as $row) {
             $cells = '';
             for ($index = 0; $index < $columnCount; $index++) {
-                $cells .= $this->buildWordTableCellXml((string) ($row[$index] ?? ''), $colWidth, false);
+                $alignment = 'left';
+
+                if ($signedAtColumnIndex !== false && $index === $signedAtColumnIndex) {
+                    $alignment = 'right';
+                }
+
+                if ($signatureColumnIndex !== false && $index === $signatureColumnIndex) {
+                    $alignment = 'center';
+                }
+
+                $cells .= $this->buildWordTableCellXml((string) ($row[$index] ?? ''), $colWidth, false, $alignment);
             }
 
             $bodyRows .= '<w:tr>'.$cells.'</w:tr>';
@@ -971,14 +1038,20 @@ class DeanEvaluationSummaryController extends Controller
             .'</w:tbl>';
     }
 
-    private function buildWordTableCellXml(string $text, int $widthDxa, bool $bold): string
+    private function buildWordTableCellXml(string $text, int $widthDxa, bool $bold, string $alignment = 'left'): string
     {
         $escaped = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $runProps = $bold ? '<w:rPr><w:b/></w:rPr>' : '';
         $isSignatureCell = str_contains($text, self::DOCX_FACULTY_SIGNATURE_TOKEN)
             || str_contains($text, self::DOCX_DEAN_SIGNATURE_TOKEN)
             || $text === 'No signature';
-        $paragraphProps = $isSignatureCell ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : '';
+        if ($isSignatureCell) {
+            $alignment = 'center';
+        }
+
+        $paragraphProps = $alignment !== 'left'
+            ? '<w:pPr><w:jc w:val="'.$alignment.'"/></w:pPr>'
+            : '';
 
         return '<w:tc>'
             .'<w:tcPr><w:tcW w:w="'.$widthDxa.'" w:type="dxa"/></w:tcPr>'
@@ -1500,6 +1573,7 @@ class DeanEvaluationSummaryController extends Controller
         .esign-image{display:block;max-height:64px;max-width:100%;margin:0 auto 8px}
         .esign-placeholder{font-size:12px;color:#6b7280;border:1px dashed #d1d5db;border-radius:8px;padding:10px;margin-bottom:8px}
         .signature-cell{text-align:center}
+        .signed-at-cell{text-align:right}
         @media print{
             body{background:#fff}
             .toolbar{display:none}
@@ -1557,18 +1631,18 @@ class DeanEvaluationSummaryController extends Controller
             <div class=\"section-title\">E-Signatures</div>
             <table class=\"modern-table\">
                 <thead>
-                    <tr><th style=\"width:220px\">Signed By</th><th style=\"width:180px\">Signed At</th><th>Signature</th></tr>
+                    <tr><th style=\"width:220px\">Signed By</th><th>Signature</th><th style=\"width:180px\">Signed At</th></tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>{$facultySignedBy}</td>
-                        <td>{$facultySignedAt}</td>
                         <td class=\"signature-cell\">{$facultySignatureImage}</td>
+                        <td class=\"signed-at-cell\">{$facultySignedAt}</td>
                     </tr>
                     <tr>
                         <td>{$deanSignedBy}</td>
-                        <td>{$deanSignedAt}</td>
                         <td class=\"signature-cell\">{$deanSignatureImage}</td>
+                        <td class=\"signed-at-cell\">{$deanSignedAt}</td>
                     </tr>
                 </tbody>
             </table>

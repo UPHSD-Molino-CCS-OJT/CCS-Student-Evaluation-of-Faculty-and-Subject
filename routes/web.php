@@ -107,4 +107,12 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
+Route::get('dean/summaries/export/preview-docx-source', [DeanEvaluationSummaryController::class, 'previewOverallDocxSource'])
+    ->middleware('signed')
+    ->name('dean.summaries.preview-overall.docx-source');
+
+Route::get('dean/summaries/class-sections/{classSection}/export/preview-docx-source', [DeanEvaluationSummaryController::class, 'previewClassSectionDocxSource'])
+    ->middleware('signed')
+    ->name('dean.summaries.preview-class-section.docx-source');
+
 require __DIR__.'/settings.php';
