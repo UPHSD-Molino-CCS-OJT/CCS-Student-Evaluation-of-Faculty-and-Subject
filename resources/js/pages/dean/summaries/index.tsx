@@ -135,12 +135,17 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             className="inline-flex"
                         >
                             <Button type="button" variant="outline">
-                                Preview Overall (DOCX)
+                                Preview
                             </Button>
                         </a>
                         <a href="/dean/summaries/export?format=docx" className="inline-flex">
                             <Button type="button" variant="outline">
                                 Download Overall Summary (DOCX)
+                            </Button>
+                        </a>
+                        <a href="/dean/summaries/export?format=pdf" className="inline-flex">
+                            <Button type="button" variant="outline">
+                                Download Overall Summary (PDF)
                             </Button>
                         </a>
                     </div>
@@ -249,7 +254,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                             className="inline-flex"
                                         >
                                             <Button type="button" variant="outline" size="sm">
-                                                Preview DOCX
+                                                Preview
                                             </Button>
                                         </a>
                                         <a
@@ -258,6 +263,14 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                         >
                                             <Button type="button" variant="outline" size="sm">
                                                 Download DOCX
+                                            </Button>
+                                        </a>
+                                        <a
+                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=pdf`}
+                                            className="inline-flex"
+                                        >
+                                            <Button type="button" variant="outline" size="sm">
+                                                Download PDF
                                             </Button>
                                         </a>
                                         <Button

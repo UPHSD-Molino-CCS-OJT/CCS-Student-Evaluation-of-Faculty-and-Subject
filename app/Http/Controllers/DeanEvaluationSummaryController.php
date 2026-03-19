@@ -682,7 +682,9 @@ class DeanEvaluationSummaryController extends Controller
 
     private function resolveExportFormat(Request $request): string
     {
-        return 'docx';
+        $format = strtolower((string) $request->query('format', 'docx'));
+
+        return in_array($format, ['docx', 'pdf'], true) ? $format : 'docx';
     }
 
     /**
