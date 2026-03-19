@@ -712,30 +712,45 @@ class DeanEvaluationSummaryController extends Controller
         })->values()->all();
 
         $overallSignoffRows = [];
+        $deanSignoffRow = null;
+        $deanSignedAtTimestamp = null;
+
         foreach ($classSections as $classSection) {
-            $subjectLabel = trim((string) (($classSection->subject?->code ?? '').' '.($classSection->section?->code ?? '')));
             $reportSignoff = $classSection->reportSignoff;
 
-            $facultyName = $reportSignoff?->facultySigner?->name;
+            $facultyName = trim((string) ($reportSignoff?->facultySigner?->name ?? $classSection->faculty?->name ?? ''));
             $overallSignoffRows[] = [
-                'signedBy' => $facultyName !== null && $facultyName !== ''
-                    ? 'Faculty - '.$facultyName.($subjectLabel !== '' ? ' ('.$subjectLabel.')' : '')
-                    : 'Faculty (not signed)'.($subjectLabel !== '' ? ' - '.$subjectLabel : ''),
+                'signedBy' => $facultyName !== '' ? $facultyName : 'Faculty (not signed)',
                 'signatureDataUri' => $reportSignoff?->faculty_signature_data_uri
                     ?? $this->signaturePathToDataUri($reportSignoff?->faculty_signature_path),
                 'signedAt' => $reportSignoff?->faculty_signed_at?->toDateTimeString(),
             ];
 
-            $deanName = $reportSignoff?->deanSigner?->name;
-            $overallSignoffRows[] = [
-                'signedBy' => $deanName !== null && $deanName !== ''
-                    ? 'Dean - '.$deanName.($subjectLabel !== '' ? ' ('.$subjectLabel.')' : '')
-                    : 'Dean (not signed)'.($subjectLabel !== '' ? ' - '.$subjectLabel : ''),
-                'signatureDataUri' => $reportSignoff?->dean_signature_data_uri
-                    ?? $this->signaturePathToDataUri($reportSignoff?->dean_signature_path),
-                'signedAt' => $reportSignoff?->dean_signed_at?->toDateTimeString(),
+            $candidateSignedAt = $reportSignoff?->dean_signed_at?->toDateTimeString();
+            $candidateTimestamp = $candidateSignedAt !== null ? strtotime($candidateSignedAt) : false;
+
+            if ($candidateTimestamp !== false
+                && ($deanSignedAtTimestamp === null || $candidateTimestamp > $deanSignedAtTimestamp)) {
+                $deanSignedAtTimestamp = $candidateTimestamp;
+                $deanName = trim((string) ($reportSignoff?->deanSigner?->name ?? ''));
+                $deanSignoffRow = [
+                    'signedBy' => $deanName !== '' ? $deanName : 'Dean',
+                    'signatureDataUri' => $reportSignoff?->dean_signature_data_uri
+                        ?? $this->signaturePathToDataUri($reportSignoff?->dean_signature_path),
+                    'signedAt' => $candidateSignedAt,
+                ];
+            }
+        }
+
+        if ($deanSignoffRow === null) {
+            $deanSignoffRow = [
+                'signedBy' => 'Dean (not signed)',
+                'signatureDataUri' => null,
+                'signedAt' => null,
             ];
         }
+
+        $overallSignoffRows[] = $deanSignoffRow;
 
         return [
             'classSections' => $classSections->all(),
