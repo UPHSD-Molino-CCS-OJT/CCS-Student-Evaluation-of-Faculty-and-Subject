@@ -2,6 +2,8 @@
 
 A Laravel 12 + Inertia React web application for student evaluation of faculty and subjects.
 
+Last updated: 2026-03-19
+
 ## Tech Stack
 
 - Backend: Laravel 12, PHP 8.2+
@@ -19,11 +21,24 @@ A Laravel 12 + Inertia React web application for student evaluation of faculty a
 - 25-question evaluation form with 1 to 5 rating legend
 - Faculty view:
   - Evaluation results per subject and section
-  - Question-level averages and overall average
+  - Question-level averages, overall average, and e-sign submission
 - Dean view:
-  - Summary per subject, faculty, and section
-  - Question-level averages and respondent counts
+  - Summary per subject, faculty, and section with signoff tracking
+  - Question-level averages, respondent counts, and template-based exports
+  - Export actions: Preview, Download DOCX, Download PDF
 - Role-based routing and dashboard redirection
+- E-sign management:
+  - Upload/update/remove e-sign in Settings (`PNG/JPG/JPEG/WebP`, up to 2 MB)
+  - E-sign is stored and reused for report signoff snapshots
+
+## Latest Updates
+
+- Dean preview now uses short-lived signed DOCX source URLs and Office Web Viewer (`op/embed`) when HTTPS is available.
+- PDF download is available through Office Viewer (`op/view`) with local fallback to server-rendered PDF.
+- Export format resolver now supports `docx` and `pdf` (default: `docx`).
+- Template workflow supports both DOCX import and manual header/footer save from the preview editor.
+- Signature persistence is DB-backed (`users.esign_image_data_uri` and signoff snapshot data URI columns), and signatures are rendered in report signoff tables.
+- Required PHP extensions are declared in `composer.json`: `ext-gd` and `ext-zip`.
 
 ## Roles
 
@@ -42,6 +57,12 @@ composer install
 npm install
 ```
 
+Optional one-command bootstrap:
+
+```bash
+composer run setup
+```
+
 2. Create environment file and app key
 
 ```bash
@@ -55,13 +76,19 @@ php artisan key:generate
 php artisan migrate:fresh --seed
 ```
 
-4. Generate Wayfinder files (routes/actions TS helpers)
+4. Link storage for uploaded assets (e-sign files and other public uploads)
+
+```bash
+php artisan storage:link
+```
+
+5. Generate Wayfinder files (routes/actions TS helpers)
 
 ```bash
 php artisan wayfinder:generate
 ```
 
-5. Start development servers
+6. Start development servers
 
 ```bash
 composer run dev
@@ -106,6 +133,7 @@ Set these in Railway service variables:
 - `CACHE_STORE=database`
 - `QUEUE_CONNECTION=database` (or `sync` if you do not run a worker service)
 - `SESSION_SECURE_COOKIE=true`
+- `LOG_CHANNEL=stack`
 
 ### 3) Create the `worker` service (recommended)
 
@@ -118,19 +146,22 @@ php artisan queue:work --tries=1 --timeout=0
 
 ### 4) First deploy notes
 
-- `npm run build` now generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
+- `npm run build` generates Wayfinder route files before Vite build, so deploys do not depend on generated files being committed.
 - If Railway build fails with `EBUSY: resource busy or locked, rmdir '/app/node_modules/.cache'`, use `npm install` (not `npm ci`) in the build command.
 - If deployment cache is stale, trigger a clear rebuild in Railway and redeploy.
 - If you see `Vite manifest not found at /app/public/build/manifest.json`, your deploy skipped frontend build. This repo includes `railway.toml` to force `npm run build` during Railway builds.
 - Railway config-as-code files are `railway.toml` or `railway.json` (not `railpack.toml`).
+- DOCX template import and DOCX media cloning require PHP `zip` (`ZipArchive`) at runtime.
+- DOCX signature image conversion and spreadsheet drawing paths require PHP `gd`.
 
 ## Seeded Demo Accounts
 
 See `database/seeders/DatabaseSeeder.php` for current values. Default accounts include:
 
 - Student:
-  - Login: seeded `student_id` value
-  - Password: same as seeded `student_id`
+  - Student ID: `1-2345-678`
+  - Email: `cantara.michaelangelo@gmail.com`
+  - Password: same as student ID (`1-2345-678`)
 - Faculty:
   - Emails: `ada.faculty@example.com`, `alan.faculty@example.com`
   - Password: `password`
@@ -147,6 +178,8 @@ See `database/seeders/DatabaseSeeder.php` for current values. Default accounts i
 ## Important Notes
 
 - The root path `/` redirects to login for guests and dashboard for authenticated users.
+- Dean export preview/docx-source endpoints are signed routes and expire automatically.
+- Dean summary export supports only `docx` and `pdf` formats (default: `docx`).
 - If you see frontend import errors like `Cannot find module '@/routes'`, run:
 
 ```bash
