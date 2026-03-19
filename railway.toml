@@ -1,19 +1,9 @@
 [build]
-builder = "NIXPACKS"
+builder = "RAILPACK"
+buildCommand = "COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts && (rm -rf node_modules/.cache || true) && npm install --include=dev --no-audit --no-fund && npm run build"
 
 [deploy]
-startCommand = "npm run build && npm start"
+preDeployCommand = ["php artisan migrate --force"]
+startCommand = "php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-
-[[deploy.healthcheckPath]]
-path = "/api/health"
-
-[deploy.healthcheckTimeout]
-value = 300
-
-# Railway Volume configuration
-# Create volume in Railway dashboard: railway volume create signatures-storage --mount /data/uploads
-# The volume will persist across deployments
-[volumes]
-mount_path = "/data/uploads"
