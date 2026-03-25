@@ -22,13 +22,13 @@ export default function StudentEvaluationAlreadySubmitted({ subject }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Evaluation Submitted" />
-            <div className="mx-auto mt-10 max-w-2xl rounded-xl border p-6">
-                <h1 className="text-xl font-semibold">Evaluation already submitted</h1>
+            <div className="mx-auto mt-6 max-w-2xl rounded-xl border p-4 sm:mt-10 sm:p-6">
+                <h1 className="text-lg font-semibold sm:text-xl">Evaluation already submitted</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                     You have already submitted your evaluation for <span className="font-medium">{subject}</span>.
                 </p>
                 <div className="mt-6">
-                    <Button asChild>
+                    <Button asChild className="w-full sm:w-auto">
                         <Link href="/student/evaluations">Back to dashboard</Link>
                     </Button>
                 </div>

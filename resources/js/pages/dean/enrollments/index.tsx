@@ -133,15 +133,15 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Enrollments" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Enrollment Management</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Enrollment Management</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Enroll students in a class offering by semester, school year, section, subject, and faculty.
                     </p>
                 </div>
 
-                <section className="rounded-xl border p-4">
+                <section className="rounded-xl border p-3 sm:p-4">
                     <h2 className="font-semibold">{editingEnrollmentId === null ? 'Add Enrollment' : 'Edit Enrollment'}</h2>
 
                     <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -263,29 +263,29 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
                         <table className="min-w-full divide-y divide-border text-sm">
                             <thead className="bg-muted/30 text-left">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Student</th>
-                                    <th className="px-4 py-3 font-medium">Student Number</th>
-                                    <th className="px-4 py-3 font-medium">Subject</th>
-                                    <th className="px-4 py-3 font-medium">Program</th>
-                                    <th className="px-4 py-3 font-medium">Faculty</th>
-                                    <th className="px-4 py-3 font-medium">Section</th>
-                                    <th className="px-4 py-3 font-medium">Semester</th>
-                                    <th className="px-4 py-3 font-medium">School Year</th>
-                                    <th className="px-4 py-3 font-medium">Actions</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Student</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Student Number</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Subject</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Program</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Faculty</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Section</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Semester</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">School Year</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {enrollments.map((row) => (
                                     <tr key={row.id}>
-                                        <td className="px-4 py-3">{row.studentName ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.studentNumber ?? '-'}</td>
-                                        <td className="px-4 py-3">{[row.subjectCode, row.subjectTitle].filter(Boolean).join(' - ') || '-'}</td>
-                                        <td className="px-4 py-3">{row.program ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.facultyName ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.section ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.term ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.schoolYear ?? '-'}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-3 sm:px-4">{row.studentName ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.studentNumber ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{[row.subjectCode, row.subjectTitle].filter(Boolean).join(' - ') || '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.program ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.facultyName ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.section ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.term ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.schoolYear ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">
                                             <div className="flex gap-2">
                                                 <button
                                                     type="button"
@@ -307,7 +307,7 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
                                 ))}
                                 {enrollments.length === 0 && (
                                     <tr>
-                                        <td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">
+                                        <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground sm:px-4">
                                             No enrollments found.
                                         </td>
                                     </tr>

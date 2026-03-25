@@ -88,15 +88,15 @@ export default function DeanManagementIndex({ deans }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Management" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Dean Management</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Dean Management</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         System admins and staff can add, edit, and remove dean accounts.
                     </p>
                 </div>
 
-                <section className="rounded-xl border p-4">
+                <section className="rounded-xl border p-3 sm:p-4">
                     <h2 className="font-semibold">{editingId === null ? 'Add Dean Account' : 'Edit Dean Account'}</h2>
 
                     <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -137,7 +137,7 @@ export default function DeanManagementIndex({ deans }: Props) {
                         </label>
                     </fieldset>
 
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
                         <LoadingButton type="button" onClick={submit} loading={isSubmitting} loadingText="Saving...">
                             {editingId === null ? 'Add Dean' : 'Save Changes'}
                         </LoadingButton>
@@ -151,7 +151,7 @@ export default function DeanManagementIndex({ deans }: Props) {
                 </section>
 
                 <section className="overflow-hidden rounded-xl border">
-                    <div className="border-b bg-muted/30 px-4 py-3">
+                    <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
                         <h2 className="font-semibold">Current Dean Accounts</h2>
                     </div>
 
@@ -159,17 +159,17 @@ export default function DeanManagementIndex({ deans }: Props) {
                         <table className="min-w-full divide-y divide-border text-sm">
                             <thead className="bg-muted/30 text-left">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Name</th>
-                                    <th className="px-4 py-3 font-medium">Email</th>
-                                    <th className="px-4 py-3 font-medium">Actions</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Name</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Email</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {deans.map((dean) => (
                                     <tr key={dean.id}>
-                                        <td className="px-4 py-3">{dean.name}</td>
-                                        <td className="px-4 py-3">{dean.email}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-3 sm:px-4">{dean.name}</td>
+                                        <td className="px-3 py-3 sm:px-4">{dean.email}</td>
+                                        <td className="px-3 py-3 sm:px-4">
                                             <div className="flex gap-2">
                                                 <button
                                                     type="button"
@@ -191,7 +191,7 @@ export default function DeanManagementIndex({ deans }: Props) {
                                 ))}
                                 {deans.length === 0 && (
                                     <tr>
-                                        <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                                        <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground sm:px-4">
                                             No dean accounts found.
                                         </td>
                                     </tr>

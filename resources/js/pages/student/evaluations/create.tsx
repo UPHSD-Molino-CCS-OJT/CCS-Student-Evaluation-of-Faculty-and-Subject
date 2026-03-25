@@ -73,9 +73,9 @@ export default function StudentEvaluationCreate({ classSection, legend, question
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Evaluate Subject" />
 
-            <div className="mx-auto max-w-5xl space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Evaluation Form</h1>
+            <div className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Evaluation Form</h1>
                     <p className="mt-1 text-sm text-muted-foreground">{classSection.subject}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Faculty: {classSection.faculty} | Section: {classSection.section}
@@ -85,7 +85,7 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                     </p>
                 </div>
 
-                <div className="rounded-xl border p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
                     <h2 className="text-sm font-semibold">Rating Legend</h2>
                     <div className="mt-3 grid gap-2 text-sm sm:grid-cols-5">
                         {legend.map((item) => (
@@ -97,9 +97,9 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                     </div>
                 </div>
 
-                <form onSubmit={submit} className="space-y-5">
+                <form onSubmit={submit} className="space-y-4 sm:space-y-5">
                     {Object.entries(groupedQuestions).map(([category, categoryQuestions]) => (
-                        <section key={category} className="rounded-xl border p-4">
+                        <section key={category} className="rounded-xl border p-3 sm:p-4">
                             <h2 className="text-base font-semibold">{category}</h2>
                             <div className="mt-4 space-y-5">
                                 {categoryQuestions.map((question) => (
@@ -136,7 +136,7 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                         </section>
                     ))}
 
-                    <section className="rounded-xl border p-4">
+                    <section className="rounded-xl border p-3 sm:p-4">
                         <Label htmlFor="comments">Optional comments</Label>
                         <textarea
                             id="comments"
@@ -149,8 +149,8 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                         <InputError message={errors.comments} />
                     </section>
 
-                    <div className="flex items-center justify-between rounded-xl border p-4">
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                        <p className="text-sm text-muted-foreground sm:text-left">
                             {unansweredCount > 0 ? `${unansweredCount} question(s) unanswered` : 'All questions answered'}
                         </p>
                         <LoadingButton
@@ -158,6 +158,7 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                             disabled={unansweredCount > 0}
                             loading={processing}
                             loadingText="Submitting..."
+                            className="w-full sm:w-auto"
                         >
                             Submit Evaluation
                         </LoadingButton>

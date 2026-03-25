@@ -103,16 +103,16 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Courses per Program" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Courses per Program</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Courses per Program</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         View all imported courses grouped by program, including semester and curriculum year.
                     </p>
                 </div>
 
                 {canManage && (
-                    <section className="rounded-xl border p-4">
+                    <section className="rounded-xl border p-3 sm:p-4">
                         <h2 className="font-semibold">{editingId === null ? 'Add Course' : 'Edit Course'}</h2>
 
                         <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -225,20 +225,20 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                                         <table className="min-w-full divide-y divide-border text-sm">
                                             <thead className="bg-muted/30 text-left">
                                                 <tr>
-                                                    <th className="px-4 py-3 font-medium">Code</th>
-                                                    <th className="px-4 py-3 font-medium">Course Name</th>
-                                                    <th className="px-4 py-3 font-medium">Semester Offered</th>
-                                                    {canManage && <th className="px-4 py-3 font-medium">Actions</th>}
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Code</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Course Name</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Semester Offered</th>
+                                                                {canManage && <th className="px-3 py-3 font-medium sm:px-4">Actions</th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
                                                 {curriculumGroup.subjects.map((subject) => (
                                                     <tr key={subject.id}>
-                                                        <td className="px-4 py-3 font-medium">{subject.code}</td>
-                                                        <td className="px-4 py-3">{subject.title}</td>
-                                                        <td className="px-4 py-3">{subject.semesterOffered ?? '-'}</td>
+                                                                    <td className="px-3 py-3 font-medium sm:px-4">{subject.code}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.title}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.semesterOffered ?? '-'}</td>
                                                         {canManage && (
-                                                            <td className="px-4 py-3">
+                                                                        <td className="px-3 py-3 sm:px-4">
                                                                 <div className="flex gap-2">
                                                                     <button
                                                                         type="button"

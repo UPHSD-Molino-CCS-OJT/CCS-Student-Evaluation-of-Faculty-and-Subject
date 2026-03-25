@@ -36,13 +36,13 @@ export default function StudentRegister() {
             <Form
                 action="/student/register"
                 method="post"
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-4 sm:gap-6"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="grid gap-4 sm:gap-5">
                             <div className="grid gap-2">
-                                <Label htmlFor="name">Full name</Label>
+                                <Label htmlFor="name" className="text-sm">Full name</Label>
                                 <Input
                                     id="name"
                                     type="text"
@@ -51,12 +51,13 @@ export default function StudentRegister() {
                                     name="name"
                                     autoComplete="name"
                                     placeholder="Juan Dela Cruz"
+                                    className="h-11 text-base"
                                 />
                                 <InputError message={errors.name} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email" className="text-sm">Email address</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -64,12 +65,13 @@ export default function StudentRegister() {
                                     name="email"
                                     autoComplete="email"
                                     placeholder="student@example.com"
+                                    className="h-11 text-base"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="student_id">Student ID</Label>
+                                <Label htmlFor="student_id" className="text-sm">Student ID</Label>
                                 <Input
                                     id="student_id"
                                     type="text"
@@ -77,8 +79,11 @@ export default function StudentRegister() {
                                     name="student_id"
                                     autoComplete="username"
                                     placeholder="1-2345-678"
+                                    inputMode="numeric"
+                                    maxLength={11}
                                     value={studentId}
                                     onChange={(event) => setStudentId(formatStudentId(event.target.value))}
+                                    className="h-11 font-mono text-base tracking-wide"
                                 />
                                 <p className="text-xs text-muted-foreground">
                                     Accepted format: 1-2345-678 or 01-2345-678
@@ -88,7 +93,7 @@ export default function StudentRegister() {
 
                             <Button
                                 type="submit"
-                                className="mt-2 w-full"
+                                className="mt-1 h-11 w-full text-base"
                                 disabled={processing}
                             >
                                 {processing && <Spinner />}

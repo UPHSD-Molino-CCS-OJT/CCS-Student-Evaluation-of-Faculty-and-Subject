@@ -109,9 +109,9 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Summary" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Dean View: Summary per Subject, Faculty, and Section</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Dean View: Summary per Subject, Faculty, and Section</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         This page summarizes class-level evaluation metrics across the college.
                     </p>
@@ -149,7 +149,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                             </Button>
                         </a>
                     </div>
-                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
+                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3 sm:p-4">
                         <p className="text-sm text-muted-foreground">
                             Import subjects by semester offered, subject code, course name, program, and curriculum
                             year (example: 2023-2024).
@@ -178,7 +178,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                         {errors.file && <p className="text-sm font-medium text-red-600">{errors.file}</p>}
                     </div>
 
-                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3">
+                    <div className="mt-4 grid gap-3 rounded-lg border border-dashed p-3 sm:p-4">
                         <p className="text-sm text-muted-foreground">
                             Import a DOCX template so DOCX export uses proper header/footer from your file.
                         </p>
@@ -217,7 +217,7 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
 
                     return (
                         <section key={row.classSectionId} className="overflow-hidden rounded-xl border">
-                            <div className="border-b bg-muted/30 px-4 py-3">
+                            <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <h2 className="font-semibold">{row.subject}</h2>
@@ -288,17 +288,17 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                 <table className="min-w-full divide-y divide-border text-sm">
                                     <thead className="bg-muted/30 text-left">
                                         <tr>
-                                            <th className="px-4 py-3 font-medium">Question</th>
-                                            <th className="px-4 py-3 font-medium">Average Rating</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Question</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Average Rating</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {questions.map((question) => (
                                             <tr key={question.number}>
-                                                <td className="px-4 py-3">
+                                                <td className="px-3 py-3 sm:px-4">
                                                     {question.number}. {question.text}
                                                 </td>
-                                                <td className="px-4 py-3 font-medium">
+                                                <td className="px-3 py-3 font-medium sm:px-4">
                                                     {averageMap[question.number]
                                                         ? Number(averageMap[question.number]).toFixed(2)
                                                         : '-'}

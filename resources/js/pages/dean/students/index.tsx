@@ -28,9 +28,9 @@ export default function DeanStudentsIndex({ students }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Students" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Student Directory</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Student Directory</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         View student number, year level, program, and current enrollment status.
                     </p>
@@ -41,21 +41,21 @@ export default function DeanStudentsIndex({ students }: Props) {
                         <table className="min-w-full divide-y divide-border text-sm">
                             <thead className="bg-muted/30 text-left">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Name</th>
-                                    <th className="px-4 py-3 font-medium">Student Number</th>
-                                    <th className="px-4 py-3 font-medium">Year Level</th>
-                                    <th className="px-4 py-3 font-medium">Program</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Name</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Student Number</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Year Level</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Program</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {students.map((student) => (
                                     <tr key={student.id}>
-                                        <td className="px-4 py-3 font-medium">{student.name}</td>
-                                        <td className="px-4 py-3">{student.studentNumber ?? '-'}</td>
-                                        <td className="px-4 py-3">{student.yearLevel ? `${student.yearLevel}` : '-'}</td>
-                                        <td className="px-4 py-3">{student.program}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-3 font-medium sm:px-4">{student.name}</td>
+                                        <td className="px-3 py-3 sm:px-4">{student.studentNumber ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{student.yearLevel ? `${student.yearLevel}` : '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{student.program}</td>
+                                        <td className="px-3 py-3 sm:px-4">
                                             <span
                                                 className={
                                                     student.status === 'Active'
@@ -71,7 +71,7 @@ export default function DeanStudentsIndex({ students }: Props) {
                                 ))}
                                 {students.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                                        <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground sm:px-4">
                                             No student records found.
                                         </td>
                                     </tr>

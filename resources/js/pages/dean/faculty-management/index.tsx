@@ -182,15 +182,15 @@ export default function DeanFacultyManagementIndex({ faculty, facultyOptions, su
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Faculty Management" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Faculty Management</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Faculty Management</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Manage faculty teaching assignments by course, section, semester, and school year.
                     </p>
                 </div>
 
-                <section className="rounded-xl border p-4">
+                <section className="rounded-xl border p-3 sm:p-4">
                     <h2 className="font-semibold">{facultyEditingId === null ? 'Add Faculty Account' : 'Edit Faculty Account'}</h2>
 
                     <fieldset disabled={isFacultySubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -247,7 +247,7 @@ export default function DeanFacultyManagementIndex({ faculty, facultyOptions, su
                     </div>
                 </section>
 
-                <section className="rounded-xl border p-4">
+                <section className="rounded-xl border p-3 sm:p-4">
                     <h2 className="font-semibold">{assignmentEditingId === null ? 'Assign Faculty' : 'Edit Faculty Assignment'}</h2>
 
                     <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
@@ -357,25 +357,25 @@ export default function DeanFacultyManagementIndex({ faculty, facultyOptions, su
                                 <table className="min-w-full divide-y divide-border text-sm">
                                     <thead className="bg-muted/20 text-left">
                                         <tr>
-                                            <th className="px-4 py-3 font-medium">Subject</th>
-                                            <th className="px-4 py-3 font-medium">Program</th>
-                                            <th className="px-4 py-3 font-medium">Section</th>
-                                            <th className="px-4 py-3 font-medium">Semester</th>
-                                            <th className="px-4 py-3 font-medium">School Year</th>
-                                            <th className="px-4 py-3 font-medium">Actions</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Subject</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Program</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Section</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Semester</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">School Year</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {teacher.assignments.map((assignment) => (
                                             <tr key={assignment.classSectionId}>
-                                                <td className="px-4 py-3">
+                                                <td className="px-3 py-3 sm:px-4">
                                                     {[assignment.subjectCode, assignment.subjectTitle].filter(Boolean).join(' - ') || '-'}
                                                 </td>
-                                                <td className="px-4 py-3">{assignment.program ?? '-'}</td>
-                                                <td className="px-4 py-3">{assignment.section ?? '-'}</td>
-                                                <td className="px-4 py-3">{assignment.term ?? '-'}</td>
-                                                <td className="px-4 py-3">{assignment.schoolYear ?? '-'}</td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-3 py-3 sm:px-4">{assignment.program ?? '-'}</td>
+                                                <td className="px-3 py-3 sm:px-4">{assignment.section ?? '-'}</td>
+                                                <td className="px-3 py-3 sm:px-4">{assignment.term ?? '-'}</td>
+                                                <td className="px-3 py-3 sm:px-4">{assignment.schoolYear ?? '-'}</td>
+                                                <td className="px-3 py-3 sm:px-4">
                                                     <div className="flex gap-2">
                                                         <button
                                                             type="button"
@@ -397,7 +397,7 @@ export default function DeanFacultyManagementIndex({ faculty, facultyOptions, su
                                         ))}
                                         {teacher.assignments.length === 0 && (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
+                                                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground sm:px-4">
                                                     No assignments yet.
                                                 </td>
                                             </tr>
