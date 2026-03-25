@@ -131,6 +131,10 @@ export default function StudentLogin() {
                         <div className="text-center text-sm text-muted-foreground">
                             Faculty, dean, staff, or system admin? <TextLink href="/login">Go to staff login</TextLink>
                         </div>
+
+                        <div className="text-center text-sm text-muted-foreground">
+                            New student? <TextLink href="/student/register">Register student account</TextLink>
+                        </div>
                     </>
                 )}
             </Form>

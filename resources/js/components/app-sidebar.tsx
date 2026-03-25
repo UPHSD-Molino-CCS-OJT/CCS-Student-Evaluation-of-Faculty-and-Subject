@@ -25,11 +25,16 @@ export function AppSidebar() {
                     href: '/faculty/reports',
                     icon: BarChart3,
                 },
+                {
+                    title: 'Courses per Program',
+                    href: '/dean/program-courses',
+                    icon: BookOpenText,
+                },
             ];
         }
 
         if (['dean', 'staff', 'system_admin'].includes(auth.user.role)) {
-            return [
+            const items: NavItem[] = [
                 {
                     title: 'Evaluation Summary',
                     href: '/dean/summaries',
@@ -56,6 +61,16 @@ export function AppSidebar() {
                     icon: UserCog,
                 },
             ];
+
+            if (['staff', 'system_admin'].includes(auth.user.role)) {
+                items.push({
+                    title: 'Dean Management',
+                    href: '/dean/dean-management',
+                    icon: UserCog,
+                });
+            }
+
+            return items;
         }
 
         return [

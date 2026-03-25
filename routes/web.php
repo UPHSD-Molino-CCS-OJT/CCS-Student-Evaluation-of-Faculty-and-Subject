@@ -3,12 +3,14 @@
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeanEvaluationSummaryController;
 use App\Http\Controllers\DeanEnrollmentController;
+use App\Http\Controllers\DeanManagementController;
 use App\Http\Controllers\DeanProgramCoursesController;
 use App\Http\Controllers\DeanStudentsController;
 use App\Http\Controllers\DeanFacultyManagementController;
 use App\Http\Controllers\EvaluationSettingController;
 use App\Http\Controllers\FacultyEvaluationReportController;
 use App\Http\Controllers\SubjectImportController;
+use App\Http\Controllers\Auth\StudentRegisteredUserController;
 use App\Http\Controllers\StudentEvaluationController;
 use App\Http\Controllers\Auth\StudentAuthenticatedSessionController;
 use Illuminate\Http\Request;
@@ -26,6 +28,12 @@ Route::middleware('guest')->group(function () {
 
     Route::post('student/login', [StudentAuthenticatedSessionController::class, 'store'])
         ->name('student.login.store');
+
+    Route::get('student/register', [StudentRegisteredUserController::class, 'create'])
+        ->name('student.register');
+
+    Route::post('student/register', [StudentRegisteredUserController::class, 'store'])
+        ->name('student.register.store');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -48,6 +56,20 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('faculty/reports/{classSection}/sign', [FacultyEvaluationReportController::class, 'signAndSubmit'])
             ->name('faculty.reports.sign');
+    });
+
+    Route::middleware('role:dean,system_admin,staff,faculty')->group(function () {
+        Route::get('dean/program-courses', [DeanProgramCoursesController::class, 'index'])
+            ->name('dean.program-courses.index');
+
+        Route::post('dean/program-courses', [DeanProgramCoursesController::class, 'store'])
+            ->name('dean.program-courses.store');
+
+        Route::patch('dean/program-courses', [DeanProgramCoursesController::class, 'store'])
+            ->name('dean.program-courses.update');
+
+        Route::delete('dean/program-courses/{subject}', [DeanProgramCoursesController::class, 'destroy'])
+            ->name('dean.program-courses.destroy');
     });
 
     Route::middleware('role:dean,system_admin,staff')->group(function () {
@@ -84,9 +106,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('dean/summaries/class-sections/{classSection}/sign', [DeanEvaluationSummaryController::class, 'signClassSection'])
             ->name('dean.summaries.sign-class-section');
 
-        Route::get('dean/program-courses', [DeanProgramCoursesController::class, 'index'])
-            ->name('dean.program-courses.index');
-
         Route::get('dean/students', [DeanStudentsController::class, 'index'])
             ->name('dean.students.index');
 
@@ -96,11 +115,32 @@ Route::middleware(['auth'])->group(function () {
         Route::post('dean/enrollments', [DeanEnrollmentController::class, 'store'])
             ->name('dean.enrollments.store');
 
+        Route::patch('dean/enrollments/{enrollment}', [DeanEnrollmentController::class, 'update'])
+            ->name('dean.enrollments.update');
+
+        Route::delete('dean/enrollments/{enrollment}', [DeanEnrollmentController::class, 'destroy'])
+            ->name('dean.enrollments.destroy');
+
         Route::get('dean/faculty-management', [DeanFacultyManagementController::class, 'index'])
             ->name('dean.faculty-management.index');
 
+        Route::post('dean/faculty-management/faculty', [DeanFacultyManagementController::class, 'storeFaculty'])
+            ->name('dean.faculty-management.faculty.store');
+
+        Route::patch('dean/faculty-management/faculty/{faculty}', [DeanFacultyManagementController::class, 'updateFaculty'])
+            ->name('dean.faculty-management.faculty.update');
+
+        Route::delete('dean/faculty-management/faculty/{faculty}', [DeanFacultyManagementController::class, 'destroyFaculty'])
+            ->name('dean.faculty-management.faculty.destroy');
+
         Route::post('dean/faculty-management', [DeanFacultyManagementController::class, 'store'])
             ->name('dean.faculty-management.store');
+
+        Route::patch('dean/faculty-management/{classSection}', [DeanFacultyManagementController::class, 'update'])
+            ->name('dean.faculty-management.update');
+
+        Route::delete('dean/faculty-management/{classSection}', [DeanFacultyManagementController::class, 'destroy'])
+            ->name('dean.faculty-management.destroy');
 
         Route::get('dean/subjects/import-template', [SubjectImportController::class, 'downloadTemplate'])
             ->name('dean.subjects.import-template');
@@ -110,6 +150,20 @@ Route::middleware(['auth'])->group(function () {
 
         Route::patch('evaluation-settings', [EvaluationSettingController::class, 'update'])
             ->name('evaluation-settings.update');
+    });
+
+    Route::middleware('role:system_admin,staff')->group(function () {
+        Route::get('dean/dean-management', [DeanManagementController::class, 'index'])
+            ->name('dean.dean-management.index');
+
+        Route::post('dean/dean-management', [DeanManagementController::class, 'store'])
+            ->name('dean.dean-management.store');
+
+        Route::patch('dean/dean-management/{dean}', [DeanManagementController::class, 'update'])
+            ->name('dean.dean-management.update');
+
+        Route::delete('dean/dean-management/{dean}', [DeanManagementController::class, 'destroy'])
+            ->name('dean.dean-management.destroy');
     });
 });
 
