@@ -112,6 +112,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/students', [DeanStudentsController::class, 'index'])
             ->name('dean.students.index');
 
+        Route::patch('dean/students/{student}', [DeanStudentsController::class, 'update'])
+            ->name('dean.students.update');
+
         Route::get('dean/enrollments', [DeanEnrollmentController::class, 'index'])
             ->name('dean.enrollments.index');
 

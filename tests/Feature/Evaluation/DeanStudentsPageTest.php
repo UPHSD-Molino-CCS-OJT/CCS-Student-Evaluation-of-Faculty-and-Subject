@@ -6,6 +6,10 @@ use App\Models\StudentSectionEnrollment;
 use App\Models\Subject;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->withoutVite();
+});
+
 test('dean, staff, and system admin can view students page', function (string $role) {
     $user = User::factory()->create([
         'role' => $role,
@@ -90,3 +94,56 @@ test('students page shows active and inactive status with program and year level
         ->where('students.1.status', 'Inactive')
     );
 });
+
+test('dean, staff, and system admin can update student profile from students page', function (string $role) {
+    $admin = User::factory()->create([
+        'role' => $role,
+        'student_id' => null,
+    ]);
+
+    $student = User::factory()->create([
+        'role' => 'student',
+        'name' => 'Old Student Name',
+        'student_id' => '1-1111-333',
+        'course_program' => 'BSIT',
+        'year_level' => 1,
+        'student_type' => 'regular',
+    ]);
+
+    $response = $this->actingAs($admin)->patch(route('dean.students.update', $student), [
+        'name' => 'Updated Student Name',
+        'student_id' => '1-1111-444',
+        'course_program' => 'BSCS',
+        'year_level' => 3,
+        'student_type' => 'irregular',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $student->refresh();
+
+    expect($student->name)->toBe('Updated Student Name');
+    expect($student->student_id)->toBe('1-1111-444');
+    expect($student->course_program)->toBe('BSCS');
+    expect($student->year_level)->toBe(3);
+    expect($student->student_type)->toBe('irregular');
+})->with(['dean', 'staff', 'system_admin']);
+
+test('student and faculty cannot update student profile from students page', function (string $role) {
+    $actor = User::factory()->create([
+        'role' => $role,
+        'student_id' => $role === 'student' ? '1-2222-333' : null,
+    ]);
+
+    $student = User::factory()->create([
+        'role' => 'student',
+        'student_id' => '1-1111-555',
+    ]);
+
+    $response = $this->actingAs($actor)->patch(route('dean.students.update', $student), [
+        'name' => 'Unauthorized Update',
+    ]);
+
+    $response->assertForbidden();
+})->with(['student', 'faculty']);
