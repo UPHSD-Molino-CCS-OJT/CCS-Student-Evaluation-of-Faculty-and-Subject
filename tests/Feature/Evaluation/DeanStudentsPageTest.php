@@ -147,3 +147,28 @@ test('student and faculty cannot update student profile from students page', fun
 
     $response->assertForbidden();
 })->with(['student', 'faculty']);
+
+test('students page marks student as active when registration profile is complete even without enrollment', function () {
+    $admin = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    User::factory()->create([
+        'role' => 'student',
+        'name' => 'Profile Activated Student',
+        'student_id' => '1-7777-111',
+        'course_program' => 'BSCS',
+        'year_level' => 4,
+        'student_type' => 'regular',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('dean.students.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('dean/students/index')
+        ->where('students.0.name', 'Profile Activated Student')
+        ->where('students.0.status', 'Active')
+    );
+});

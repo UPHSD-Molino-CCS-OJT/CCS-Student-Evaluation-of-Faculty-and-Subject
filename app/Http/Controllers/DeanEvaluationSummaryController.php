@@ -61,7 +61,7 @@ class DeanEvaluationSummaryController extends Controller
             ->groupBy('class_section_id');
 
         $summaryMap = ClassSection::query()
-            ->selectRaw('class_sections.id AS class_section_id, COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('class_sections.id AS class_section_id, COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->whereIn('class_sections.id', $classSections->pluck('id'))
@@ -585,7 +585,7 @@ class DeanEvaluationSummaryController extends Controller
             ->keyBy('question_number');
 
         $summary = ClassSection::query()
-            ->selectRaw('COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->where('class_sections.id', $classSection->id)
@@ -683,7 +683,7 @@ class DeanEvaluationSummaryController extends Controller
             ->get();
 
         $summaryMap = ClassSection::query()
-            ->selectRaw('class_sections.id AS class_section_id, COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('class_sections.id AS class_section_id, COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->whereIn('class_sections.id', $classSections->pluck('id'))

@@ -32,7 +32,7 @@ class FacultyEvaluationReportController extends Controller
             ->groupBy('class_section_id');
 
         $respondentMap = ClassSection::query()
-            ->selectRaw('class_sections.id AS class_section_id, COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('class_sections.id AS class_section_id, COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->whereIn('class_sections.id', $assignments->pluck('id'))

@@ -85,13 +85,7 @@ class StudentRegisteredUserController extends Controller
             $data['student_type'] === 'irregular' ? $selectedSubjectIds : null,
         );
 
-        if ($classSectionIds === []) {
-            return back()->withErrors([
-                'course_program' => 'No class offerings are available for the selected course yet.',
-            ])->withInput();
-        }
-
-        if ($data['student_type'] === 'irregular') {
+        if ($data['student_type'] === 'irregular' && $classSectionIds !== []) {
             $assignedSubjectIds = $this->resolveSubjectIdsForClassSections($classSectionIds);
             $unassignedSubjectIds = array_values(array_diff($selectedSubjectIds, $assignedSubjectIds));
 
@@ -116,19 +110,21 @@ class StudentRegisteredUserController extends Controller
                 'password' => $normalizedStudentId,
             ]);
 
-            $timestamp = now();
+            if ($classSectionIds !== []) {
+                $timestamp = now();
 
-            StudentSectionEnrollment::query()->insert(
-                array_map(
-                    fn (int $classSectionId): array => [
-                        'student_id' => $student->id,
-                        'class_section_id' => $classSectionId,
-                        'created_at' => $timestamp,
-                        'updated_at' => $timestamp,
-                    ],
-                    $classSectionIds,
-                )
-            );
+                StudentSectionEnrollment::query()->insert(
+                    array_map(
+                        fn (int $classSectionId): array => [
+                            'student_id' => $student->id,
+                            'class_section_id' => $classSectionId,
+                            'created_at' => $timestamp,
+                            'updated_at' => $timestamp,
+                        ],
+                        $classSectionIds,
+                    )
+                );
+            }
         });
 
         if (! $student instanceof User) {

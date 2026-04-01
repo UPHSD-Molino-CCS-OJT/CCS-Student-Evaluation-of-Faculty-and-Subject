@@ -41,7 +41,19 @@ class DeanStudentsController extends Controller
                     }
                 }
 
-                $isActive = $student->enrollments->isNotEmpty();
+                $isProfileActivated = ($student->course_program ?? '') !== ''
+                    && $student->year_level !== null
+                    && ($student->student_type ?? '') !== '';
+
+                $isEnrolled = $student->enrollments->isNotEmpty();
+                $isActive = $isEnrolled || $isProfileActivated;
+
+                $statusNote = 'No class enrollments found. May be graduated or no longer under a program.';
+                if ($isEnrolled) {
+                    $statusNote = 'Currently enrolled';
+                } elseif ($isProfileActivated) {
+                    $statusNote = 'Registration is active. Class enrollments are pending assignment.';
+                }
 
                 return [
                     'id' => $student->id,
@@ -52,9 +64,7 @@ class DeanStudentsController extends Controller
                     'studentType' => $student->student_type,
                     'program' => $program ?: 'Unassigned',
                     'status' => $isActive ? 'Active' : 'Inactive',
-                    'statusNote' => $isActive
-                        ? 'Currently enrolled'
-                        : 'No class enrollments found. May be graduated or no longer under a program.',
+                    'statusNote' => $statusNote,
                 ];
             })
             ->values();

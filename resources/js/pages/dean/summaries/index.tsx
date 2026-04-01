@@ -301,11 +301,11 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                 </p>
                             </div>
                             <div className="space-y-2 border-b p-3 sm:p-4">
-                                {questionSections.map((questionSection) => (
+                                {questionSections.map((questionSection, questionSectionIndex) => (
                                     <details
                                         key={`${section}-${questionSection.category}`}
                                         className="overflow-hidden rounded-md border"
-                                        open
+                                        open={questionSectionIndex === 0}
                                     >
                                         <summary className="cursor-pointer bg-muted/20 px-3 py-2 text-sm font-semibold">
                                             Section: {questionSection.category} ({questionSection.items.length})

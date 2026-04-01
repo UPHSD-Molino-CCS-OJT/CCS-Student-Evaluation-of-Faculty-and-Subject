@@ -147,3 +147,27 @@ test('irregular students must choose subjects and are enrolled only in selected 
         'class_section_id' => $otherClass->id,
     ]);
 });
+
+test('regular students can register even when no class offerings exist yet and account is still activated', function () {
+    createSubjectWithoutOffering('BSCS', 'CCS401', 'Capstone Project 1');
+
+    $response = $this->post(route('student.register.store'), [
+        'name' => 'Pending Enrollment Student',
+        'email' => 'pending.enrollment@example.com',
+        'student_id' => '1-9999-001',
+        'course_program' => 'BSCS',
+        'year_level' => 4,
+        'student_type' => 'regular',
+    ]);
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticated();
+
+    $student = User::query()->where('email', 'pending.enrollment@example.com')->firstOrFail();
+
+    expect($student->course_program)->toBe('BSCS')
+        ->and($student->year_level)->toBe(4)
+        ->and($student->student_type)->toBe('regular');
+
+    expect(StudentSectionEnrollment::query()->where('student_id', $student->id)->count())->toBe(0);
+});
