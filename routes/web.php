@@ -70,6 +70,9 @@ Route::middleware(['auth'])->group(function () {
 
         Route::delete('dean/program-courses/{subject}', [DeanProgramCoursesController::class, 'destroy'])
             ->name('dean.program-courses.destroy');
+
+        Route::delete('dean/program-courses/program/remove', [DeanProgramCoursesController::class, 'destroyProgram'])
+            ->name('dean.program-courses.destroy-program');
     });
 
     Route::middleware('role:dean,system_admin,staff')->group(function () {

@@ -6,6 +6,7 @@ import type { BreadcrumbItem } from '@/types';
 
 type ProgramGroup = {
     program: string;
+    programValue: string | null;
     courseCount: number;
     curriculums: Array<{
         curriculum: string;
@@ -73,6 +74,24 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
         }
 
         router.delete(`/dean/program-courses/${subjectId}`, {
+            preserveScroll: true,
+        });
+    };
+
+    const removeProgram = (programValue: string | null, programLabel: string) => {
+        const confirmationMessage = programValue === null
+            ? 'Remove all unassigned program courses? This action cannot be undone.'
+            : `Remove program ${programLabel} and all its courses? This action cannot be undone.`;
+
+        if (!window.confirm(confirmationMessage)) {
+            return;
+        }
+
+        router.delete('/dean/program-courses/program/remove', {
+            data: {
+                program: programValue,
+                remove_unassigned: programValue === null,
+            },
             preserveScroll: true,
         });
     };
@@ -205,10 +224,24 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                 {programs.map((group) => (
                     <section key={group.program} className="overflow-hidden rounded-xl border">
                         <div className="border-b bg-muted/30 px-4 py-3">
-                            <h2 className="font-semibold">{group.program}</h2>
-                            <p className="text-sm text-muted-foreground">
-                                {group.courseCount} course(s) across {group.curriculums.length} curriculum year(s)
-                            </p>
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="font-semibold">{group.program}</h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        {group.courseCount} course(s) across {group.curriculums.length} curriculum year(s)
+                                    </p>
+                                </div>
+
+                                {canManage && (
+                                    <button
+                                        type="button"
+                                        className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-700"
+                                        onClick={() => removeProgram(group.programValue, group.program)}
+                                    >
+                                        Remove Program
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-4 p-4">

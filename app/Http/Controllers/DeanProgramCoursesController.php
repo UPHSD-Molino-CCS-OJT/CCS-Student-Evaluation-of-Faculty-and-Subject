@@ -12,6 +12,8 @@ use Inertia\Response;
 
 class DeanProgramCoursesController extends Controller
 {
+    private const UNASSIGNED_PROGRAM_KEY = '__UNASSIGNED__';
+
     public function index(): Response
     {
         $canManage = in_array((string) request()->user()?->role, ['dean', 'system_admin', 'staff', 'faculty'], true);
@@ -22,8 +24,11 @@ class DeanProgramCoursesController extends Controller
             ->orderBy('semester_offered')
             ->orderBy('code')
             ->get()
-            ->groupBy(fn (Subject $subject): string => $subject->program ?: 'Unassigned Program')
-            ->map(function ($subjects, string $program): array {
+            ->groupBy(fn (Subject $subject): string => $subject->program ?: self::UNASSIGNED_PROGRAM_KEY)
+            ->map(function ($subjects, string $programKey): array {
+                $programValue = $programKey === self::UNASSIGNED_PROGRAM_KEY ? null : $programKey;
+                $programLabel = $programValue ?? 'Unassigned Program';
+
                 $curriculums = $subjects
                     ->groupBy(fn (Subject $subject): string => $subject->curriculum_version ?: 'Unassigned Curriculum')
                     ->map(function ($curriculumSubjects, string $curriculum): array {
@@ -40,7 +45,8 @@ class DeanProgramCoursesController extends Controller
                     ->values();
 
                 return [
-                    'program' => $program,
+                    'program' => $programLabel,
+                    'programValue' => $programValue,
                     'courseCount' => $subjects->count(),
                     'curriculums' => $curriculums,
                 ];
@@ -106,5 +112,43 @@ class DeanProgramCoursesController extends Controller
         $subject->delete();
 
         return back()->with('status', 'Course removed successfully.');
+    }
+
+    public function destroyProgram(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'program' => ['nullable', 'string', 'max:100'],
+            'remove_unassigned' => ['nullable', 'boolean'],
+        ]);
+
+        $removeUnassigned = (bool) ($data['remove_unassigned'] ?? false);
+
+        if (! $removeUnassigned && (! isset($data['program']) || trim((string) $data['program']) === '')) {
+            return back()->withErrors([
+                'program' => 'Program is required to remove program courses.',
+            ]);
+        }
+
+        $query = Subject::query();
+
+        if ($removeUnassigned) {
+            $query->where(function ($builder): void {
+                $builder->whereNull('program')->orWhere('program', '');
+            });
+        } else {
+            $query->where('program', (string) $data['program']);
+        }
+
+        $deletedCount = $query->count();
+
+        if ($deletedCount === 0) {
+            return back()->withErrors([
+                'program' => 'No courses found for the selected program.',
+            ]);
+        }
+
+        $query->delete();
+
+        return back()->with('status', 'Program and its courses removed successfully.');
     }
 }

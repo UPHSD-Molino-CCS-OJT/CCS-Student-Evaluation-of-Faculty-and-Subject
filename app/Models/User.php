@@ -26,6 +26,7 @@ class User extends Authenticatable
         'student_id',
         'course_program',
         'student_type',
+        'year_level',
         'password',
         'role',
         'esign_image_path',
@@ -56,6 +57,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'year_level' => 'integer',
         ];
     }
 

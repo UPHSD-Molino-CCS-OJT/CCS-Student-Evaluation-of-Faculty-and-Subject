@@ -6,6 +6,10 @@ use App\Models\StudentSectionEnrollment;
 use App\Models\Subject;
 use App\Models\User;
 
+beforeEach(function () {
+    $this->withoutVite();
+});
+
 function createSubjectOffering(string $program, string $code, string $title): ClassSection
 {
     $faculty = User::factory()->create([
@@ -44,6 +48,7 @@ test('student registration screen loads with course and subject options', functi
     $response->assertInertia(fn ($page) => $page
         ->component('auth/student-register')
         ->where('courses', ['BSCS', 'BSIT'])
+        ->where('yearLevels', [1, 2, 3, 4, 5])
         ->has('subjects', 2));
 });
 
@@ -57,6 +62,7 @@ test('regular students can register and are auto-enrolled to available subjects 
         'email' => 'regular.student@example.com',
         'student_id' => '01-1234-567',
         'course_program' => 'BSCS',
+        'year_level' => 2,
         'student_type' => 'regular',
     ]);
 
@@ -68,6 +74,7 @@ test('regular students can register and are auto-enrolled to available subjects 
     expect($student->role)->toBe('student')
         ->and($student->student_id)->toBe('1-1234-567')
         ->and($student->course_program)->toBe('BSCS')
+        ->and($student->year_level)->toBe(2)
         ->and($student->student_type)->toBe('regular');
 
     expect(StudentSectionEnrollment::query()->where('student_id', $student->id)->count())->toBe(2);
@@ -92,6 +99,7 @@ test('irregular students must choose subjects and are enrolled only in selected 
         'email' => 'irregular.no.subjects@example.com',
         'student_id' => '1-5555-111',
         'course_program' => 'BSCS',
+        'year_level' => 3,
         'student_type' => 'irregular',
     ]);
 
@@ -104,6 +112,7 @@ test('irregular students must choose subjects and are enrolled only in selected 
         'email' => 'irregular.student@example.com',
         'student_id' => '1-5555-222',
         'course_program' => 'BSCS',
+        'year_level' => 3,
         'student_type' => 'irregular',
         'subject_ids' => [$selectedClass->subject_id],
     ]);
@@ -114,6 +123,7 @@ test('irregular students must choose subjects and are enrolled only in selected 
     $student = User::query()->where('email', 'irregular.student@example.com')->firstOrFail();
 
     expect(StudentSectionEnrollment::query()->where('student_id', $student->id)->count())->toBe(1)
+        ->and($student->year_level)->toBe(3)
         ->and($student->student_type)->toBe('irregular');
 
     $this->assertDatabaseHas('student_section_enrollments', [

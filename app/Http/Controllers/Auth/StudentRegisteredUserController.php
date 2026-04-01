@@ -26,6 +26,7 @@ class StudentRegisteredUserController extends Controller
         return Inertia::render('auth/student-register', [
             'courses' => $this->availableCourses(),
             'subjects' => $this->availableSubjects(),
+            'yearLevels' => $this->availableYearLevels(),
         ]);
     }
 
@@ -39,6 +40,7 @@ class StudentRegisteredUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'student_id' => ['required', 'regex:/^\d{1,2}-\d{4}-\d{3}$/', 'unique:users,student_id'],
             'course_program' => ['required', 'string', 'max:100', Rule::in($availableCoursePrograms)],
+            'year_level' => ['required', 'integer', Rule::in($this->availableYearLevels())],
             'student_type' => ['required', 'string', Rule::in(['regular', 'irregular'])],
             'subject_ids' => ['nullable', 'array'],
             'subject_ids.*' => ['integer', 'distinct', Rule::exists('subjects', 'id')],
@@ -111,6 +113,7 @@ class StudentRegisteredUserController extends Controller
                 'student_id' => $normalizedStudentId,
                 'course_program' => $data['course_program'],
                 'student_type' => $data['student_type'],
+                'year_level' => (int) $data['year_level'],
                 'role' => 'student',
                 'password' => $normalizedStudentId,
             ]);
@@ -150,6 +153,14 @@ class StudentRegisteredUserController extends Controller
         $normalizedFirst = $normalizedFirst === '' ? '0' : $normalizedFirst;
 
         return sprintf('%s-%s-%s', $normalizedFirst, $second, $third);
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function availableYearLevels(): array
+    {
+        return [1, 2, 3, 4, 5];
     }
 
     /**

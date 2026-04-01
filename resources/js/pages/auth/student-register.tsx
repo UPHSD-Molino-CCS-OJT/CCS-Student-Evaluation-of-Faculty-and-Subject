@@ -20,11 +20,13 @@ type SubjectOption = {
 type Props = {
     courses: string[];
     subjects: SubjectOption[];
+    yearLevels: number[];
 };
 
-export default function StudentRegister({ courses, subjects }: Props) {
+export default function StudentRegister({ courses, subjects, yearLevels }: Props) {
     const [studentId, setStudentId] = useState('');
     const [courseProgram, setCourseProgram] = useState('');
+    const [yearLevel, setYearLevel] = useState('');
     const [studentType, setStudentType] = useState<'regular' | 'irregular'>('regular');
     const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
 
@@ -157,6 +159,26 @@ export default function StudentRegister({ courses, subjects }: Props) {
                                     </p>
                                 )}
                                 <InputError message={errors.course_program} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="year_level" className="text-sm">Year level</Label>
+                                <select
+                                    id="year_level"
+                                    name="year_level"
+                                    required
+                                    value={yearLevel}
+                                    onChange={(event) => setYearLevel(event.target.value)}
+                                    className="h-11 w-full rounded-md border bg-background px-3 text-base"
+                                >
+                                    <option value="">Select your year level</option>
+                                    {yearLevels.map((level) => (
+                                        <option key={level} value={level}>
+                                            Year {level}
+                                        </option>
+                                    ))}
+                                </select>
+                                <InputError message={errors.year_level} />
                             </div>
 
                             <div className="grid gap-2">

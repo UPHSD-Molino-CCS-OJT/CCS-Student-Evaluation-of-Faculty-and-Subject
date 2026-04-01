@@ -30,6 +30,7 @@ class UserFactory extends Factory
             'student_id' => null,
             'course_program' => null,
             'student_type' => null,
+            'year_level' => null,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => 'student',
