@@ -105,15 +105,35 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
         router.post(`/dean/summaries/class-sections/${classSectionId}/sign`, {}, { preserveScroll: true });
     };
 
+    const sectionGroups = Object.entries(
+        rows.reduce<Record<string, Row[]>>((groups, row) => {
+            const key = row.section || 'Unassigned Section';
+            groups[key] ??= [];
+            groups[key].push(row);
+
+            return groups;
+        }, {}),
+    ).sort(([left], [right]) => left.localeCompare(right));
+
+    const toNumericAverage = (value: number | string | null | undefined): number | null => {
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        const parsed = Number(value);
+
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dean Summary" />
 
             <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
                 <div className="rounded-xl border p-3 sm:p-4">
-                    <h1 className="text-lg font-semibold sm:text-xl">Dean View: Summary per Subject, Faculty, and Section</h1>
+                    <h1 className="text-lg font-semibold sm:text-xl">Dean View: Evaluation Results per Section</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        This page summarizes class-level evaluation metrics across the college.
+                        This page summarizes section-level evaluation metrics across all class offerings.
                     </p>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                         <LoadingButton
@@ -206,83 +226,58 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                     {status && <p className="mt-3 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
-                {rows.map((row) => {
-                    const averageMap = Object.fromEntries(
-                        row.questionAverages.map((entry) => [entry.questionNumber, entry.averageRating]),
-                    );
-                    const overallAverage =
-                        row.overallAverage === null || row.overallAverage === undefined
-                            ? null
-                            : Number(row.overallAverage);
+                {sectionGroups.map(([section, sectionRows]) => {
+                    const totalRespondents = sectionRows.reduce((total, row) => total + row.respondents, 0);
+
+                    const weightedOverallSum = sectionRows.reduce((total, row) => {
+                        const overallAverage = toNumericAverage(row.overallAverage);
+
+                        if (overallAverage === null || row.respondents <= 0) {
+                            return total;
+                        }
+
+                        return total + overallAverage * row.respondents;
+                    }, 0);
+
+                    const sectionOverallAverage =
+                        totalRespondents > 0 ? weightedOverallSum / totalRespondents : null;
+
+                    const sectionQuestionAverages = questions.map((question) => {
+                        const weightedQuestion = sectionRows.reduce(
+                            (accumulator, row) => {
+                                const questionAverage = row.questionAverages.find(
+                                    (entry) => entry.questionNumber === question.number,
+                                )?.averageRating;
+
+                                if (questionAverage === undefined || row.respondents <= 0) {
+                                    return accumulator;
+                                }
+
+                                return {
+                                    weightedSum: accumulator.weightedSum + questionAverage * row.respondents,
+                                    respondents: accumulator.respondents + row.respondents,
+                                };
+                            },
+                            { weightedSum: 0, respondents: 0 },
+                        );
+
+                        return {
+                            question,
+                            average:
+                                weightedQuestion.respondents > 0
+                                    ? weightedQuestion.weightedSum / weightedQuestion.respondents
+                                    : null,
+                        };
+                    });
 
                     return (
-                        <section key={row.classSectionId} className="overflow-hidden rounded-xl border">
+                        <section key={section} className="overflow-hidden rounded-xl border">
                             <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h2 className="font-semibold">{row.subject}</h2>
-                                        <p className="text-sm text-muted-foreground">
-                                            Faculty: {row.faculty} | Section: {row.section}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Respondents: {row.respondents} | Overall Average:{' '}
-                                            {overallAverage !== null && Number.isFinite(overallAverage)
-                                                ? overallAverage.toFixed(2)
-                                                : '-'}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Faculty Signed:{' '}
-                                            {row.facultySignedAt
-                                                ? `${row.facultySignedBy ?? 'Faculty'} at ${row.facultySignedAt}`
-                                                : 'Pending'}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Dean Signed:{' '}
-                                            {row.deanSignedAt
-                                                ? `${row.deanSignedBy ?? 'Dean'} at ${row.deanSignedAt}`
-                                                : 'Pending'}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="inline-flex"
-                                        >
-                                            <Button type="button" variant="outline" size="sm">
-                                                Preview
-                                            </Button>
-                                        </a>
-                                        <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx`}
-                                            className="inline-flex"
-                                        >
-                                            <Button type="button" variant="outline" size="sm">
-                                                Download DOCX
-                                            </Button>
-                                        </a>
-                                        <a
-                                            href={`/dean/summaries/class-sections/${row.classSectionId}/export/pdf-office`}
-                                            className="inline-flex"
-                                        >
-                                            <Button type="button" variant="outline" size="sm">
-                                                PDF Download (Office)
-                                            </Button>
-                                        </a>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={() => deanSign(row.classSectionId)}
-                                            disabled={!row.canDeanSign}
-                                        >
-                                            {row.deanSignedAt ? 'Already Signed' : 'Sign as Dean'}
-                                        </Button>
-                                    </div>
-                                </div>
+                                <h2 className="font-semibold">Section: {section}</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Respondents: {totalRespondents} | Section Overall Average:{' '}
+                                    {sectionOverallAverage !== null ? sectionOverallAverage.toFixed(2) : '-'}
+                                </p>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-border text-sm">
@@ -293,18 +288,100 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {questions.map((question) => (
-                                            <tr key={question.number}>
+                                        {sectionQuestionAverages.map(({ question, average }) => (
+                                            <tr key={`${section}-${question.number}`}>
                                                 <td className="px-3 py-3 sm:px-4">
                                                     {question.number}. {question.text}
                                                 </td>
                                                 <td className="px-3 py-3 font-medium sm:px-4">
-                                                    {averageMap[question.number]
-                                                        ? Number(averageMap[question.number]).toFixed(2)
-                                                        : '-'}
+                                                    {average !== null ? average.toFixed(2) : '-'}
                                                 </td>
                                             </tr>
                                         ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="overflow-x-auto border-t">
+                                <table className="min-w-full divide-y divide-border text-sm">
+                                    <thead className="bg-muted/20 text-left">
+                                        <tr>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Subject</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Faculty</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Term / School Year</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Respondents</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Overall Avg</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Faculty Sign</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Dean Sign</th>
+                                            <th className="px-3 py-3 font-medium sm:px-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {sectionRows.map((row) => {
+                                            const overallAverage = toNumericAverage(row.overallAverage);
+
+                                            return (
+                                                <tr key={row.classSectionId}>
+                                                    <td className="px-3 py-3 sm:px-4">{row.subject}</td>
+                                                    <td className="px-3 py-3 sm:px-4">{row.faculty}</td>
+                                                    <td className="px-3 py-3 sm:px-4">
+                                                        {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
+                                                    </td>
+                                                    <td className="px-3 py-3 sm:px-4">{row.respondents}</td>
+                                                    <td className="px-3 py-3 sm:px-4">
+                                                        {overallAverage !== null ? overallAverage.toFixed(2) : '-'}
+                                                    </td>
+                                                    <td className="px-3 py-3 sm:px-4">
+                                                        {row.facultySignedAt
+                                                            ? `${row.facultySignedBy ?? 'Faculty'} at ${row.facultySignedAt}`
+                                                            : 'Pending'}
+                                                    </td>
+                                                    <td className="px-3 py-3 sm:px-4">
+                                                        {row.deanSignedAt
+                                                            ? `${row.deanSignedBy ?? 'Dean'} at ${row.deanSignedAt}`
+                                                            : 'Pending'}
+                                                    </td>
+                                                    <td className="px-3 py-3 sm:px-4">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <a
+                                                                href={`/dean/summaries/class-sections/${row.classSectionId}/preview`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex"
+                                                            >
+                                                                <Button type="button" variant="outline" size="sm">
+                                                                    Preview
+                                                                </Button>
+                                                            </a>
+                                                            <a
+                                                                href={`/dean/summaries/class-sections/${row.classSectionId}/export?format=docx`}
+                                                                className="inline-flex"
+                                                            >
+                                                                <Button type="button" variant="outline" size="sm">
+                                                                    Download DOCX
+                                                                </Button>
+                                                            </a>
+                                                            <a
+                                                                href={`/dean/summaries/class-sections/${row.classSectionId}/export/pdf-office`}
+                                                                className="inline-flex"
+                                                            >
+                                                                <Button type="button" variant="outline" size="sm">
+                                                                    PDF Download (Office)
+                                                                </Button>
+                                                            </a>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                onClick={() => deanSign(row.classSectionId)}
+                                                                disabled={!row.canDeanSign}
+                                                            >
+                                                                {row.deanSignedAt ? 'Already Signed' : 'Sign as Dean'}
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

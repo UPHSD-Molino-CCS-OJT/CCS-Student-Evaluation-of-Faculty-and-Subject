@@ -70,15 +70,35 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
         );
     };
 
+    const sectionGroups = Object.entries(
+        rows.reduce<Record<string, Row[]>>((groups, row) => {
+            const key = row.section || 'Unassigned Section';
+            groups[key] ??= [];
+            groups[key].push(row);
+
+            return groups;
+        }, {}),
+    ).sort(([left], [right]) => left.localeCompare(right));
+
+    const toNumericAverage = (value: number | string | null | undefined): number | null => {
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        const parsed = Number(value);
+
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Faculty Reports" />
 
             <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
                 <div className="rounded-xl border p-3 sm:p-4">
-                    <h1 className="text-lg font-semibold sm:text-xl">Faculty View: Evaluation per Subject and Section</h1>
+                    <h1 className="text-lg font-semibold sm:text-xl">Faculty View: Evaluation Results per Section</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        This report shows your average rating for each question and class assignment.
+                        This report shows section-level averages with class offerings grouped under each section.
                     </p>
                     <p
                         className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
@@ -130,42 +150,58 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
                     {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
                 </div>
 
-                {rows.map((row) => {
-                    const averageMap = Object.fromEntries(
-                        row.questionAverages.map((entry) => [entry.questionNumber, entry.averageRating]),
-                    );
-                    const overallAverage =
-                        row.overallAverage === null || row.overallAverage === undefined
-                            ? null
-                            : Number(row.overallAverage);
+                {sectionGroups.map(([section, sectionRows]) => {
+                    const totalRespondents = sectionRows.reduce((total, row) => total + row.respondents, 0);
+
+                    const weightedOverallSum = sectionRows.reduce((total, row) => {
+                        const overallAverage = toNumericAverage(row.overallAverage);
+
+                        if (overallAverage === null || row.respondents <= 0) {
+                            return total;
+                        }
+
+                        return total + overallAverage * row.respondents;
+                    }, 0);
+
+                    const sectionOverallAverage =
+                        totalRespondents > 0 ? weightedOverallSum / totalRespondents : null;
+
+                    const sectionQuestionAverages = questions.map((question) => {
+                        const weightedQuestion = sectionRows.reduce(
+                            (accumulator, row) => {
+                                const questionAverage = row.questionAverages.find(
+                                    (entry) => entry.questionNumber === question.number,
+                                )?.averageRating;
+
+                                if (questionAverage === undefined || row.respondents <= 0) {
+                                    return accumulator;
+                                }
+
+                                return {
+                                    weightedSum: accumulator.weightedSum + questionAverage * row.respondents,
+                                    respondents: accumulator.respondents + row.respondents,
+                                };
+                            },
+                            { weightedSum: 0, respondents: 0 },
+                        );
+
+                        return {
+                            question,
+                            average:
+                                weightedQuestion.respondents > 0
+                                    ? weightedQuestion.weightedSum / weightedQuestion.respondents
+                                    : null,
+                        };
+                    });
 
                     return (
-                        <section key={row.classSectionId} className="overflow-hidden rounded-xl border">
+                        <section key={section} className="overflow-hidden rounded-xl border">
                             <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
-                                <h2 className="font-semibold">{row.subject}</h2>
+                                <h2 className="font-semibold">Section: {section}</h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Section: {row.section} | {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
+                                    Respondents: {totalRespondents} | Section Overall Average:{' '}
+                                    {sectionOverallAverage !== null ? sectionOverallAverage.toFixed(2) : '-'}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
-                                    Respondents: {row.respondents} | Overall Average:{' '}
-                                    {overallAverage !== null && Number.isFinite(overallAverage)
-                                        ? overallAverage.toFixed(2)
-                                        : '-'}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                    Faculty Signed: {row.facultySignedAt ?? 'Pending'} | Dean Confirmation:{' '}
-                                    {row.deanSignedAt ?? 'Pending'}
-                                </p>
-                                <div className="mt-2">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={() => signAndSubmit(row.classSectionId)}
-                                        disabled={!row.canSign}
-                                    >
-                                        {row.facultySignedAt ? 'Already Signed' : 'Sign & Submit to Dean'}
-                                    </Button>
-                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-border text-sm">
@@ -176,22 +212,52 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {questions.map((question) => (
-                                            <tr key={question.number}>
+                                        {sectionQuestionAverages.map(({ question, average }) => (
+                                            <tr key={`${section}-${question.number}`}>
                                                 <td className="px-3 py-3 sm:px-4">
                                                     {question.number}. {question.text}
                                                 </td>
                                                 <td className="px-3 py-3 font-medium sm:px-4">
-                                                    {averageMap[question.number] !== null &&
-                                                    averageMap[question.number] !== undefined &&
-                                                    Number.isFinite(Number(averageMap[question.number]))
-                                                        ? Number(averageMap[question.number]).toFixed(2)
-                                                        : '-'}
+                                                    {average !== null ? average.toFixed(2) : '-'}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div className="space-y-2 p-3 sm:p-4">
+                                <h3 className="text-sm font-semibold">Class Offerings In This Section</h3>
+                                {sectionRows.map((row) => {
+                                    const overallAverage = toNumericAverage(row.overallAverage);
+
+                                    return (
+                                        <div key={row.classSectionId} className="rounded-md border p-3">
+                                            <p className="font-medium">{row.subject}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {[row.term, row.schoolYear].filter(Boolean).join(' - ') || '-'}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Respondents: {row.respondents} | Overall Average:{' '}
+                                                {overallAverage !== null ? overallAverage.toFixed(2) : '-'}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Faculty Signed: {row.facultySignedAt ?? 'Pending'} | Dean Confirmation:{' '}
+                                                {row.deanSignedAt ?? 'Pending'}
+                                            </p>
+                                            <div className="mt-2">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() => signAndSubmit(row.classSectionId)}
+                                                    disabled={!row.canSign}
+                                                >
+                                                    {row.facultySignedAt ? 'Already Signed' : 'Sign & Submit to Dean'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </section>
                     );

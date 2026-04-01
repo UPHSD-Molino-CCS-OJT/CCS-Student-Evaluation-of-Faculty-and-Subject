@@ -38,8 +38,19 @@ function createSubjectOffering(string $program, string $code, string $title): Cl
     ]);
 }
 
+function createSubjectWithoutOffering(string $program, string $code, string $title): Subject
+{
+    return Subject::query()->create([
+        'code' => $code,
+        'title' => $title,
+        'semester_offered' => '1st Semester',
+        'program' => $program,
+        'curriculum_version' => '2024',
+    ]);
+}
+
 test('student registration screen loads with course and subject options', function () {
-    createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing');
+    createSubjectWithoutOffering('BSCS', 'CCS101', 'Intro to Computing');
     createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT');
 
     $response = $this->get(route('student.register'));

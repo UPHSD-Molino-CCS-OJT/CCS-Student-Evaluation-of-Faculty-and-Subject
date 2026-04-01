@@ -129,7 +129,7 @@ Set these in Railway service variables:
 - `ASSET_URL` (optional; set to the same `https://` public URL if you still see mixed-content assets)
 - `DB_CONNECTION=mysql`
 - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (from Railway MySQL)
-- `SESSION_DRIVER=database`
+- `SESSION_DRIVER=cookie` (recommended on Railway to avoid DB-backed session disconnect issues)
 - `CACHE_STORE=database`
 - `QUEUE_CONNECTION=database` (or `sync` if you do not run a worker service)
 - `SESSION_SECURE_COOKIE=true`
@@ -202,6 +202,8 @@ composer install
 ```bash
 COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-scripts --no-interaction
 ```
+
+- If you encounter `SQLSTATE[HY000] [2006] MySQL server has gone away` on session reads (for example during logout), switch to `SESSION_DRIVER=cookie` and redeploy.
 
 ## Useful Commands
 

@@ -33,7 +33,6 @@ class StudentRegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $availableCoursePrograms = $this->availableCourses();
-        $availableSubjectIds = $this->availableSubjectIds();
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -69,7 +68,6 @@ class StudentRegisteredUserController extends Controller
         if ($data['student_type'] === 'irregular' && $selectedSubjectIds !== []) {
             $validSelectedSubjectIds = Subject::query()
                 ->whereIn('id', $selectedSubjectIds)
-                ->whereIn('id', $availableSubjectIds)
                 ->where('program', $data['course_program'])
                 ->pluck('id')
                 ->map(fn ($subjectId): int => (int) $subjectId)
@@ -169,7 +167,6 @@ class StudentRegisteredUserController extends Controller
     private function availableCourses(): array
     {
         return Subject::query()
-            ->whereIn('id', $this->availableSubjectIds())
             ->whereNotNull('program')
             ->where('program', '<>', '')
             ->distinct()
@@ -185,7 +182,6 @@ class StudentRegisteredUserController extends Controller
     private function availableSubjects(): array
     {
         return Subject::query()
-            ->whereIn('id', $this->availableSubjectIds())
             ->whereNotNull('program')
             ->where('program', '<>', '')
             ->orderBy('program')
@@ -201,19 +197,6 @@ class StudentRegisteredUserController extends Controller
                 'curriculumVersion' => $subject->curriculum_version,
             ])
             ->values()
-            ->all();
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    private function availableSubjectIds(): array
-    {
-        return ClassSection::query()
-            ->select('subject_id')
-            ->distinct()
-            ->pluck('subject_id')
-            ->map(fn ($subjectId): int => (int) $subjectId)
             ->all();
     }
 
