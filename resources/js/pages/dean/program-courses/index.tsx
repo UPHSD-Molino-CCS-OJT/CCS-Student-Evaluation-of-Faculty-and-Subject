@@ -15,6 +15,7 @@ type ProgramGroup = {
             code: string;
             title: string;
             semesterOffered?: string | null;
+            yearLevel?: number | null;
         }>;
     }>;
 };
@@ -49,7 +50,15 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
         program: '',
         curriculum_version: '',
         semester_offered: terms[0] ?? '1st Semester',
+        year_level: '1',
     });
+
+    const yearLevelOptions = [
+        { value: '1', label: '1st Year' },
+        { value: '2', label: '2nd Year' },
+        { value: '3', label: '3rd Year' },
+        { value: '4', label: '4th Year' },
+    ];
 
     const programOptions = Array.from(
         new Set(
@@ -87,6 +96,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                     program: '',
                     curriculum_version: '',
                     semester_offered: terms[0] ?? '1st Semester',
+                    year_level: '1',
                 });
             },
         });
@@ -134,6 +144,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
             program: normalizedProgram,
             curriculum_version: curriculum,
             semester_offered: subject.semesterOffered ?? (terms[0] ?? '1st Semester'),
+            year_level: subject.yearLevel ? String(subject.yearLevel) : '1',
         });
 
         if (normalizedProgram === '') {
@@ -164,6 +175,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
             program: '',
             curriculum_version: '',
             semester_offered: terms[0] ?? '1st Semester',
+            year_level: '1',
         });
     };
 
@@ -270,6 +282,22 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                                 </select>
                                 {errors.semester_offered && <p className="text-xs text-red-600">{errors.semester_offered}</p>}
                             </label>
+
+                            <label className="space-y-1 text-sm md:col-span-2">
+                                <span>Year Level</span>
+                                <select
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.year_level}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, year_level: e.target.value }))}
+                                >
+                                    {yearLevelOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.year_level && <p className="text-xs text-red-600">{errors.year_level}</p>}
+                            </label>
                         </fieldset>
 
                         <div className="mt-4 flex gap-2">
@@ -339,6 +367,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                                                                 <th className="px-3 py-3 font-medium sm:px-4">Code</th>
                                                                 <th className="px-3 py-3 font-medium sm:px-4">Course Name</th>
                                                                 <th className="px-3 py-3 font-medium sm:px-4">Semester Offered</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Year Level</th>
                                                                 {canManage && <th className="px-3 py-3 font-medium sm:px-4">Actions</th>}
                                                 </tr>
                                             </thead>
@@ -348,6 +377,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                                                                     <td className="px-3 py-3 font-medium sm:px-4">{subject.code}</td>
                                                                     <td className="px-3 py-3 sm:px-4">{subject.title}</td>
                                                                     <td className="px-3 py-3 sm:px-4">{subject.semesterOffered ?? '-'}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.yearLevel ? `${subject.yearLevel}${subject.yearLevel === 1 ? 'st' : subject.yearLevel === 2 ? 'nd' : subject.yearLevel === 3 ? 'rd' : 'th'} Year` : '-'}</td>
                                                         {canManage && (
                                                                         <td className="px-3 py-3 sm:px-4">
                                                                 <div className="flex gap-2">

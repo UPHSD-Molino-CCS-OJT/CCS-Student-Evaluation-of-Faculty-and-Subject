@@ -22,6 +22,7 @@ class DeanProgramCoursesController extends Controller
             ->orderBy('program')
             ->orderBy('curriculum_version')
             ->orderBy('semester_offered')
+            ->orderBy('year_level')
             ->orderBy('code')
             ->get()
             ->groupBy(fn (Subject $subject): string => $subject->program ?: self::UNASSIGNED_PROGRAM_KEY)
@@ -39,6 +40,7 @@ class DeanProgramCoursesController extends Controller
                                 'code' => $subject->code,
                                 'title' => $subject->title,
                                 'semesterOffered' => $subject->semester_offered,
+                                'yearLevel' => $subject->year_level,
                             ])->values(),
                         ];
                     })
@@ -68,6 +70,7 @@ class DeanProgramCoursesController extends Controller
             'program' => ['required', 'string', 'max:100'],
             'curriculum_version' => ['required', 'string', 'max:100'],
             'semester_offered' => ['required', 'string', 'in:1st Semester,2nd Semester,Summer'],
+            'year_level' => ['required', 'integer', 'in:1,2,3,4'],
             'id' => ['nullable', 'integer', 'exists:subjects,id'],
         ]);
 
@@ -94,6 +97,7 @@ class DeanProgramCoursesController extends Controller
             'program' => $data['program'],
             'curriculum_version' => $data['curriculum_version'],
             'semester_offered' => $data['semester_offered'],
+            'year_level' => (int) $data['year_level'],
         ];
 
         if ($subjectId !== null) {

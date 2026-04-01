@@ -90,3 +90,30 @@ test('authorized user can remove an entire program and all its courses', functio
         'program' => 'BSIT',
     ]);
 });
+
+test('authorized user can create course with year level', function () {
+    $user = User::factory()->create([
+        'role' => 'dean',
+        'student_id' => null,
+    ]);
+
+    $response = $this->actingAs($user)->post(route('dean.program-courses.store'), [
+        'code' => 'CCS201',
+        'title' => 'Object-Oriented Programming',
+        'program' => 'BSCS',
+        'curriculum_version' => '2024',
+        'semester_offered' => '2nd Semester',
+        'year_level' => 2,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('status', 'Course created successfully.');
+
+    $this->assertDatabaseHas('subjects', [
+        'code' => 'CCS201',
+        'program' => 'BSCS',
+        'curriculum_version' => '2024',
+        'semester_offered' => '2nd Semester',
+        'year_level' => 2,
+    ]);
+});
