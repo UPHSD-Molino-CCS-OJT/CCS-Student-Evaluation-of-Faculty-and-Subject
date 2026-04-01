@@ -225,10 +225,14 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
                                 </p>
                             </div>
                             <div className="space-y-2 border-b p-3 sm:p-4">
-                                {questionSections.map((questionSection) => (
-                                    <details key={`${section}-${questionSection.category}`} className="overflow-hidden rounded-md border">
+                                {questionSections.map((questionSection, index) => (
+                                    <details
+                                        key={`${section}-${questionSection.category}`}
+                                        className="overflow-hidden rounded-md border"
+                                        open={index === 0}
+                                    >
                                         <summary className="cursor-pointer bg-muted/20 px-3 py-2 text-sm font-semibold">
-                                            Section: {questionSection.category}
+                                            Section: {questionSection.category} ({questionSection.items.length})
                                         </summary>
                                         <div className="overflow-x-auto border-t">
                                             <table className="min-w-full divide-y divide-border text-sm">
