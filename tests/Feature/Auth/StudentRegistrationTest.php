@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->withoutVite();
 });
 
-function createSubjectOffering(string $program, string $code, string $title): ClassSection
+function createSubjectOffering(string $program, string $code, string $title, int $yearLevel = 1): ClassSection
 {
     $faculty = User::factory()->create([
         'role' => 'faculty',
@@ -21,6 +21,7 @@ function createSubjectOffering(string $program, string $code, string $title): Cl
         'code' => $code,
         'title' => $title,
         'semester_offered' => '1st Semester',
+        'year_level' => $yearLevel,
         'program' => $program,
         'curriculum_version' => '2024',
     ]);
@@ -38,12 +39,13 @@ function createSubjectOffering(string $program, string $code, string $title): Cl
     ]);
 }
 
-function createSubjectWithoutOffering(string $program, string $code, string $title): Subject
+function createSubjectWithoutOffering(string $program, string $code, string $title, int $yearLevel = 1): Subject
 {
     return Subject::query()->create([
         'code' => $code,
         'title' => $title,
         'semester_offered' => '1st Semester',
+        'year_level' => $yearLevel,
         'program' => $program,
         'curriculum_version' => '2024',
     ]);
@@ -64,9 +66,10 @@ test('student registration screen loads with course and subject options', functi
 });
 
 test('regular students can register and are auto-enrolled to available subjects in their selected course', function () {
-    $classSectionOne = createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing');
-    $classSectionTwo = createSubjectOffering('BSCS', 'CCS210', 'Data Structures');
-    createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT');
+    $classSectionOne = createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing', 2);
+    $classSectionTwo = createSubjectOffering('BSCS', 'CCS210', 'Data Structures', 2);
+    $otherYearClassSection = createSubjectOffering('BSCS', 'CCS110', 'Discrete Structures', 1);
+    createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT', 2);
 
     $response = $this->post(route('student.register.store'), [
         'name' => 'Regular Student',
@@ -98,6 +101,11 @@ test('regular students can register and are auto-enrolled to available subjects 
     $this->assertDatabaseHas('student_section_enrollments', [
         'student_id' => $student->id,
         'class_section_id' => $classSectionTwo->id,
+    ]);
+
+    $this->assertDatabaseMissing('student_section_enrollments', [
+        'student_id' => $student->id,
+        'class_section_id' => $otherYearClassSection->id,
     ]);
 });
 

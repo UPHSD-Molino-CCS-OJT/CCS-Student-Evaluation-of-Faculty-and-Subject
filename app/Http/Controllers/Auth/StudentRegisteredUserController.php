@@ -82,6 +82,7 @@ class StudentRegisteredUserController extends Controller
 
         $classSectionIds = $this->resolveAssignableClassSectionIds(
             $data['course_program'],
+            $data['student_type'] === 'regular' ? (int) $data['year_level'] : null,
             $data['student_type'] === 'irregular' ? $selectedSubjectIds : null,
         );
 
@@ -200,11 +201,17 @@ class StudentRegisteredUserController extends Controller
      * @param  array<int, int>|null  $subjectIds
      * @return array<int, int>
      */
-    private function resolveAssignableClassSectionIds(string $courseProgram, ?array $subjectIds = null): array
+    private function resolveAssignableClassSectionIds(string $courseProgram, ?int $yearLevel = null, ?array $subjectIds = null): array
     {
         $query = ClassSection::query()
             ->select(['id', 'subject_id'])
-            ->whereHas('subject', fn ($subjectQuery) => $subjectQuery->where('program', $courseProgram));
+            ->whereHas('subject', function ($subjectQuery) use ($courseProgram, $yearLevel): void {
+                $subjectQuery->where('program', $courseProgram);
+
+                if ($yearLevel !== null) {
+                    $subjectQuery->where('year_level', $yearLevel);
+                }
+            });
 
         if ($subjectIds !== null && $subjectIds !== []) {
             $query->whereIn('subject_id', $subjectIds);
