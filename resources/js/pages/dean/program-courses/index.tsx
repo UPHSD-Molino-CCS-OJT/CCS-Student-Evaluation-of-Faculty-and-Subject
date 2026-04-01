@@ -25,6 +25,8 @@ type Props = {
     terms: string[];
 };
 
+const CUSTOM_PROGRAM_OPTION = '__CUSTOM_PROGRAM__';
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Courses per Program',
@@ -39,6 +41,8 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [programSelection, setProgramSelection] = useState('');
+    const [customProgram, setCustomProgram] = useState('');
     const [form, setForm] = useState({
         code: '',
         title: '',
@@ -47,8 +51,26 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
         semester_offered: terms[0] ?? '1st Semester',
     });
 
+    const programOptions = Array.from(
+        new Set(
+            programs
+                .map((group) => group.programValue)
+                .filter((value): value is string => value !== null && value.trim() !== ''),
+        ),
+    ).sort((left, right) => left.localeCompare(right));
+
+    const resolvedProgram =
+        programSelection === CUSTOM_PROGRAM_OPTION
+            ? customProgram.trim()
+            : (programSelection || form.program).trim();
+
     const submit = () => {
-        const payload = editingId === null ? form : { ...form, id: editingId };
+        const payloadBase = {
+            ...form,
+            program: resolvedProgram,
+        };
+
+        const payload = editingId === null ? payloadBase : { ...payloadBase, id: editingId };
         const method = editingId === null ? 'post' : 'patch';
 
         router[method]('/dean/program-courses', payload, {
@@ -57,6 +79,8 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
             onFinish: () => setIsSubmitting(false),
             onSuccess: () => {
                 setEditingId(null);
+                setProgramSelection('');
+                setCustomProgram('');
                 setForm({
                     code: '',
                     title: '',
@@ -96,19 +120,44 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
         });
     };
 
-    const beginEdit = (subject: ProgramGroup['curriculums'][number]['subjects'][number], program: string, curriculum: string) => {
+    const beginEdit = (
+        subject: ProgramGroup['curriculums'][number]['subjects'][number],
+        programValue: string | null,
+        curriculum: string,
+    ) => {
+        const normalizedProgram = (programValue ?? '').trim();
+
         setEditingId(subject.id);
         setForm({
             code: subject.code,
             title: subject.title,
-            program,
+            program: normalizedProgram,
             curriculum_version: curriculum,
             semester_offered: subject.semesterOffered ?? (terms[0] ?? '1st Semester'),
         });
+
+        if (normalizedProgram === '') {
+            setProgramSelection('');
+            setCustomProgram('');
+
+            return;
+        }
+
+        if (programOptions.includes(normalizedProgram)) {
+            setProgramSelection(normalizedProgram);
+            setCustomProgram('');
+
+            return;
+        }
+
+        setProgramSelection(CUSTOM_PROGRAM_OPTION);
+        setCustomProgram(normalizedProgram);
     };
 
     const cancelEdit = () => {
         setEditingId(null);
+        setProgramSelection('');
+        setCustomProgram('');
         setForm({
             code: '',
             title: '',
@@ -161,13 +210,36 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
 
                             <label className="space-y-1 text-sm">
                                 <span>Program</span>
-                                <input
-                                    type="text"
+                                <select
                                     className="w-full rounded-md border bg-background px-3 py-2"
-                                    value={form.program}
-                                    onChange={(e) => setForm((prev) => ({ ...prev, program: e.target.value }))}
-                                    placeholder="e.g. BSCS"
-                                />
+                                    value={programSelection}
+                                    onChange={(e) => {
+                                        const selectedValue = e.target.value;
+
+                                        setProgramSelection(selectedValue);
+
+                                        if (selectedValue !== CUSTOM_PROGRAM_OPTION) {
+                                            setCustomProgram('');
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select program</option>
+                                    {programOptions.map((program) => (
+                                        <option key={program} value={program}>
+                                            {program}
+                                        </option>
+                                    ))}
+                                    <option value={CUSTOM_PROGRAM_OPTION}>Custom program</option>
+                                </select>
+                                {programSelection === CUSTOM_PROGRAM_OPTION && (
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-md border bg-background px-3 py-2"
+                                        value={customProgram}
+                                        onChange={(e) => setCustomProgram(e.target.value)}
+                                        placeholder="Enter custom program"
+                                    />
+                                )}
                                 {errors.program && <p className="text-xs text-red-600">{errors.program}</p>}
                             </label>
 
@@ -201,7 +273,13 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                         </fieldset>
 
                         <div className="mt-4 flex gap-2">
-                            <LoadingButton type="button" onClick={submit} loading={isSubmitting} loadingText="Saving...">
+                            <LoadingButton
+                                type="button"
+                                onClick={submit}
+                                loading={isSubmitting}
+                                loadingText="Saving..."
+                                disabled={resolvedProgram === ''}
+                            >
                                 {editingId === null ? 'Add Course' : 'Save Changes'}
                             </LoadingButton>
                             {editingId !== null && (
@@ -277,7 +355,7 @@ export default function ProgramCoursesIndex({ programs, canManage, terms }: Prop
                                                                         type="button"
                                                                         className="rounded-md border px-3 py-1 text-xs"
                                                                         onClick={() =>
-                                                                            beginEdit(subject, group.program, curriculumGroup.curriculum)
+                                                                            beginEdit(subject, group.programValue, curriculumGroup.curriculum)
                                                                         }
                                                                     >
                                                                         Edit

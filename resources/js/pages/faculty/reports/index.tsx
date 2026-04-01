@@ -90,6 +90,23 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
         return Number.isFinite(parsed) ? parsed : null;
     };
 
+    const questionSections = questions.reduce<Array<{ category: string; items: Question[] }>>((sections, question) => {
+        const existingSection = sections.find((section) => section.category === question.category);
+
+        if (existingSection) {
+            existingSection.items.push(question);
+
+            return sections;
+        }
+
+        sections.push({
+            category: question.category,
+            items: [question],
+        });
+
+        return sections;
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Faculty Reports" />
@@ -194,6 +211,10 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
                         };
                     });
 
+                    const averageByQuestionNumber = Object.fromEntries(
+                        sectionQuestionAverages.map(({ question, average }) => [question.number, average]),
+                    );
+
                     return (
                         <section key={section} className="overflow-hidden rounded-xl border">
                             <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
@@ -203,27 +224,40 @@ export default function FacultyReports({ questions, rows, hasDatabaseEsign, exis
                                     {sectionOverallAverage !== null ? sectionOverallAverage.toFixed(2) : '-'}
                                 </p>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-border text-sm">
-                                    <thead className="bg-muted/30 text-left">
-                                        <tr>
-                                            <th className="px-3 py-3 font-medium sm:px-4">Question</th>
-                                            <th className="px-3 py-3 font-medium sm:px-4">Average Rating</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {sectionQuestionAverages.map(({ question, average }) => (
-                                            <tr key={`${section}-${question.number}`}>
-                                                <td className="px-3 py-3 sm:px-4">
-                                                    {question.number}. {question.text}
-                                                </td>
-                                                <td className="px-3 py-3 font-medium sm:px-4">
-                                                    {average !== null ? average.toFixed(2) : '-'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="space-y-2 border-b p-3 sm:p-4">
+                                {questionSections.map((questionSection) => (
+                                    <details key={`${section}-${questionSection.category}`} className="overflow-hidden rounded-md border">
+                                        <summary className="cursor-pointer bg-muted/20 px-3 py-2 text-sm font-semibold">
+                                            Section: {questionSection.category}
+                                        </summary>
+                                        <div className="overflow-x-auto border-t">
+                                            <table className="min-w-full divide-y divide-border text-sm">
+                                                <thead className="bg-muted/30 text-left">
+                                                    <tr>
+                                                        <th className="px-3 py-3 font-medium sm:px-4">Question</th>
+                                                        <th className="px-3 py-3 font-medium sm:px-4">Average Rating</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border">
+                                                    {questionSection.items.map((question) => {
+                                                        const average = averageByQuestionNumber[question.number] as number | null | undefined;
+
+                                                        return (
+                                                            <tr key={`${section}-${questionSection.category}-${question.number}`}>
+                                                                <td className="px-3 py-3 sm:px-4">
+                                                                    {question.number}. {question.text}
+                                                                </td>
+                                                                <td className="px-3 py-3 font-medium sm:px-4">
+                                                                    {average !== null && average !== undefined ? average.toFixed(2) : '-'}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </details>
+                                ))}
                             </div>
 
                             <div className="space-y-2 p-3 sm:p-4">
