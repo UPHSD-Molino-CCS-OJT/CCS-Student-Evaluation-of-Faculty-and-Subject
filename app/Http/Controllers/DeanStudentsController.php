@@ -23,7 +23,7 @@ class DeanStudentsController extends Controller
                     ->sortByDesc('created_at')
                     ->first();
 
-                $program = $latestEnrollment?->classSection?->subject?->program;
+                $program = $latestEnrollment?->classSection?->subject?->program ?: $student->course_program;
                 $yearLevel = null;
 
                 $sectionCode = $latestEnrollment?->classSection?->section?->code;

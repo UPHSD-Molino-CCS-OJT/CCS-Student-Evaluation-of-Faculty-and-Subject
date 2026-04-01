@@ -24,6 +24,8 @@ class User extends Authenticatable
         'name',
         'email',
         'student_id',
+        'course_program',
+        'student_type',
         'password',
         'role',
         'esign_image_path',
