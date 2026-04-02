@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->withoutVite();
 });
 
-function createSubjectOffering(string $program, string $code, string $title, int $yearLevel = 1): ClassSection
+function createSubjectOffering(string $program, string $code, string $title, int $yearLevel = 1, ?string $sectionCode = null): ClassSection
 {
     $faculty = User::factory()->create([
         'role' => 'faculty',
@@ -26,8 +26,8 @@ function createSubjectOffering(string $program, string $code, string $title, int
         'curriculum_version' => '2024',
     ]);
 
-    $section = Section::query()->create([
-        'code' => $code.'-SEC',
+    $section = Section::query()->firstOrCreate([
+        'code' => $sectionCode ?? $code.'-SEC',
     ]);
 
     return ClassSection::query()->create([
@@ -53,7 +53,7 @@ function createSubjectWithoutOffering(string $program, string $code, string $tit
 
 test('student registration screen loads with course and subject options', function () {
     createSubjectWithoutOffering('BSCS', 'CCS101', 'Intro to Computing');
-    createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT');
+    createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT', sectionCode: 'BSIT-1A');
 
     $response = $this->get(route('student.register'));
 
@@ -62,13 +62,14 @@ test('student registration screen loads with course and subject options', functi
         ->component('auth/student-register')
         ->where('courses', ['BSCS', 'BSIT'])
         ->where('yearLevels', [1, 2, 3, 4, 5])
+        ->has('sections', 1)
         ->has('subjects', 2));
 });
 
 test('regular students can register and are auto-enrolled to available subjects in their selected course', function () {
-    $classSectionOne = createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing', 2);
-    $classSectionTwo = createSubjectOffering('BSCS', 'CCS210', 'Data Structures', 2);
-    $otherYearClassSection = createSubjectOffering('BSCS', 'CCS110', 'Discrete Structures', 1);
+    $classSectionOne = createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing', 2, 'BSCS-2A');
+    $classSectionTwo = createSubjectOffering('BSCS', 'CCS210', 'Data Structures', 2, 'BSCS-2A');
+    $otherYearClassSection = createSubjectOffering('BSCS', 'CCS110', 'Discrete Structures', 1, 'BSCS-2A');
     createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT', 2);
 
     $response = $this->post(route('student.register.store'), [
@@ -76,6 +77,7 @@ test('regular students can register and are auto-enrolled to available subjects 
         'email' => 'regular.student@example.com',
         'student_id' => '01-1234-567',
         'course_program' => 'BSCS',
+        'section_id' => $classSectionOne->section_id,
         'year_level' => 2,
         'student_type' => 'regular',
     ]);
@@ -110,14 +112,15 @@ test('regular students can register and are auto-enrolled to available subjects 
 });
 
 test('irregular students must choose subjects and are enrolled only in selected subjects', function () {
-    $selectedClass = createSubjectOffering('BSCS', 'CCS301', 'Networks');
-    $otherClass = createSubjectOffering('BSCS', 'CCS302', 'Operating Systems');
+    $selectedClass = createSubjectOffering('BSCS', 'CCS301', 'Networks', 3, 'BSCS-3A');
+    $otherClass = createSubjectOffering('BSCS', 'CCS302', 'Operating Systems', 3, 'BSCS-3B');
 
     $invalidResponse = $this->from(route('student.register'))->post(route('student.register.store'), [
         'name' => 'Irregular Student',
         'email' => 'irregular.no.subjects@example.com',
         'student_id' => '1-5555-111',
         'course_program' => 'BSCS',
+        'section_id' => $selectedClass->section_id,
         'year_level' => 3,
         'student_type' => 'irregular',
     ]);
@@ -131,6 +134,7 @@ test('irregular students must choose subjects and are enrolled only in selected 
         'email' => 'irregular.student@example.com',
         'student_id' => '1-5555-222',
         'course_program' => 'BSCS',
+        'section_id' => $selectedClass->section_id,
         'year_level' => 3,
         'student_type' => 'irregular',
         'subject_ids' => [$selectedClass->subject_id],
@@ -157,6 +161,7 @@ test('irregular students must choose subjects and are enrolled only in selected 
 });
 
 test('regular students can register even when no class offerings exist yet and account is still activated', function () {
+    $assignedSectionClass = createSubjectOffering('BSCS', 'CCS101', 'Intro to Computing', 1, 'BSCS-1A');
     createSubjectWithoutOffering('BSCS', 'CCS401', 'Capstone Project 1');
 
     $response = $this->post(route('student.register.store'), [
@@ -164,6 +169,7 @@ test('regular students can register even when no class offerings exist yet and a
         'email' => 'pending.enrollment@example.com',
         'student_id' => '1-9999-001',
         'course_program' => 'BSCS',
+        'section_id' => $assignedSectionClass->section_id,
         'year_level' => 4,
         'student_type' => 'regular',
     ]);
@@ -178,4 +184,28 @@ test('regular students can register even when no class offerings exist yet and a
         ->and($student->student_type)->toBe('regular');
 
     expect(StudentSectionEnrollment::query()->where('student_id', $student->id)->count())->toBe(0);
+});
+
+test('students must choose a section that has assigned faculty for their selected course', function () {
+    createSubjectOffering('BSIT', 'IT101', 'Fundamentals of IT', 1, 'BSIT-1A');
+
+    $unassignedCourseSection = Section::query()->create([
+        'code' => 'BSCS-1Z',
+    ]);
+
+    createSubjectWithoutOffering('BSCS', 'CCS101', 'Intro to Computing', 1);
+
+    $response = $this->from(route('student.register'))->post(route('student.register.store'), [
+        'name' => 'Invalid Section Student',
+        'email' => 'invalid.section@example.com',
+        'student_id' => '1-3131-313',
+        'course_program' => 'BSCS',
+        'section_id' => $unassignedCourseSection->id,
+        'year_level' => 1,
+        'student_type' => 'regular',
+    ]);
+
+    $response->assertRedirect(route('student.register'));
+    $response->assertSessionHasErrors('section_id');
+    $this->assertGuest();
 });

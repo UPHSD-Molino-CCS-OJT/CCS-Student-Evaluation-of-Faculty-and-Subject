@@ -26,6 +26,7 @@ class StudentRegisteredUserController extends Controller
         return Inertia::render('auth/student-register', [
             'courses' => $this->availableCourses(),
             'subjects' => $this->availableSubjects(),
+            'sections' => $this->availableSections(),
             'yearLevels' => $this->availableYearLevels(),
         ]);
     }
@@ -39,11 +40,21 @@ class StudentRegisteredUserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'student_id' => ['required', 'regex:/^\d{1,2}-\d{4}-\d{3}$/', 'unique:users,student_id'],
             'course_program' => ['required', 'string', 'max:100', Rule::in($availableCoursePrograms)],
+            'section_id' => ['required', 'integer', Rule::exists('sections', 'id')],
             'year_level' => ['required', 'integer', Rule::in($this->availableYearLevels())],
             'student_type' => ['required', 'string', Rule::in(['regular', 'irregular'])],
             'subject_ids' => ['nullable', 'array'],
             'subject_ids.*' => ['integer', 'distinct', Rule::exists('subjects', 'id')],
         ]);
+
+        $selectedSectionId = (int) $data['section_id'];
+        $availableSectionIds = $this->availableSectionIdsForCourse($data['course_program']);
+
+        if (! in_array($selectedSectionId, $availableSectionIds, true)) {
+            return back()->withErrors([
+                'section_id' => 'Selected section does not have an assigned faculty for this course yet.',
+            ])->withInput();
+        }
 
         $normalizedStudentId = $this->normalizeStudentId($data['student_id']);
 
@@ -82,6 +93,7 @@ class StudentRegisteredUserController extends Controller
 
         $classSectionIds = $this->resolveAssignableClassSectionIds(
             $data['course_program'],
+            $selectedSectionId,
             $data['student_type'] === 'regular' ? (int) $data['year_level'] : null,
             $data['student_type'] === 'irregular' ? $selectedSubjectIds : null,
         );
@@ -198,13 +210,53 @@ class StudentRegisteredUserController extends Controller
     }
 
     /**
+     * @return array<int, array{id:int,code:string,program:string|null}>
+     */
+    private function availableSections(): array
+    {
+        return ClassSection::query()
+            ->join('subjects', 'subjects.id', '=', 'class_sections.subject_id')
+            ->join('sections', 'sections.id', '=', 'class_sections.section_id')
+            ->whereNotNull('subjects.program')
+            ->where('subjects.program', '<>', '')
+            ->selectRaw('sections.id as id, sections.code as code, subjects.program as program')
+            ->distinct()
+            ->orderBy('subjects.program')
+            ->orderBy('sections.code')
+            ->get()
+            ->map(fn (object $row): array => [
+                'id' => (int) $row->id,
+                'code' => (string) $row->code,
+                'program' => $row->program,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function availableSectionIdsForCourse(string $courseProgram): array
+    {
+        return ClassSection::query()
+            ->join('subjects', 'subjects.id', '=', 'class_sections.subject_id')
+            ->where('subjects.program', $courseProgram)
+            ->distinct()
+            ->pluck('class_sections.section_id')
+            ->map(fn ($sectionId): int => (int) $sectionId)
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  array<int, int>|null  $subjectIds
      * @return array<int, int>
      */
-    private function resolveAssignableClassSectionIds(string $courseProgram, ?int $yearLevel = null, ?array $subjectIds = null): array
+    private function resolveAssignableClassSectionIds(string $courseProgram, int $sectionId, ?int $yearLevel = null, ?array $subjectIds = null): array
     {
         $query = ClassSection::query()
             ->select(['id', 'subject_id'])
+            ->where('section_id', $sectionId)
             ->whereHas('subject', function ($subjectQuery) use ($courseProgram, $yearLevel): void {
                 $subjectQuery->where('program', $courseProgram);
 

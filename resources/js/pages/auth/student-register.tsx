@@ -17,15 +17,23 @@ type SubjectOption = {
     curriculumVersion: string | null;
 };
 
+type SectionOption = {
+    id: number;
+    code: string;
+    program: string | null;
+};
+
 type Props = {
     courses: string[];
     subjects: SubjectOption[];
+    sections: SectionOption[];
     yearLevels: number[];
 };
 
-export default function StudentRegister({ courses, subjects, yearLevels }: Props) {
+export default function StudentRegister({ courses, subjects, sections, yearLevels }: Props) {
     const [studentId, setStudentId] = useState('');
     const [courseProgram, setCourseProgram] = useState('');
+    const [sectionId, setSectionId] = useState('');
     const [yearLevel, setYearLevel] = useState('');
     const [studentType, setStudentType] = useState<'regular' | 'irregular'>('regular');
     const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
@@ -46,6 +54,7 @@ export default function StudentRegister({ courses, subjects, yearLevels }: Props
     };
 
     const availableSubjects = subjects.filter((subject) => subject.program === courseProgram);
+    const availableSections = sections.filter((section) => section.program === courseProgram);
 
     const toggleSubjectSelection = (subjectId: number, checked: boolean) => {
         setSelectedSubjectIds((previous) => {
@@ -138,6 +147,17 @@ export default function StudentRegister({ courses, subjects, yearLevels }: Props
                                         const nextCourse = event.target.value;
 
                                         setCourseProgram(nextCourse);
+                                        setSectionId((previous) => {
+                                            if (previous === '') {
+                                                return previous;
+                                            }
+
+                                            const stillValid = sections.some((section) => (
+                                                section.id === Number(previous) && section.program === nextCourse
+                                            ));
+
+                                            return stillValid ? previous : '';
+                                        });
                                         setSelectedSubjectIds((previous) => previous.filter((subjectId) => {
                                             const subject = subjects.find((item) => item.id === subjectId);
 
@@ -159,6 +179,36 @@ export default function StudentRegister({ courses, subjects, yearLevels }: Props
                                     </p>
                                 )}
                                 <InputError message={errors.course_program} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="section_id" className="text-sm">Section</Label>
+                                <select
+                                    id="section_id"
+                                    name="section_id"
+                                    required
+                                    value={sectionId}
+                                    onChange={(event) => setSectionId(event.target.value)}
+                                    className="h-11 w-full rounded-md border bg-background px-3 text-base"
+                                >
+                                    <option value="">Select your section</option>
+                                    {availableSections.map((section) => (
+                                        <option key={section.id} value={section.id}>
+                                            {section.code}
+                                        </option>
+                                    ))}
+                                </select>
+                                {courseProgram !== '' && availableSections.length === 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                        No faculty-assigned sections are available for this course yet.
+                                    </p>
+                                )}
+                                {courseProgram === '' && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Select a course first to view available sections.
+                                    </p>
+                                )}
+                                <InputError message={errors.section_id} />
                             </div>
 
                             <div className="grid gap-2">
