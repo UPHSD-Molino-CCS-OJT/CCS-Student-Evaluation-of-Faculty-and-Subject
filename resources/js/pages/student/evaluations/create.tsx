@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Label } from '@/components/ui/label';
@@ -31,14 +31,29 @@ type Props = {
 };
 
 export default function StudentEvaluationCreate({ classSection, legend, questions }: Props) {
-    const groupedQuestions = questions.reduce<Record<string, Question[]>>((carry, question) => {
-        if (!carry[question.category]) {
-            carry[question.category] = [];
+    const questionSections = questions.reduce<Array<{ category: string; items: Question[] }>>((sections, question) => {
+        const existingSection = sections.find((section) => section.category === question.category);
+
+        if (existingSection) {
+            existingSection.items.push(question);
+
+            return sections;
         }
 
-        carry[question.category].push(question);
-        return carry;
-    }, {});
+        sections.push({
+            category: question.category,
+            items: [question],
+        });
+
+        return sections;
+    }, []);
+
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
+        Object.fromEntries(questionSections.map((section, sectionIndex) => [section.category, sectionIndex === 0])),
+    );
+
+    const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const commentsRef = useRef<HTMLTextAreaElement | null>(null);
 
     const { data, setData, post, processing, errors } = useForm<{
         responses: Record<number, number | null>;
@@ -69,13 +84,51 @@ export default function StudentEvaluationCreate({ classSection, legend, question
         post(`/student/evaluations/${classSection.id}`);
     };
 
+    const setQuestionRating = (question: Question, rating: number) => {
+        const updatedResponses = {
+            ...data.responses,
+            [question.number]: rating,
+        };
+
+        setData('responses', updatedResponses);
+
+        const currentIndex = questions.findIndex((item) => item.number === question.number);
+        const nextUnansweredQuestion =
+            questions.slice(currentIndex + 1).find((item) => updatedResponses[item.number] === null)
+            ?? questions.find((item) => updatedResponses[item.number] === null);
+
+        if (nextUnansweredQuestion) {
+            setOpenSections((previous) =>
+                previous[nextUnansweredQuestion.category]
+                    ? previous
+                    : { ...previous, [nextUnansweredQuestion.category]: true },
+            );
+
+            requestAnimationFrame(() => {
+                questionRefs.current[nextUnansweredQuestion.number]?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            });
+
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            commentsRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Evaluate Subject" />
 
-            <div className="mx-auto max-w-5xl space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Evaluation Form</h1>
+            <div className="mx-auto max-w-5xl space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Evaluation Form</h1>
                     <p className="mt-1 text-sm text-muted-foreground">{classSection.subject}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Faculty: {classSection.faculty} | Section: {classSection.section}
@@ -85,7 +138,7 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                     </p>
                 </div>
 
-                <div className="rounded-xl border p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
                     <h2 className="text-sm font-semibold">Rating Legend</h2>
                     <div className="mt-3 grid gap-2 text-sm sm:grid-cols-5">
                         {legend.map((item) => (
@@ -97,49 +150,68 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                     </div>
                 </div>
 
-                <form onSubmit={submit} className="space-y-5">
-                    {Object.entries(groupedQuestions).map(([category, categoryQuestions]) => (
-                        <section key={category} className="rounded-xl border p-4">
-                            <h2 className="text-base font-semibold">{category}</h2>
-                            <div className="mt-4 space-y-5">
-                                {categoryQuestions.map((question) => (
-                                    <div key={question.number} className="space-y-2">
-                                        <p className="text-sm">
-                                            <span className="font-medium">{question.number}.</span> {question.text}
-                                        </p>
-                                        <div className="flex flex-wrap gap-4">
-                                            {[5, 4, 3, 2, 1].map((rating) => (
-                                                <Label
-                                                    key={rating}
-                                                    className="flex cursor-pointer items-center gap-2 text-sm font-normal"
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name={`responses.${question.number}`}
-                                                        checked={data.responses[question.number] === rating}
-                                                        onChange={() => {
-                                                            setData('responses', {
-                                                                ...data.responses,
-                                                                [question.number]: rating,
-                                                            });
-                                                        }}
-                                                        className="h-4 w-4"
-                                                    />
-                                                    {rating}
-                                                </Label>
-                                            ))}
+                <form onSubmit={submit} className="space-y-4 sm:space-y-5">
+                    {questionSections.map((questionSection) => (
+                        <section key={questionSection.category} className="rounded-xl border p-3 sm:p-4">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setOpenSections((previous) => ({
+                                        ...previous,
+                                        [questionSection.category]: !previous[questionSection.category],
+                                    }))
+                                }
+                                className="flex w-full items-center justify-between text-left"
+                            >
+                                <h2 className="text-base font-semibold">{questionSection.category}</h2>
+                                <span className="text-sm text-muted-foreground">
+                                    {openSections[questionSection.category] ? 'Hide' : 'Show'} ({questionSection.items.length})
+                                </span>
+                            </button>
+
+                            {openSections[questionSection.category] && (
+                                <div className="mt-4 space-y-5">
+                                    {questionSection.items.map((question) => (
+                                        <div
+                                            key={question.number}
+                                            className="space-y-2"
+                                            ref={(element) => {
+                                                questionRefs.current[question.number] = element;
+                                            }}
+                                        >
+                                            <p className="text-sm">
+                                                <span className="font-medium">{question.number}.</span> {question.text}
+                                            </p>
+                                            <div className="flex flex-wrap gap-4">
+                                                {[5, 4, 3, 2, 1].map((rating) => (
+                                                    <Label
+                                                        key={rating}
+                                                        className="flex cursor-pointer items-center gap-2 text-sm font-normal"
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name={`responses.${question.number}`}
+                                                            checked={data.responses[question.number] === rating}
+                                                            onChange={() => setQuestionRating(question, rating)}
+                                                            className="h-4 w-4"
+                                                        />
+                                                        {rating}
+                                                    </Label>
+                                                ))}
+                                            </div>
+                                            <InputError message={errors[`responses.${question.number}` as keyof typeof errors]} />
                                         </div>
-                                        <InputError message={errors[`responses.${question.number}` as keyof typeof errors]} />
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </section>
                     ))}
 
-                    <section className="rounded-xl border p-4">
+                    <section className="rounded-xl border p-3 sm:p-4">
                         <Label htmlFor="comments">Optional comments</Label>
                         <textarea
                             id="comments"
+                            ref={commentsRef}
                             value={data.comments}
                             onChange={(event) => setData('comments', event.target.value)}
                             rows={4}
@@ -149,8 +221,8 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                         <InputError message={errors.comments} />
                     </section>
 
-                    <div className="flex items-center justify-between rounded-xl border p-4">
-                        <p className="text-sm text-muted-foreground">
+                    <div className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                        <p className="text-sm text-muted-foreground sm:text-left">
                             {unansweredCount > 0 ? `${unansweredCount} question(s) unanswered` : 'All questions answered'}
                         </p>
                         <LoadingButton
@@ -158,6 +230,7 @@ export default function StudentEvaluationCreate({ classSection, legend, question
                             disabled={unansweredCount > 0}
                             loading={processing}
                             loadingText="Submitting..."
+                            className="w-full sm:w-auto"
                         >
                             Submit Evaluation
                         </LoadingButton>

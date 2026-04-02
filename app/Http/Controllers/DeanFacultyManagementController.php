@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -77,6 +78,63 @@ class DeanFacultyManagementController extends Controller
         ]);
     }
 
+    public function storeFaculty(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        User::query()->create([
+            'name' => $data['name'],
+            'email' => mb_strtolower(trim($data['email'])),
+            'role' => 'faculty',
+            'password' => $data['password'] !== null && $data['password'] !== ''
+                ? $data['password']
+                : 'password',
+        ]);
+
+        return back()->with('status', 'Faculty member created successfully.');
+    }
+
+    public function updateFaculty(Request $request, User $faculty): RedirectResponse
+    {
+        if ($faculty->role !== 'faculty') {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($faculty->id)],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        $payload = [
+            'name' => $data['name'],
+            'email' => mb_strtolower(trim($data['email'])),
+        ];
+
+        if (($data['password'] ?? null) !== null && $data['password'] !== '') {
+            $payload['password'] = $data['password'];
+        }
+
+        $faculty->update($payload);
+
+        return back()->with('status', 'Faculty member updated successfully.');
+    }
+
+    public function destroyFaculty(User $faculty): RedirectResponse
+    {
+        if ($faculty->role !== 'faculty') {
+            abort(404);
+        }
+
+        $faculty->delete();
+
+        return back()->with('status', 'Faculty member removed successfully.');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -110,5 +168,47 @@ class DeanFacultyManagementController extends Controller
         });
 
         return back()->with('status', 'Faculty assignment saved successfully.');
+    }
+
+    public function update(Request $request, ClassSection $classSection): RedirectResponse
+    {
+        $data = $request->validate([
+            'faculty_id' => ['required', 'integer', 'exists:users,id'],
+            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'section_code' => ['required', 'string', 'max:255'],
+            'term' => ['required', 'string', 'in:1st Semester,2nd Semester,Summer'],
+            'school_year' => ['required', 'string', 'max:255'],
+        ]);
+
+        $faculty = User::query()->findOrFail($data['faculty_id']);
+
+        if ($faculty->role !== 'faculty') {
+            return back()->withErrors([
+                'faculty_id' => 'Selected user is not a faculty member.',
+            ]);
+        }
+
+        DB::transaction(function () use ($data, $classSection): void {
+            $section = Section::query()->firstOrCreate([
+                'code' => $data['section_code'],
+            ]);
+
+            $classSection->update([
+                'subject_id' => $data['subject_id'],
+                'faculty_id' => $data['faculty_id'],
+                'section_id' => $section->id,
+                'school_year' => $data['school_year'],
+                'term' => $data['term'],
+            ]);
+        });
+
+        return back()->with('status', 'Faculty assignment updated successfully.');
+    }
+
+    public function destroy(ClassSection $classSection): RedirectResponse
+    {
+        $classSection->delete();
+
+        return back()->with('status', 'Faculty assignment removed successfully.');
     }
 }

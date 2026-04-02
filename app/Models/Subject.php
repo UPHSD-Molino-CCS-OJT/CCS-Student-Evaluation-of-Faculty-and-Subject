@@ -17,9 +17,20 @@ class Subject extends Model
         'code',
         'title',
         'semester_offered',
+        'year_level',
         'program',
         'curriculum_version',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'year_level' => 'integer',
+        ];
+    }
 
     public function classSections(): HasMany
     {

@@ -202,6 +202,23 @@ test('dean staff and system admin can export class section summary', function (s
     expect(substr($content, 0, 2))->toBe('PK');
 })->with(['dean', 'staff', 'system_admin']);
 
+test('dean staff and system admin can export section summary document', function (string $role) {
+    $classSection = createClassSectionWithEvaluation();
+
+    $user = User::factory()->create([
+        'role' => $role,
+        'student_id' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('dean.summaries.export-section', [
+        'section' => $classSection->section_id,
+        'format' => 'pdf',
+    ]));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+})->with(['dean', 'staff', 'system_admin']);
+
 test('dean staff and system admin can preview class section summary', function (string $role) {
     $classSection = createClassSectionWithEvaluation();
 

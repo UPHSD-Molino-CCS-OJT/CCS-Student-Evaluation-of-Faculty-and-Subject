@@ -10,6 +10,7 @@ use App\Models\EvaluationReportSignoff;
 use App\Models\ExportDocumentTemplate;
 use App\Models\EvaluationSetting;
 use App\Models\EvaluationResponse;
+use App\Models\Section;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -61,7 +62,7 @@ class DeanEvaluationSummaryController extends Controller
             ->groupBy('class_section_id');
 
         $summaryMap = ClassSection::query()
-            ->selectRaw('class_sections.id AS class_section_id, COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('class_sections.id AS class_section_id, COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->whereIn('class_sections.id', $classSections->pluck('id'))
@@ -74,6 +75,7 @@ class DeanEvaluationSummaryController extends Controller
 
             return [
                 'classSectionId' => $classSection->id,
+                'sectionId' => $classSection->section_id,
                 'subject' => $classSection->subject->code.' - '.$classSection->subject->title,
                 'faculty' => $classSection->faculty->name,
                 'section' => $classSection->section->code,
@@ -560,6 +562,59 @@ class DeanEvaluationSummaryController extends Controller
         ]);
     }
 
+    public function exportSection(Request $request, Section $section): StreamedResponse|HttpResponse
+    {
+        $data = $this->buildOverallSummaryData($section->id);
+        $format = $this->resolveExportFormat($request);
+        $safeSectionCode = Str::slug($section->code ?: 'section');
+
+        if ($format === 'docx') {
+            $inline = strtolower((string) $request->query('disposition', 'attachment')) === 'inline';
+
+            if ($inline === false) {
+                $tempOutput = tempnam(sys_get_temp_dir(), 'dean-section-docx-');
+
+                if ($tempOutput === false) {
+                    throw new RuntimeException('Unable to allocate temporary DOCX output file.');
+                }
+
+                $outputPath = $tempOutput.'.docx';
+                @rename($tempOutput, $outputPath);
+
+                $templatePath = $this->resolveDocxTemplatePath();
+
+                if ($templatePath === null) {
+                    return response($this->renderOverallDocHtml($data), HttpResponse::HTTP_OK, [
+                        'Content-Type' => 'application/msword',
+                        'Content-Disposition' => 'attachment; filename=evaluation-summary-section-'.$safeSectionCode.'-'.now()->format('Ymd-His').'.doc',
+                    ]);
+                }
+
+                $cloner = app(WordDocumentCloner::class);
+                $cloner->cloneWithBodyXmlAndMedia(
+                    $templatePath,
+                    $outputPath,
+                    $this->buildOverallWordBodyXml($data),
+                    $this->buildOverallDocxSignatureMediaMap($data['overallSignoffRows']),
+                );
+
+                return $this->streamDocxFile(
+                    $outputPath,
+                    'evaluation-summary-section-'.$safeSectionCode.'-'.now()->format('Ymd-His').'.docx',
+                    false,
+                );
+            }
+
+            return $this->exportOverallDocx($data, true);
+        }
+
+        $fileName = 'evaluation-summary-section-'.$safeSectionCode.'-'.now()->format('Ymd-His').'.pdf';
+
+        return Pdf::loadHTML($this->renderOverallDocHtml($data))
+            ->setPaper('a4', 'landscape')
+            ->download($fileName);
+    }
+
     /**
      * @return array{
      *   classSection:ClassSection,
@@ -585,7 +640,7 @@ class DeanEvaluationSummaryController extends Controller
             ->keyBy('question_number');
 
         $summary = ClassSection::query()
-            ->selectRaw('COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
             ->where('class_sections.id', $classSection->id)
@@ -676,23 +731,33 @@ class DeanEvaluationSummaryController extends Controller
      *   overallSignoffRows:array<int, array{signedBy:string,signatureDataUri:?string,signedAt:?string}>
      * }
      */
-    private function buildOverallSummaryData(): array
+    private function buildOverallSummaryData(?int $sectionId = null): array
     {
-        $classSections = ClassSection::query()
+        $classSectionsQuery = ClassSection::query()
             ->with(['subject', 'section', 'faculty', 'reportSignoff.facultySigner:id,name', 'reportSignoff.deanSigner:id,name'])
-            ->get();
+            ;
+
+        if ($sectionId !== null) {
+            $classSectionsQuery->where('section_id', $sectionId);
+        }
+
+        $classSections = $classSectionsQuery->get();
+
+        $classSectionIds = $classSections->pluck('id');
 
         $summaryMap = ClassSection::query()
-            ->selectRaw('class_sections.id AS class_section_id, COUNT(evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
+            ->selectRaw('class_sections.id AS class_section_id, COUNT(DISTINCT evaluations.id) AS respondents, ROUND(AVG(evaluation_responses.rating), 2) AS overall_average')
             ->leftJoin('evaluations', 'evaluations.class_section_id', '=', 'class_sections.id')
             ->leftJoin('evaluation_responses', 'evaluation_responses.evaluation_id', '=', 'evaluations.id')
-            ->whereIn('class_sections.id', $classSections->pluck('id'))
+            ->whereIn('class_sections.id', $classSectionIds)
             ->groupBy('class_sections.id')
             ->get()
             ->keyBy('class_section_id');
 
         $overallQuestionAverages = EvaluationResponse::query()
             ->selectRaw('evaluation_responses.question_number, ROUND(AVG(evaluation_responses.rating), 2) AS average_rating')
+            ->join('evaluations', 'evaluations.id', '=', 'evaluation_responses.evaluation_id')
+            ->whereIn('evaluations.class_section_id', $classSectionIds)
             ->groupBy('evaluation_responses.question_number')
             ->orderBy('evaluation_responses.question_number')
             ->get()

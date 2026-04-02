@@ -1,9 +1,12 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { LoadingButton } from '@/components/ui/loading-button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
 type ProgramGroup = {
     program: string;
+    programValue: string | null;
     courseCount: number;
     curriculums: Array<{
         curriculum: string;
@@ -12,13 +15,18 @@ type ProgramGroup = {
             code: string;
             title: string;
             semesterOffered?: string | null;
+            yearLevel?: number | null;
         }>;
     }>;
 };
 
 type Props = {
     programs: ProgramGroup[];
+    canManage: boolean;
+    terms: string[];
 };
+
+const CUSTOM_PROGRAM_OPTION = '__CUSTOM_PROGRAM__';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -27,18 +35,291 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function ProgramCoursesIndex({ programs }: Props) {
+export default function ProgramCoursesIndex({ programs, canManage, terms }: Props) {
+    const page = usePage();
+    const status = (page.props as { flash?: { status?: string } }).flash?.status;
+    const errors = (page.props as { errors?: Record<string, string> }).errors ?? {};
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [programSelection, setProgramSelection] = useState('');
+    const [customProgram, setCustomProgram] = useState('');
+    const [form, setForm] = useState({
+        code: '',
+        title: '',
+        program: '',
+        curriculum_version: '',
+        semester_offered: terms[0] ?? '1st Semester',
+        year_level: '1',
+    });
+
+    const yearLevelOptions = [
+        { value: '1', label: '1st Year' },
+        { value: '2', label: '2nd Year' },
+        { value: '3', label: '3rd Year' },
+        { value: '4', label: '4th Year' },
+    ];
+
+    const programOptions = Array.from(
+        new Set(
+            programs
+                .map((group) => group.programValue)
+                .filter((value): value is string => value !== null && value.trim() !== ''),
+        ),
+    ).sort((left, right) => left.localeCompare(right));
+
+    const resolvedProgram =
+        programSelection === CUSTOM_PROGRAM_OPTION
+            ? customProgram.trim()
+            : (programSelection || form.program).trim();
+
+    const submit = () => {
+        const payloadBase = {
+            ...form,
+            program: resolvedProgram,
+        };
+
+        const payload = editingId === null ? payloadBase : { ...payloadBase, id: editingId };
+        const method = editingId === null ? 'post' : 'patch';
+
+        router[method]('/dean/program-courses', payload, {
+            preserveScroll: true,
+            onStart: () => setIsSubmitting(true),
+            onFinish: () => setIsSubmitting(false),
+            onSuccess: () => {
+                setEditingId(null);
+                setProgramSelection('');
+                setCustomProgram('');
+                setForm({
+                    code: '',
+                    title: '',
+                    program: '',
+                    curriculum_version: '',
+                    semester_offered: terms[0] ?? '1st Semester',
+                    year_level: '1',
+                });
+            },
+        });
+    };
+
+    const removeSubject = (subjectId: number) => {
+        if (!window.confirm('Remove this course?')) {
+            return;
+        }
+
+        router.delete(`/dean/program-courses/${subjectId}`, {
+            preserveScroll: true,
+        });
+    };
+
+    const removeProgram = (programValue: string | null, programLabel: string) => {
+        const confirmationMessage = programValue === null
+            ? 'Remove all unassigned program courses? This action cannot be undone.'
+            : `Remove program ${programLabel} and all its courses? This action cannot be undone.`;
+
+        if (!window.confirm(confirmationMessage)) {
+            return;
+        }
+
+        router.delete('/dean/program-courses/program/remove', {
+            data: {
+                program: programValue,
+                remove_unassigned: programValue === null,
+            },
+            preserveScroll: true,
+        });
+    };
+
+    const beginEdit = (
+        subject: ProgramGroup['curriculums'][number]['subjects'][number],
+        programValue: string | null,
+        curriculum: string,
+    ) => {
+        const normalizedProgram = (programValue ?? '').trim();
+
+        setEditingId(subject.id);
+        setForm({
+            code: subject.code,
+            title: subject.title,
+            program: normalizedProgram,
+            curriculum_version: curriculum,
+            semester_offered: subject.semesterOffered ?? (terms[0] ?? '1st Semester'),
+            year_level: subject.yearLevel ? String(subject.yearLevel) : '1',
+        });
+
+        if (normalizedProgram === '') {
+            setProgramSelection('');
+            setCustomProgram('');
+
+            return;
+        }
+
+        if (programOptions.includes(normalizedProgram)) {
+            setProgramSelection(normalizedProgram);
+            setCustomProgram('');
+
+            return;
+        }
+
+        setProgramSelection(CUSTOM_PROGRAM_OPTION);
+        setCustomProgram(normalizedProgram);
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setProgramSelection('');
+        setCustomProgram('');
+        setForm({
+            code: '',
+            title: '',
+            program: '',
+            curriculum_version: '',
+            semester_offered: terms[0] ?? '1st Semester',
+            year_level: '1',
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Courses per Program" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Courses per Program</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Courses per Program</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         View all imported courses grouped by program, including semester and curriculum year.
                     </p>
                 </div>
+
+                {canManage && (
+                    <section className="rounded-xl border p-3 sm:p-4">
+                        <h2 className="font-semibold">{editingId === null ? 'Add Course' : 'Edit Course'}</h2>
+
+                        <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
+                            <label className="space-y-1 text-sm">
+                                <span>Subject Code</span>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.code}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
+                                    placeholder="e.g. CCS101"
+                                />
+                                {errors.code && <p className="text-xs text-red-600">{errors.code}</p>}
+                            </label>
+
+                            <label className="space-y-1 text-sm">
+                                <span>Course Name</span>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.title}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                                    placeholder="e.g. Introduction to Computing"
+                                />
+                                {errors.title && <p className="text-xs text-red-600">{errors.title}</p>}
+                            </label>
+
+                            <label className="space-y-1 text-sm">
+                                <span>Program</span>
+                                <select
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={programSelection}
+                                    onChange={(e) => {
+                                        const selectedValue = e.target.value;
+
+                                        setProgramSelection(selectedValue);
+
+                                        if (selectedValue !== CUSTOM_PROGRAM_OPTION) {
+                                            setCustomProgram('');
+                                        }
+                                    }}
+                                >
+                                    <option value="">Select program</option>
+                                    {programOptions.map((program) => (
+                                        <option key={program} value={program}>
+                                            {program}
+                                        </option>
+                                    ))}
+                                    <option value={CUSTOM_PROGRAM_OPTION}>Custom program</option>
+                                </select>
+                                {programSelection === CUSTOM_PROGRAM_OPTION && (
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-md border bg-background px-3 py-2"
+                                        value={customProgram}
+                                        onChange={(e) => setCustomProgram(e.target.value)}
+                                        placeholder="Enter custom program"
+                                    />
+                                )}
+                                {errors.program && <p className="text-xs text-red-600">{errors.program}</p>}
+                            </label>
+
+                            <label className="space-y-1 text-sm">
+                                <span>Curriculum Version</span>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.curriculum_version}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, curriculum_version: e.target.value }))}
+                                    placeholder="e.g. 2024"
+                                />
+                                {errors.curriculum_version && <p className="text-xs text-red-600">{errors.curriculum_version}</p>}
+                            </label>
+
+                            <label className="space-y-1 text-sm md:col-span-2">
+                                <span>Semester Offered</span>
+                                <select
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.semester_offered}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, semester_offered: e.target.value }))}
+                                >
+                                    {terms.map((term) => (
+                                        <option key={term} value={term}>
+                                            {term}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.semester_offered && <p className="text-xs text-red-600">{errors.semester_offered}</p>}
+                            </label>
+
+                            <label className="space-y-1 text-sm md:col-span-2">
+                                <span>Year Level</span>
+                                <select
+                                    className="w-full rounded-md border bg-background px-3 py-2"
+                                    value={form.year_level}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, year_level: e.target.value }))}
+                                >
+                                    {yearLevelOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.year_level && <p className="text-xs text-red-600">{errors.year_level}</p>}
+                            </label>
+                        </fieldset>
+
+                        <div className="mt-4 flex gap-2">
+                            <LoadingButton
+                                type="button"
+                                onClick={submit}
+                                loading={isSubmitting}
+                                loadingText="Saving..."
+                                disabled={resolvedProgram === ''}
+                            >
+                                {editingId === null ? 'Add Course' : 'Save Changes'}
+                            </LoadingButton>
+                            {editingId !== null && (
+                                <button type="button" className="rounded-md border px-4 py-2 text-sm" onClick={cancelEdit}>
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
+
+                        {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
+                    </section>
+                )}
 
                 {programs.length === 0 && (
                     <div className="rounded-xl border p-6 text-sm text-muted-foreground">
@@ -49,10 +330,24 @@ export default function ProgramCoursesIndex({ programs }: Props) {
                 {programs.map((group) => (
                     <section key={group.program} className="overflow-hidden rounded-xl border">
                         <div className="border-b bg-muted/30 px-4 py-3">
-                            <h2 className="font-semibold">{group.program}</h2>
-                            <p className="text-sm text-muted-foreground">
-                                {group.courseCount} course(s) across {group.curriculums.length} curriculum year(s)
-                            </p>
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="font-semibold">{group.program}</h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        {group.courseCount} course(s) across {group.curriculums.length} curriculum year(s)
+                                    </p>
+                                </div>
+
+                                {canManage && (
+                                    <button
+                                        type="button"
+                                        className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-700"
+                                        onClick={() => removeProgram(group.programValue, group.program)}
+                                    >
+                                        Remove Program
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-4 p-4">
@@ -69,17 +364,42 @@ export default function ProgramCoursesIndex({ programs }: Props) {
                                         <table className="min-w-full divide-y divide-border text-sm">
                                             <thead className="bg-muted/30 text-left">
                                                 <tr>
-                                                    <th className="px-4 py-3 font-medium">Code</th>
-                                                    <th className="px-4 py-3 font-medium">Course Name</th>
-                                                    <th className="px-4 py-3 font-medium">Semester Offered</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Code</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Course Name</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Semester Offered</th>
+                                                                <th className="px-3 py-3 font-medium sm:px-4">Year Level</th>
+                                                                {canManage && <th className="px-3 py-3 font-medium sm:px-4">Actions</th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
                                                 {curriculumGroup.subjects.map((subject) => (
                                                     <tr key={subject.id}>
-                                                        <td className="px-4 py-3 font-medium">{subject.code}</td>
-                                                        <td className="px-4 py-3">{subject.title}</td>
-                                                        <td className="px-4 py-3">{subject.semesterOffered ?? '-'}</td>
+                                                                    <td className="px-3 py-3 font-medium sm:px-4">{subject.code}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.title}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.semesterOffered ?? '-'}</td>
+                                                                    <td className="px-3 py-3 sm:px-4">{subject.yearLevel ? `${subject.yearLevel}${subject.yearLevel === 1 ? 'st' : subject.yearLevel === 2 ? 'nd' : subject.yearLevel === 3 ? 'rd' : 'th'} Year` : '-'}</td>
+                                                        {canManage && (
+                                                                        <td className="px-3 py-3 sm:px-4">
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="rounded-md border px-3 py-1 text-xs"
+                                                                        onClick={() =>
+                                                                            beginEdit(subject, group.programValue, curriculumGroup.curriculum)
+                                                                        }
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-700"
+                                                                        onClick={() => removeSubject(subject.id)}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))}
                                             </tbody>

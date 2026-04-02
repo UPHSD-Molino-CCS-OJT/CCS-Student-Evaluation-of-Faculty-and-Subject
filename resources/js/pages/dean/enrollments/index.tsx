@@ -24,11 +24,15 @@ type SubjectOption = {
 
 type EnrollmentItem = {
     id: number;
+    studentId: number | null;
     studentName: string | null;
     studentNumber: string | null;
+    subjectId: number | null;
     subjectCode: string | null;
     subjectTitle: string | null;
     program: string | null;
+    facultyId: number | null;
+    facultyName: string | null;
     section: string | null;
     term: string | null;
     schoolYear: string | null;
@@ -63,12 +67,65 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
         school_year: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editingEnrollmentId, setEditingEnrollmentId] = useState<number | null>(null);
 
     const submit = () => {
-        router.post('/dean/enrollments', form, {
+        const url = editingEnrollmentId === null
+            ? '/dean/enrollments'
+            : `/dean/enrollments/${editingEnrollmentId}`;
+        const method = editingEnrollmentId === null ? 'post' : 'patch';
+
+        router[method](url, form, {
             preserveScroll: true,
             onStart: () => setIsSubmitting(true),
-            onFinish: () => setIsSubmitting(false),
+            onFinish: () => {
+                setIsSubmitting(false);
+            },
+            onSuccess: () => {
+                setEditingEnrollmentId(null);
+                setForm({
+                    student_id: '',
+                    subject_id: '',
+                    faculty_id: '',
+                    section_code: '',
+                    term: terms[0] ?? '1st Semester',
+                    school_year: '',
+                });
+            },
+        });
+    };
+
+    const startEdit = (row: EnrollmentItem) => {
+        setEditingEnrollmentId(row.id);
+        setForm({
+            student_id: row.studentId ? String(row.studentId) : '',
+            subject_id: row.subjectId ? String(row.subjectId) : '',
+            faculty_id: row.facultyId ? String(row.facultyId) : '',
+            section_code: row.section ?? '',
+            term: row.term ?? (terms[0] ?? '1st Semester'),
+            school_year: row.schoolYear ?? '',
+        });
+    };
+
+    const cancelEdit = () => {
+        setEditingEnrollmentId(null);
+        setForm({
+            student_id: '',
+            subject_id: '',
+            faculty_id: '',
+            section_code: '',
+            term: terms[0] ?? '1st Semester',
+            school_year: '',
+        });
+    };
+
+    const removeEnrollment = (enrollmentId: number) => {
+        if (!window.confirm('Remove this enrollment?')) {
+            return;
+        }
+
+        router.delete(`/dean/enrollments/${enrollmentId}`, {
+            preserveScroll: true,
         });
     };
 
@@ -76,16 +133,16 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Enrollments" />
 
-            <div className="space-y-5 p-4">
-                <div className="rounded-xl border p-4">
-                    <h1 className="text-xl font-semibold">Enrollment Management</h1>
+            <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
+                <div className="rounded-xl border p-3 sm:p-4">
+                    <h1 className="text-lg font-semibold sm:text-xl">Enrollment Management</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Enroll students in a class offering by semester, school year, section, subject, and faculty.
                     </p>
                 </div>
 
-                <section className="rounded-xl border p-4">
-                    <h2 className="font-semibold">Add Enrollment</h2>
+                <section className="rounded-xl border p-3 sm:p-4">
+                    <h2 className="font-semibold">{editingEnrollmentId === null ? 'Add Enrollment' : 'Edit Enrollment'}</h2>
 
                     <fieldset disabled={isSubmitting} className="mt-4 grid gap-3 md:grid-cols-2">
                         <label className="space-y-1 text-sm">
@@ -182,8 +239,17 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
 
                     <div className="mt-4">
                         <LoadingButton type="button" onClick={submit} loading={isSubmitting} loadingText="Enrolling...">
-                            Enroll Student
+                            {editingEnrollmentId === null ? 'Enroll Student' : 'Save Enrollment'}
                         </LoadingButton>
+                        {editingEnrollmentId !== null && (
+                            <button
+                                type="button"
+                                className="ml-2 rounded-md border px-4 py-2 text-sm"
+                                onClick={cancelEdit}
+                            >
+                                Cancel
+                            </button>
+                        )}
                         {status && <p className="mt-2 text-sm font-medium text-emerald-600">{status}</p>}
                     </div>
                 </section>
@@ -197,30 +263,51 @@ export default function DeanEnrollmentsIndex({ students, faculty, subjects, enro
                         <table className="min-w-full divide-y divide-border text-sm">
                             <thead className="bg-muted/30 text-left">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Student</th>
-                                    <th className="px-4 py-3 font-medium">Student Number</th>
-                                    <th className="px-4 py-3 font-medium">Subject</th>
-                                    <th className="px-4 py-3 font-medium">Program</th>
-                                    <th className="px-4 py-3 font-medium">Section</th>
-                                    <th className="px-4 py-3 font-medium">Semester</th>
-                                    <th className="px-4 py-3 font-medium">School Year</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Student</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Student Number</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Subject</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Program</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Faculty</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Section</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Semester</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">School Year</th>
+                                    <th className="px-3 py-3 font-medium sm:px-4">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {enrollments.map((row) => (
                                     <tr key={row.id}>
-                                        <td className="px-4 py-3">{row.studentName ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.studentNumber ?? '-'}</td>
-                                        <td className="px-4 py-3">{[row.subjectCode, row.subjectTitle].filter(Boolean).join(' - ') || '-'}</td>
-                                        <td className="px-4 py-3">{row.program ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.section ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.term ?? '-'}</td>
-                                        <td className="px-4 py-3">{row.schoolYear ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.studentName ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.studentNumber ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{[row.subjectCode, row.subjectTitle].filter(Boolean).join(' - ') || '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.program ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.facultyName ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.section ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.term ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">{row.schoolYear ?? '-'}</td>
+                                        <td className="px-3 py-3 sm:px-4">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    className="rounded-md border px-3 py-1 text-xs"
+                                                    onClick={() => startEdit(row)}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-700"
+                                                    onClick={() => removeEnrollment(row.id)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                                 {enrollments.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                                        <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground sm:px-4">
                                             No enrollments found.
                                         </td>
                                     </tr>

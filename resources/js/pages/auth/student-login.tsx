@@ -65,49 +65,51 @@ export default function StudentLogin() {
         >
             <Head title="Student login" />
 
-            <Form action="/student/login" method="post" className="flex flex-col gap-6">
+            <Form action="/student/login" method="post" className="flex flex-col gap-4 sm:gap-6">
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="grid gap-4 sm:gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="student_id_0">Student ID</Label>
-                                <div className="flex w-full max-w-full items-center justify-center gap-1 whitespace-nowrap">
-                                    {studentIdDigits.map((digit, index) => (
-                                        <div key={index} className="flex items-center gap-1">
-                                            <Input
-                                                id={`student_id_${index}`}
-                                                ref={(element) => {
-                                                    inputRefs.current[index] = element;
-                                                }}
-                                                type="text"
-                                                inputMode="numeric"
-                                                pattern="[0-9]*"
-                                                autoFocus={index === 0}
-                                                autoComplete={index === 0 ? 'username' : 'off'}
-                                                tabIndex={index + 1}
-                                                maxLength={1}
-                                                className="h-9 w-8 text-center text-sm sm:h-10 sm:w-10 sm:text-base"
-                                                value={digit}
-                                                onChange={(event) => handleDigitChange(index, event.target.value)}
-                                                onKeyDown={(event) => {
-                                                    if (index === 1 && event.key === '-') {
-                                                        event.preventDefault();
-                                                        inputRefs.current[2]?.focus();
-                                                        return;
-                                                    }
+                                <div className="w-full overflow-x-auto pb-1">
+                                    <div className="flex min-w-max items-center justify-center gap-1">
+                                        {studentIdDigits.map((digit, index) => (
+                                            <div key={index} className="flex items-center gap-1">
+                                                <Input
+                                                    id={`student_id_${index}`}
+                                                    ref={(element) => {
+                                                        inputRefs.current[index] = element;
+                                                    }}
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    autoFocus={index === 0}
+                                                    autoComplete={index === 0 ? 'username' : 'off'}
+                                                    tabIndex={index + 1}
+                                                    maxLength={1}
+                                                    className="h-10 w-9 text-center text-sm sm:h-11 sm:w-10 sm:text-base"
+                                                    value={digit}
+                                                    onChange={(event) => handleDigitChange(index, event.target.value)}
+                                                    onKeyDown={(event) => {
+                                                        if (index === 1 && event.key === '-') {
+                                                            event.preventDefault();
+                                                            inputRefs.current[2]?.focus();
+                                                            return;
+                                                        }
 
-                                                    if (event.key === 'Backspace') {
-                                                        handleBackspace(index);
-                                                    }
-                                                }}
-                                                onPaste={(event) => {
-                                                    event.preventDefault();
-                                                    handlePaste(event.clipboardData.getData('text'));
-                                                }}
-                                            />
-                                            {(index === 1 || index === 5) && <span className="text-muted-foreground">-</span>}
-                                        </div>
-                                    ))}
+                                                        if (event.key === 'Backspace') {
+                                                            handleBackspace(index);
+                                                        }
+                                                    }}
+                                                    onPaste={(event) => {
+                                                        event.preventDefault();
+                                                        handlePaste(event.clipboardData.getData('text'));
+                                                    }}
+                                                />
+                                                {(index === 1 || index === 5) && <span className="text-muted-foreground">-</span>}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                                 <input type="hidden" name="student_id" value={studentIdValue} />
                                 <p className="text-xs text-muted-foreground">
@@ -118,7 +120,7 @@ export default function StudentLogin() {
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-2 h-11 w-full text-base"
                                 tabIndex={10}
                                 disabled={processing}
                                 data-test="student-login-button"
@@ -130,6 +132,10 @@ export default function StudentLogin() {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Faculty, dean, staff, or system admin? <TextLink href="/login">Go to staff login</TextLink>
+                        </div>
+
+                        <div className="text-center text-sm text-muted-foreground">
+                            New student? <TextLink href="/student/register">Register student account</TextLink>
                         </div>
                     </>
                 )}

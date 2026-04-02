@@ -8,20 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
 type Props = {
     status?: string;
     canResetPassword: boolean;
-    canRegister: boolean;
 };
 
 export default function Login({
     status,
     canResetPassword,
-    canRegister,
 }: Props) {
     return (
         <AuthLayout
@@ -33,11 +30,11 @@ export default function Login({
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                className="flex flex-col gap-4 sm:gap-6"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="grid gap-4 sm:gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="login">Email address</Label>
                                 <Input
@@ -49,6 +46,7 @@ export default function Login({
                                     tabIndex={1}
                                     autoComplete="username"
                                     placeholder="email@example.com"
+                                    className="h-11 text-base"
                                 />
                                 <InputError message={errors.login} />
                             </div>
@@ -73,6 +71,7 @@ export default function Login({
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    className="h-11 text-base"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -88,7 +87,7 @@ export default function Login({
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-2 h-11 w-full text-base"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
@@ -105,14 +104,6 @@ export default function Login({
                             </TextLink>
                         </div>
 
-                        {canRegister && (
-                            <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{' '}
-                                <TextLink href={register()} tabIndex={5}>
-                                    Sign up
-                                </TextLink>
-                            </div>
-                        )}
                     </>
                 )}
             </Form>
