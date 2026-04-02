@@ -13,6 +13,7 @@ type Question = {
 
 type Row = {
     classSectionId: number;
+    sectionId: number;
     subject: string;
     faculty: string;
     section: string;
@@ -294,7 +295,19 @@ export default function DeanSummaries({ questions, rows, evaluationOpen }: Props
                     return (
                         <section key={section} className="overflow-hidden rounded-xl border">
                             <div className="border-b bg-muted/30 px-3 py-3 sm:px-4">
-                                <h2 className="font-semibold">Section: {section}</h2>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h2 className="font-semibold">Section: {section}</h2>
+                                    {sectionRows[0]?.sectionId && (
+                                        <a
+                                            href={`/dean/summaries/sections/${sectionRows[0].sectionId}/export?format=docx`}
+                                            className="inline-flex"
+                                        >
+                                            <Button type="button" variant="outline" size="sm">
+                                                Download Section DOCX
+                                            </Button>
+                                        </a>
+                                    )}
+                                </div>
                                 <p className="text-sm text-muted-foreground">
                                     Respondents: {totalRespondents} | Section Overall Average:{' '}
                                     {sectionOverallAverage !== null ? sectionOverallAverage.toFixed(2) : '-'}

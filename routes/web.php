@@ -100,6 +100,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('dean/summaries/class-sections/{classSection}/export', [DeanEvaluationSummaryController::class, 'exportClassSection'])
             ->name('dean.summaries.export-class-section');
 
+        Route::get('dean/summaries/sections/{section}/export', [DeanEvaluationSummaryController::class, 'exportSection'])
+            ->name('dean.summaries.export-section');
+
         Route::get('dean/summaries/class-sections/{classSection}/export/pdf-office', [DeanEvaluationSummaryController::class, 'downloadClassSectionPdfOffice'])
             ->name('dean.summaries.export-class-section-pdf-office');
 
