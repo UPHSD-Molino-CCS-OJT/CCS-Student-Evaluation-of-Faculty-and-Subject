@@ -182,7 +182,7 @@ test('dean staff and system admin can preview overall summary', function (string
     $response->assertOk();
     $response->assertHeader('content-type', 'text/html; charset=UTF-8');
     $response->assertSee('Overall Evaluation Summary', false);
-    $response->assertSee('Section: BSCS-3A', false);
+    $response->assertSee('Section: Teacher Evaluation', false);
 })->with(['dean', 'staff', 'system_admin']);
 
 test('dean staff and system admin can export class section summary', function (string $role) {

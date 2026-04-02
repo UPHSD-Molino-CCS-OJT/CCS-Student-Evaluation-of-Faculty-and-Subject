@@ -115,20 +115,39 @@ class DeanEvaluationSummaryController extends Controller
 
     public function previewClassSection(ClassSection $classSection): StreamedResponse|HttpResponse|RedirectResponse
     {
-        $data = $this->buildClassSectionSummaryData($classSection);
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-class-section.docx-source',
+            now()->addMinutes(10),
+            ['classSection' => $classSection->id],
+        );
 
-        return response($this->renderClassPreviewHtml($data), HttpResponse::HTTP_OK, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-        ]);
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $data = $this->buildClassSectionSummaryData($classSection);
+
+            return response($this->renderClassPreviewHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+            ]);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/embed.aspx?src='.rawurlencode($sourceUrl));
     }
 
     public function previewOverall(): StreamedResponse|HttpResponse|RedirectResponse
     {
-        $data = $this->buildOverallSummaryData();
+        $sourceUrl = URL::temporarySignedRoute(
+            'dean.summaries.preview-overall.docx-source',
+            now()->addMinutes(10),
+        );
 
-        return response($this->renderOverallPreviewHtml($data), HttpResponse::HTTP_OK, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-        ]);
+        if (! str_starts_with($sourceUrl, 'https://')) {
+            $data = $this->buildOverallSummaryData();
+
+            return response($this->renderOverallPreviewHtml($data), HttpResponse::HTTP_OK, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+            ]);
+        }
+
+        return redirect()->away('https://view.officeapps.live.com/op/embed.aspx?src='.rawurlencode($sourceUrl));
     }
 
     public function previewClassSectionDocxSource(Request $request, ClassSection $classSection): StreamedResponse|HttpResponse
@@ -676,6 +695,28 @@ class DeanEvaluationSummaryController extends Controller
         ];
     }
 
+    /**
+     * @param  array<int, array{number:int,category:string,text:string,average:float|null}>  $questionRows
+     * @return array<string, array<int, array{number:int,category:string,text:string,average:float|null}>>
+     */
+    private function groupQuestionRowsByCategory(array $questionRows): array
+    {
+        $grouped = [];
+
+        foreach ($questionRows as $row) {
+            $category = trim((string) ($row['category'] ?? ''));
+
+            if ($category === '') {
+                $category = 'General';
+            }
+
+            $grouped[$category] ??= [];
+            $grouped[$category][] = $row;
+        }
+
+        return $grouped;
+    }
+
     private function resolveUserEsignDataUri(object $user): ?string
     {
         if (is_string($user->esign_image_data_uri ?? null) && $user->esign_image_data_uri !== '') {
@@ -900,20 +941,35 @@ class DeanEvaluationSummaryController extends Controller
             ['Evaluators', (string) $data['respondents'].' Students'],
         ];
 
-        $evaluationRows = [];
-        foreach ($data['questionRows'] as $row) {
-            $evaluationRows[] = [
-                (string) $row['text'],
-                $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
-                $this->remarkFromAverage($row['average']),
-            ];
+        $evaluationSectionsXml = '';
+        foreach ($this->groupQuestionRowsByCategory($data['questionRows']) as $category => $rows) {
+            $evaluationRows = [];
+
+            foreach ($rows as $row) {
+                $evaluationRows[] = [
+                    (string) $row['text'],
+                    $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
+                    $this->remarkFromAverage($row['average']),
+                ];
+            }
+
+            $evaluationSectionsXml .=
+                $this->buildWordHeadingParagraphXml('Section: '.$category)
+                .$this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $evaluationRows);
         }
 
-        $evaluationRows[] = [
+        if ($evaluationSectionsXml === '') {
+            $evaluationSectionsXml = $this->buildWordTableXml(
+                ['Criteria', 'Average', 'Remarks'],
+                [['No evaluation questions found', '-', '-']]
+            );
+        }
+
+        $overallAverageRows = [[
             'AVERAGE',
             $data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-',
             $this->remarkFromAverage($data['overallAverage']),
-        ];
+        ]];
 
         $commentRows = [];
         if ($data['comments'] === []) {
@@ -945,7 +1001,9 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION SUMMARY').
             $this->buildWordTableXml(['Field', 'Value'], $metaRows).
             $this->buildWordHeadingParagraphXml('STUDENT EVALUATION').
-            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $evaluationRows).
+            $evaluationSectionsXml.
+            $this->buildWordHeadingParagraphXml('OVERALL RESULT').
+            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $overallAverageRows).
             $this->buildWordHeadingParagraphXml('COMMENTS').
             $this->buildWordTableXml(['Comment'], $commentRows).
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
@@ -1032,16 +1090,15 @@ class DeanEvaluationSummaryController extends Controller
      */
     private function buildOverallWordBodyXml(array $data): string
     {
-        $classRowsBySection = [];
+        $classRows = [];
         foreach ($data['classSections'] as $classSection) {
             $summary = $data['summaryMap'][$classSection->id] ?? null;
             $average = $summary?->overall_average !== null ? number_format((float) $summary->overall_average, 2) : '-';
-            $sectionCode = (string) ($classSection->section?->code ?? 'Unassigned Section');
 
-            $classRowsBySection[$sectionCode] ??= [];
-            $classRowsBySection[$sectionCode][] = [
+            $classRows[] = [
                 (string) (($classSection->subject?->code ?? '').' - '.($classSection->subject?->title ?? '')),
                 (string) ($classSection->faculty?->name ?? ''),
+                (string) ($classSection->section?->code ?? 'Unassigned Section'),
                 (string) ($classSection->term ?? ''),
                 (string) ($classSection->school_year ?? ''),
                 $average,
@@ -1049,29 +1106,37 @@ class DeanEvaluationSummaryController extends Controller
             ];
         }
 
-        ksort($classRowsBySection, SORT_NATURAL | SORT_FLAG_CASE);
-
-        $classSummaryXml = '';
-        foreach ($classRowsBySection as $sectionCode => $sectionRows) {
-            $classSummaryXml .=
-                $this->buildWordHeadingParagraphXml('SECTION: '.$sectionCode).
-                $this->buildWordTableXml(['Subject', 'Faculty', 'Term', 'School Year', 'Average', 'Remarks'], $sectionRows);
+        if ($classRows === []) {
+            $classRows[] = ['No class sections found', '-', '-', '-', '-', '-', '-'];
         }
 
-        if ($classSummaryXml === '') {
-            $classSummaryXml = $this->buildWordTableXml(
-                ['Subject', 'Faculty', 'Term', 'School Year', 'Average', 'Remarks'],
-                [['No class sections found', '-', '-', '-', '-', '-']]
+        $classSummaryXml = $this->buildWordTableXml(
+            ['Subject', 'Faculty', 'Section', 'Term', 'School Year', 'Average', 'Remarks'],
+            $classRows
+        );
+
+        $questionSectionsXml = '';
+        foreach ($this->groupQuestionRowsByCategory($data['overallQuestionRows']) as $category => $rows) {
+            $questionRows = [];
+
+            foreach ($rows as $row) {
+                $questionRows[] = [
+                    (string) $row['text'],
+                    $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
+                    $this->remarkFromAverage($row['average']),
+                ];
+            }
+
+            $questionSectionsXml .=
+                $this->buildWordHeadingParagraphXml('Section: '.$category)
+                .$this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $questionRows);
+        }
+
+        if ($questionSectionsXml === '') {
+            $questionSectionsXml = $this->buildWordTableXml(
+                ['Criteria', 'Average', 'Remarks'],
+                [['No evaluation questions found', '-', '-']]
             );
-        }
-
-        $questionRows = [];
-        foreach ($data['overallQuestionRows'] as $row) {
-            $questionRows[] = [
-                (string) $row['text'],
-                $row['average'] !== null ? number_format((float) $row['average'], 2) : '-',
-                $this->remarkFromAverage($row['average']),
-            ];
         }
 
         $signoffRows = [];
@@ -1094,7 +1159,7 @@ class DeanEvaluationSummaryController extends Controller
             $this->buildWordHeadingParagraphXml('CLASS EVALUATION SUMMARY').
             $classSummaryXml.
             $this->buildWordHeadingParagraphXml('OVERALL QUESTION AVERAGES').
-            $this->buildWordTableXml(['Criteria', 'Average', 'Remarks'], $questionRows).
+            $questionSectionsXml.
             $this->buildWordHeadingParagraphXml('E-SIGN STATUS').
             $this->buildWordTableXml(['Signed By', 'Signature', 'Date'], $signoffRows);
     }
@@ -1699,17 +1764,47 @@ class DeanEvaluationSummaryController extends Controller
             ? '<div class="print-footer">'.$templateFooter.'</div>'
             : '';
 
-        $rowsHtml = '';
-        foreach ($data['questionRows'] as $row) {
-            $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
-            $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
-            $criteria = htmlspecialchars($row['text']);
-            $rowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+        $questionSectionsHtml = '';
+        foreach ($this->groupQuestionRowsByCategory($data['questionRows']) as $category => $rows) {
+            $rowsHtml = '';
+
+            foreach ($rows as $row) {
+                $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
+                $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
+                $criteria = htmlspecialchars($row['text']);
+                $rowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+            }
+
+            $questionSectionsHtml .= "
+            <div class=\"section-title\">Section: ".htmlspecialchars($category)."</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody>{$rowsHtml}</tbody>
+            </table>";
+        }
+
+        if ($questionSectionsHtml === '') {
+            $questionSectionsHtml = "
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody><tr><td>No evaluation questions found</td><td class=\"right\">-</td><td>-</td></tr></tbody>
+            </table>";
         }
 
         $averageText = $data['overallAverage'] !== null ? number_format($data['overallAverage'], 2) : '-';
         $averageRemark = htmlspecialchars($this->remarkFromAverage($data['overallAverage']));
-        $rowsHtml .= "<tr class=\"avg\"><td>AVERAGE</td><td class=\"right\">{$averageText}</td><td>{$averageRemark}</td></tr>";
+        $overallResultHtml = "
+            <div class=\"section-title\">Overall Result</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody><tr class=\"avg\"><td>AVERAGE</td><td class=\"right\">{$averageText}</td><td>{$averageRemark}</td></tr></tbody>
+            </table>";
 
         $commentsHtml = '';
         if ($data['comments'] === []) {
@@ -1813,12 +1908,8 @@ class DeanEvaluationSummaryController extends Controller
             </div>
 
             <div class=\"section-title\">STUDENT EVALUATION</div>
-            <table class=\"modern-table\">
-                <thead>
-                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
-                </thead>
-                <tbody>{$rowsHtml}</tbody>
-            </table>
+            {$questionSectionsHtml}
+            {$overallResultHtml}
 
             <div class=\"section-title\">Comments</div>
             <table class=\"modern-table\"><tbody>{$commentsHtml}</tbody></table>
@@ -1871,7 +1962,7 @@ class DeanEvaluationSummaryController extends Controller
             ? '<div class="print-footer">'.$templateFooter.'</div>'
             : '';
 
-        $rowsHtmlBySection = [];
+        $classRowsHtml = '';
         foreach ($data['classSections'] as $classSection) {
             $summary = $data['summaryMap'][$classSection->id] ?? null;
             $average = $summary?->overall_average !== null ? number_format((float) $summary->overall_average, 2) : '-';
@@ -1881,42 +1972,56 @@ class DeanEvaluationSummaryController extends Controller
             $section = htmlspecialchars((string) ($classSection->section?->code ?? ''));
             $term = htmlspecialchars((string) ($classSection->term ?? ''));
             $sy = htmlspecialchars((string) ($classSection->school_year ?? ''));
-            $rowsHtmlBySection[$section] ??= '';
-            $rowsHtmlBySection[$section] .= "<tr><td>{$subject}</td><td>{$faculty}</td><td>{$term}</td><td>{$sy}</td><td class=\"right\">{$average}</td><td>{$remarks}</td></tr>";
+            $classRowsHtml .= "<tr><td>{$subject}</td><td>{$faculty}</td><td>{$section}</td><td>{$term}</td><td>{$sy}</td><td class=\"right\">{$average}</td><td>{$remarks}</td></tr>";
         }
 
-        ksort($rowsHtmlBySection, SORT_NATURAL | SORT_FLAG_CASE);
-
-        $classSummaryHtml = '';
-        foreach ($rowsHtmlBySection as $section => $sectionRowsHtml) {
-            $sectionLabel = $section !== '' ? $section : 'Unassigned Section';
-
-            $classSummaryHtml .= "
-            <div class=\"section-title\">Section: {$sectionLabel}</div>
-            <table class=\"modern-table\">
-                <thead>
-                    <tr><th>Subject</th><th>Faculty</th><th>Term</th><th>School Year</th><th>Average</th><th>Remarks</th></tr>
-                </thead>
-                <tbody>{$sectionRowsHtml}</tbody>
-            </table>";
-        }
-
-        if ($classSummaryHtml === '') {
+        if ($classRowsHtml === '') {
             $classSummaryHtml = "
             <table class=\"modern-table\">
                 <thead>
-                    <tr><th>Subject</th><th>Faculty</th><th>Term</th><th>School Year</th><th>Average</th><th>Remarks</th></tr>
+                    <tr><th>Subject</th><th>Faculty</th><th>Section</th><th>Term</th><th>School Year</th><th>Average</th><th>Remarks</th></tr>
                 </thead>
-                <tbody><tr><td>No class sections found</td><td>-</td><td>-</td><td>-</td><td class=\"right\">-</td><td>-</td></tr></tbody>
+                <tbody><tr><td>No class sections found</td><td>-</td><td>-</td><td>-</td><td>-</td><td class=\"right\">-</td><td>-</td></tr></tbody>
+            </table>";
+        } else {
+            $classSummaryHtml = "
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Subject</th><th>Faculty</th><th>Section</th><th>Term</th><th>School Year</th><th>Average</th><th>Remarks</th></tr>
+                </thead>
+                <tbody>{$classRowsHtml}</tbody>
             </table>";
         }
 
-        $questionRowsHtml = '';
-        foreach ($data['overallQuestionRows'] as $row) {
-            $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
-            $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
-            $criteria = htmlspecialchars($row['text']);
-            $questionRowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+        $questionSectionsHtml = '';
+        foreach ($this->groupQuestionRowsByCategory($data['overallQuestionRows']) as $category => $rows) {
+            $questionRowsHtml = '';
+
+            foreach ($rows as $row) {
+                $avg = $row['average'] !== null ? number_format($row['average'], 2) : '-';
+                $remarks = htmlspecialchars($this->remarkFromAverage($row['average']));
+                $criteria = htmlspecialchars($row['text']);
+                $questionRowsHtml .= "<tr><td>{$criteria}</td><td class=\"right\">{$avg}</td><td>{$remarks}</td></tr>";
+            }
+
+            $questionSectionsHtml .= "
+            <div class=\"section-title\">Section: ".htmlspecialchars($category)."</div>
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody>{$questionRowsHtml}</tbody>
+            </table>";
+        }
+
+        if ($questionSectionsHtml === '') {
+            $questionSectionsHtml = "
+            <table class=\"modern-table\">
+                <thead>
+                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
+                </thead>
+                <tbody><tr><td>No evaluation questions found</td><td class=\"right\">-</td><td>-</td></tr></tbody>
+            </table>";
         }
 
         $signoffRowsHtml = '';
@@ -2002,12 +2107,7 @@ class DeanEvaluationSummaryController extends Controller
             {$classSummaryHtml}
 
             <div class=\"section-title\">Overall Question Averages</div>
-            <table class=\"modern-table\">
-                <thead>
-                    <tr><th>Criteria</th><th style=\"width:110px\">Average</th><th style=\"width:180px\">Remarks</th></tr>
-                </thead>
-                <tbody>{$questionRowsHtml}</tbody>
-            </table>
+            {$questionSectionsHtml}
 
             <div class=\"section-title\">E-Signatures</div>
             <table class=\"modern-table\">
