@@ -34,10 +34,26 @@ Route::get('/setup-database', function () {
             'success' => true,
             'message' => 'Database migrations and seeding completed successfully!',
             'login_credentials' => [
-                'student_email' => 'cantara.michaelangelo@gmail.com',
-                'student_password' => '1-2345-678',
-                'faculty_email' => 'ada.faculty@example.com',
-                'faculty_password' => 'password'
+                'student' => [
+                    'email' => 'cantara.michaelangelo@gmail.com',
+                    'password' => '1-2345-678'
+                ],
+                'faculty' => [
+                    'email' => 'ada.faculty@example.com',
+                    'password' => 'password'
+                ],
+                'dean' => [
+                    'email' => 'dean@example.com',
+                    'password' => 'password'
+                ],
+                'staff' => [
+                    'email' => 'staff@example.com',
+                    'password' => 'password'
+                ],
+                'admin' => [
+                    'email' => 'sysadmin@example.com',
+                    'password' => 'password'
+                ]
             ]
         ]);
     } catch (\Exception $e) {
