@@ -22,6 +22,11 @@ Route::get('/', function (Request $request) {
         : redirect()->route('student.login');
 })->name('home');
 
+Route::get('/seed', function () {
+    \Illuminate\Support\Facades\Artisan::call('db:seed');
+    return response()->json(['message' => 'Database seeded successfully!']);
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('student/login', [StudentAuthenticatedSessionController::class, 'create'])
         ->name('student.login');
