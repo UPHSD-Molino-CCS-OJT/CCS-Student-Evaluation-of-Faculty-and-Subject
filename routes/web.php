@@ -22,9 +22,30 @@ Route::get('/', function (Request $request) {
         : redirect()->route('student.login');
 })->name('home');
 
-Route::get('/seed', function () {
-    \Illuminate\Support\Facades\Artisan::call('db:seed');
-    return response()->json(['message' => 'Database seeded successfully!']);
+Route::get('/setup-database', function () {
+    try {
+        // Run migrations first
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        
+        // Then seed the database
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Database migrations and seeding completed successfully!',
+            'login_credentials' => [
+                'student_email' => 'cantara.michaelangelo@gmail.com',
+                'student_password' => '1-2345-678',
+                'faculty_email' => 'ada.faculty@example.com',
+                'faculty_password' => 'password'
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });
 
 Route::middleware('guest')->group(function () {
